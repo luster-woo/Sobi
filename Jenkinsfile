@@ -39,9 +39,20 @@ pipeline {
             when { expression { fileExists('deploy/docker-compose.app.yml') } }
             steps {
                 sh 'cp deploy/docker-compose.app.yml $COMPOSE'
-                sh 'docker compose -f $COMPOSE up -d'
-                sleep 10
-                sh 'docker compose -f $COMPOSE ps'
+                sh '''
+                    SVCS=""
+                    docker image inspect sogong-backend:latest  >/dev/null 2>&1 && SVCS="$SVCS backend"
+                    docker image inspect sogong-ai:latest       >/dev/null 2>&1 && SVCS="$SVCS ai"
+                    docker image inspect sogong-frontend:latest >/dev/null 2>&1 && SVCS="$SVCS frontend"
+                    if [ -n "$SVCS" ]; then
+                        echo "배포 대상:$SVCS"
+                        docker compose -f $COMPOSE up -d $SVCS
+                        sleep 10
+                        docker compose -f $COMPOSE ps
+                    else
+                        echo "배포할 이미지가 아직 없습니다 - 건너뜁니다"
+                    fi
+                '''
             }
         }
 

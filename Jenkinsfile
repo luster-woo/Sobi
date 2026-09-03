@@ -21,15 +21,15 @@ pipeline {
         stage('Build') {
             parallel {
                 stage('backend') {
-                    when { expression { fileExists('backend/Dockerfile') } }
+                    when { expression { fileExists('backend/Dockerfile') && (fileExists('backend/build.gradle') || fileExists('backend/pom.xml')) } }
                     steps { sh 'docker build -t sogong-backend:$BUILD_NUMBER -t sogong-backend:latest backend' }
                 }
                 stage('frontend') {
-                    when { expression { fileExists('frontend/Dockerfile') } }
+                    when { expression { fileExists('frontend/Dockerfile') && fileExists('frontend/package.json') } }
                     steps { sh 'docker build -t sogong-frontend:$BUILD_NUMBER -t sogong-frontend:latest frontend' }
                 }
                 stage('ai') {
-                    when { expression { fileExists('ai/Dockerfile') } }
+                    when { expression { fileExists('ai/Dockerfile') && fileExists('ai/requirements.txt') } }
                     steps { sh 'docker build -t sogong-ai:$BUILD_NUMBER -t sogong-ai:latest ai' }
                 }
             }

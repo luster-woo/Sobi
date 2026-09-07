@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
+import Button from '@/components/common/Button'
+import Card from '@/components/common/Card'
+import Checkbox from '@/components/common/Checkbox'
+import DefinitionList from '@/components/common/DefinitionList'
+import { IconCheckCircle } from '@/components/common/Icon'
+import Tag from '@/components/common/Tag'
+
 import OnboardingShell from './OnboardingShell'
-import Card from '@/shared/ui/Card'
-import Button from '@/shared/ui/Button'
-import Checkbox from '@/shared/ui/Checkbox'
-import Tag from '@/shared/ui/Tag'
-import DefinitionList from '@/shared/ui/DefinitionList'
-import { IconCheckCircle } from '@/shared/ui/Icon'
 
 const ITEMS: [string, string][] = [
   ['매출 정보', '최근 24개월 카드·현금 매출'],
@@ -41,7 +43,10 @@ export default function MydataConsentPage() {
         {ITEMS.map(([k, v], i) => (
           <div
             key={k}
-            className={['flex items-center justify-between py-3', i > 0 ? 'border-t border-border-subtle' : ''].join(' ')}
+            className={[
+              'flex items-center justify-between py-3',
+              i > 0 ? 'border-border-subtle border-t' : '',
+            ].join(' ')}
           >
             <span className="flex items-center gap-3">
               <IconCheckCircle size={18} className="text-primary" />
@@ -65,7 +70,11 @@ export default function MydataConsentPage() {
 
       <div className="flex items-center justify-between px-1">
         <Checkbox
-          label={<span className="typo-label-sm">[필수] 전송요구 내용을 확인했으며, 위 항목의 전송에 동의합니다.</span>}
+          label={
+            <span className="typo-label-sm">
+              [필수] 전송요구 내용을 확인했으며, 위 항목의 전송에 동의합니다.
+            </span>
+          }
           checked={agree}
           onChange={(e) => setAgree(e.target.checked)}
         />

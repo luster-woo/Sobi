@@ -1,4 +1,4 @@
-import type { MarketAnalysis, MarketCondition } from '@/shared/types'
+import type { MarketAnalysis, MarketCondition } from '@/types'
 
 export const defaultMarketCondition: MarketCondition = {
   large: '외식업',

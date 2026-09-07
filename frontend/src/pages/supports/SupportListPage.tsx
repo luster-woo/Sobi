@@ -1,19 +1,15 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import SearchBar from '@/shared/ui/SearchBar'
-import FilterChip from '@/shared/ui/FilterChip'
-import ProductRow from '@/shared/ui/ProductRow'
-import Pagination from '@/shared/ui/Pagination'
-import SupportDetailModal from './SupportDetailModal'
-import { mockSupports } from '@/mocks/supports.mock'
-import { dday, formatMonthDay } from '@/shared/lib/format'
 
-export function supportMetrics(s: (typeof mockSupports)[number]) {
-  return [
-    { label: '지원 금액', value: s.amountLabel },
-    { label: '접수 기간', value: s.deadline ? `D-${dday(s.deadline)}` : '상시' },
-  ]
-}
+import FilterChip from '@/components/common/FilterChip'
+import Pagination from '@/components/common/Pagination'
+import ProductRow from '@/components/common/ProductRow'
+import SearchBar from '@/components/common/SearchBar'
+import { mockSupports } from '@/mocks/supports.mock'
+import { formatMonthDay } from '@/utils/format'
+
+import SupportDetailModal from './SupportDetailModal'
+import { supportMetrics } from './supportMetrics'
 
 /** 14. 지원금 조회 (+ 14-1 상세 모달) */
 export default function SupportListPage() {
@@ -42,7 +38,7 @@ export default function SupportListPage() {
         <FilterChip dropdown>소관 기관</FilterChip>
         <FilterChip dropdown>판정 결과</FilterChip>
         <FilterChip dropdown>즐겨찾기만</FilterChip>
-        <span className="ml-3 typo-body2 text-text-muted">
+        <span className="typo-body2 text-text-muted ml-3">
           정렬 <span className="text-text">지원 금액 높은 순</span>
         </span>
       </div>
@@ -70,7 +66,11 @@ export default function SupportListPage() {
 
       <Pagination page={page} total={7} onChange={setPage} />
 
-      <SupportDetailModal support={selected} onClose={() => navigate('/supports')} onToggleBookmark={toggleBookmark} />
+      <SupportDetailModal
+        support={selected}
+        onClose={() => navigate('/supports')}
+        onToggleBookmark={toggleBookmark}
+      />
     </div>
   )
 }

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AuthCard from '@/shared/ui/AuthCard'
-import Input from '@/shared/ui/Input'
-import Button from '@/shared/ui/Button'
-import { cn } from '@/shared/lib/format'
+
+import AuthCard from '@/components/common/AuthCard'
+import Button from '@/components/common/Button'
+import Input from '@/components/common/Input'
+import { cn } from '@/utils/format'
 
 function strength(pw: string) {
   let s = 0
@@ -37,7 +38,13 @@ export default function PasswordResetPage() {
         }}
       >
         <div className="flex items-end gap-2">
-          <Input className="flex-1" label="아이디 (이메일)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input
+            className="flex-1"
+            label="아이디 (이메일)"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
           <Button type="button" variant="outline" className="shrink-0">
             코드 발송
           </Button>
@@ -74,7 +81,10 @@ export default function PasswordResetPage() {
           <div className="flex items-center gap-3">
             <div className="flex flex-1 gap-1.5">
               {[0, 1, 2, 3].map((i) => (
-                <span key={i} className={cn('h-1 flex-1 rounded-full', i < level ? 'bg-primary' : 'bg-border')} />
+                <span
+                  key={i}
+                  className={cn('h-1 flex-1 rounded-full', i < level ? 'bg-primary' : 'bg-border')}
+                />
               ))}
             </div>
             <span className="typo-caption text-text-secondary">
@@ -96,7 +106,9 @@ export default function PasswordResetPage() {
           <Button type="submit" className="w-full" disabled={!canSubmit}>
             비밀번호 변경
           </Button>
-          <p className="text-center typo-caption text-text-muted">이메일이 오지 않았나요? 스팸함을 확인해 주세요</p>
+          <p className="typo-caption text-text-muted text-center">
+            이메일이 오지 않았나요? 스팸함을 확인해 주세요
+          </p>
         </div>
       </form>
     </AuthCard>

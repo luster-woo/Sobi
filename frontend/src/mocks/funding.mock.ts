@@ -1,4 +1,4 @@
-import type { FundingMix } from '@/shared/types'
+import type { FundingMix } from '@/types'
 
 export const mockFundingMixes: FundingMix[] = [
   {

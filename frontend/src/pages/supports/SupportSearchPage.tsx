@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import SearchBar from '@/shared/ui/SearchBar'
-import ProductRow from '@/shared/ui/ProductRow'
+
+import ProductRow from '@/components/common/ProductRow'
+import SearchBar from '@/components/common/SearchBar'
 import { mockSupports } from '@/mocks/supports.mock'
-import { formatMonthDay } from '@/shared/lib/format'
-import { supportMetrics } from './SupportListPage'
+import { formatMonthDay } from '@/utils/format'
+
+import { supportMetrics } from './supportMetrics'
 
 /** 14-3. 지원금 검색 결과 (자연어 검색) */
 export default function SupportSearchPage() {
@@ -31,7 +33,9 @@ export default function SupportSearchPage() {
 
       <div>
         <h2 className="typo-h3">검색 결과 {results.length}건</h2>
-        <p className="mt-1 typo-caption text-text-muted">‘{keyword}’ 키워드가 포함된 공고예요 · 판정은 내 자격 기준</p>
+        <p className="typo-caption text-text-muted mt-1">
+          ‘{keyword}’ 키워드가 포함된 공고예요 · 판정은 내 자격 기준
+        </p>
       </div>
 
       <div className="space-y-3">

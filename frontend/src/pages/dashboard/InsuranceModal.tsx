@@ -1,9 +1,9 @@
-import type { Insurance } from '@/shared/types'
-import Modal from '@/shared/ui/Modal'
-import Button from '@/shared/ui/Button'
-import Badge from '@/shared/ui/Badge'
-import Card from '@/shared/ui/Card'
-import DefinitionList from '@/shared/ui/DefinitionList'
+import Badge from '@/components/common/Badge'
+import Button from '@/components/common/Button'
+import Card from '@/components/common/Card'
+import DefinitionList from '@/components/common/DefinitionList'
+import Modal from '@/components/common/Modal'
+import type { Insurance } from '@/types'
 
 interface InsuranceModalProps {
   item: Insurance | null
@@ -27,7 +27,10 @@ export default function InsuranceModal({ item, onClose, onToggleStatus }: Insura
           <Button variant="outline" onClick={onClose}>
             닫기
           </Button>
-          <Button variant={required ? 'primary' : 'outline'} onClick={() => onToggleStatus(item.id)}>
+          <Button
+            variant={required ? 'primary' : 'outline'}
+            onClick={() => onToggleStatus(item.id)}
+          >
             {required ? '가입 제외로 변경' : '가입 필요로 변경'}
           </Button>
         </>

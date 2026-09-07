@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Card from '@/shared/ui/Card'
-import Spinner from '@/shared/ui/Spinner'
-import ProgressBar from '@/shared/ui/ProgressBar'
-import { IconCheckCircle } from '@/shared/ui/Icon'
-import { cn } from '@/shared/lib/format'
+
+import Card from '@/components/common/Card'
+import { IconCheckCircle } from '@/components/common/Icon'
+import ProgressBar from '@/components/common/ProgressBar'
+import Spinner from '@/components/common/Spinner'
+import { cn } from '@/utils/format'
 
 const STEPS = [
   { label: '본인 인증', done: '휴대폰 인증 완료' },
@@ -36,7 +37,7 @@ export default function MydataLoadingPage() {
   return (
     <div className="flex flex-col items-center pt-40">
       <Spinner />
-      <h1 className="mt-8 typo-h2">금융 데이터를 안전하게 가져오는 중이에요</h1>
+      <h1 className="typo-h2 mt-8">금융 데이터를 안전하게 가져오는 중이에요</h1>
 
       <Card className="mt-12 w-[460px] space-y-1 p-6">
         {STEPS.map((s, i) => {
@@ -46,7 +47,10 @@ export default function MydataLoadingPage() {
           return (
             <div
               key={s.label}
-              className={cn('flex items-center justify-between py-3', i > 0 && 'border-t border-border-subtle')}
+              className={cn(
+                'flex items-center justify-between py-3',
+                i > 0 && 'border-border-subtle border-t',
+              )}
             >
               <span className="flex items-center gap-3">
                 {isDone ? (
@@ -61,8 +65,14 @@ export default function MydataLoadingPage() {
                 )}
                 <span className={cn('typo-body1', isWait && 'text-text-disabled')}>{s.label}</span>
               </span>
-              <span className={cn('typo-caption', isWait ? 'text-text-disabled' : 'text-text-muted')}>
-                {isDone ? s.done : isCurrent ? `가져오는 중 · ${progress % 25 === 0 ? 60 : (progress % 25) * 4}%` : '대기'}
+              <span
+                className={cn('typo-caption', isWait ? 'text-text-disabled' : 'text-text-muted')}
+              >
+                {isDone
+                  ? s.done
+                  : isCurrent
+                    ? `가져오는 중 · ${progress % 25 === 0 ? 60 : (progress % 25) * 4}%`
+                    : '대기'}
               </span>
             </div>
           )

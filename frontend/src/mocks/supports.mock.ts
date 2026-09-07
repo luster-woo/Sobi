@@ -1,4 +1,5 @@
-import type { Support } from '@/shared/types'
+import type { Support } from '@/types'
+
 import type { DashboardProduct } from './loans.mock'
 
 export const mockSupports: Support[] = [
@@ -68,21 +69,119 @@ export const mockSupports: Support[] = [
 ]
 
 export const mockDashboardSupports: DashboardProduct[] = [
-  { id: 'sp-2', name: '고용촉진장려금\n고용노동부', tags: ['보조금', '인건비'], metricLabel: '지원혜택', metricValue: '1인당 연 720만', bookmarked: false },
-  { id: 'sp-3', name: '소상공인\n경영개선 컨설팅', tags: ['컨설팅', '신규'], metricLabel: '지원혜택', metricValue: '최대 300만 원', bookmarked: false },
-  { id: 'sp-6', name: '대구\n소상공인 이자 지원', tags: ['보조금', '~ 10. 4'], metricLabel: '지원혜택', metricValue: '최대 200만 원', bookmarked: false },
-  { id: 'sp-9', name: '소상공인\n온라인 판로 지원', tags: ['바우처', '신규'], metricLabel: '지원혜택', metricValue: '최대 400만 원', bookmarked: false },
-  { id: 'sp-10', name: '중소기업\n노란우산 장려금', tags: ['보조금', '상시 접수'], metricLabel: '지원혜택', metricValue: '월 2만 원', bookmarked: false },
-  { id: 'sp-11', name: '대구\n착한가격업소 지원', tags: ['보조금', '~ 11. 30'], metricLabel: '지원혜택', metricValue: '최대 100만 원', bookmarked: false },
-  { id: 'sp-12', name: '소상공인\n배달·택배비 지원', tags: ['보조금', '연 1회'], metricLabel: '지원혜택', metricValue: '최대 30만 원', bookmarked: false },
-  { id: 'sp-13', name: '소상공인\n에너지 효율 개선', tags: ['바우처', '시설개선'], metricLabel: '지원혜택', metricValue: '최대 600만 원', bookmarked: false },
+  {
+    id: 'sp-2',
+    name: '고용촉진장려금\n고용노동부',
+    tags: ['보조금', '인건비'],
+    metricLabel: '지원혜택',
+    metricValue: '1인당 연 720만',
+    bookmarked: false,
+  },
+  {
+    id: 'sp-3',
+    name: '소상공인\n경영개선 컨설팅',
+    tags: ['컨설팅', '신규'],
+    metricLabel: '지원혜택',
+    metricValue: '최대 300만 원',
+    bookmarked: false,
+  },
+  {
+    id: 'sp-6',
+    name: '대구\n소상공인 이자 지원',
+    tags: ['보조금', '~ 10. 4'],
+    metricLabel: '지원혜택',
+    metricValue: '최대 200만 원',
+    bookmarked: false,
+  },
+  {
+    id: 'sp-9',
+    name: '소상공인\n온라인 판로 지원',
+    tags: ['바우처', '신규'],
+    metricLabel: '지원혜택',
+    metricValue: '최대 400만 원',
+    bookmarked: false,
+  },
+  {
+    id: 'sp-10',
+    name: '중소기업\n노란우산 장려금',
+    tags: ['보조금', '상시 접수'],
+    metricLabel: '지원혜택',
+    metricValue: '월 2만 원',
+    bookmarked: false,
+  },
+  {
+    id: 'sp-11',
+    name: '대구\n착한가격업소 지원',
+    tags: ['보조금', '~ 11. 30'],
+    metricLabel: '지원혜택',
+    metricValue: '최대 100만 원',
+    bookmarked: false,
+  },
+  {
+    id: 'sp-12',
+    name: '소상공인\n배달·택배비 지원',
+    tags: ['보조금', '연 1회'],
+    metricLabel: '지원혜택',
+    metricValue: '최대 30만 원',
+    bookmarked: false,
+  },
+  {
+    id: 'sp-13',
+    name: '소상공인\n에너지 효율 개선',
+    tags: ['바우처', '시설개선'],
+    metricLabel: '지원혜택',
+    metricValue: '최대 600만 원',
+    bookmarked: false,
+  },
 ]
 
 export const mockPreDashboardSupports: DashboardProduct[] = [
-  { id: 'sp-5', name: '청년창업사관학교\n중소벤처기업진흥공단', tags: ['보조금', '만 39세 이하'], metricLabel: '지원혜택', metricValue: '최대 1억 원', bookmarked: true },
-  { id: 'sp-7', name: '신사업창업사관학교\n소상공인시장진흥공단', tags: ['교육', '예비창업자'], metricLabel: '지원혜택', metricValue: '최대 2,000만 원', bookmarked: false },
-  { id: 'sp-8', name: '대구\n예비창업자 점포 임차료 지원', tags: ['보조금', '~ 11. 20'], metricLabel: '지원혜택', metricValue: '최대 500만 원', bookmarked: false },
-  { id: 'sp-14', name: '예비창업패키지\n창업진흥원', tags: ['보조금', '~ 10. 31'], metricLabel: '지원혜택', metricValue: '최대 5,000만 원', bookmarked: false },
-  { id: 'sp-15', name: '소상공인\n창업 교육 바우처', tags: ['교육', '상시 접수'], metricLabel: '지원혜택', metricValue: '최대 200만 원', bookmarked: false },
-  { id: 'sp-16', name: '대구\n청년 창업 공간 지원', tags: ['시설', '대구 소재'], metricLabel: '지원혜택', metricValue: '임차료 70%', bookmarked: false },
+  {
+    id: 'sp-5',
+    name: '청년창업사관학교\n중소벤처기업진흥공단',
+    tags: ['보조금', '만 39세 이하'],
+    metricLabel: '지원혜택',
+    metricValue: '최대 1억 원',
+    bookmarked: true,
+  },
+  {
+    id: 'sp-7',
+    name: '신사업창업사관학교\n소상공인시장진흥공단',
+    tags: ['교육', '예비창업자'],
+    metricLabel: '지원혜택',
+    metricValue: '최대 2,000만 원',
+    bookmarked: false,
+  },
+  {
+    id: 'sp-8',
+    name: '대구\n예비창업자 점포 임차료 지원',
+    tags: ['보조금', '~ 11. 20'],
+    metricLabel: '지원혜택',
+    metricValue: '최대 500만 원',
+    bookmarked: false,
+  },
+  {
+    id: 'sp-14',
+    name: '예비창업패키지\n창업진흥원',
+    tags: ['보조금', '~ 10. 31'],
+    metricLabel: '지원혜택',
+    metricValue: '최대 5,000만 원',
+    bookmarked: false,
+  },
+  {
+    id: 'sp-15',
+    name: '소상공인\n창업 교육 바우처',
+    tags: ['교육', '상시 접수'],
+    metricLabel: '지원혜택',
+    metricValue: '최대 200만 원',
+    bookmarked: false,
+  },
+  {
+    id: 'sp-16',
+    name: '대구\n청년 창업 공간 지원',
+    tags: ['시설', '대구 소재'],
+    metricLabel: '지원혜택',
+    metricValue: '임차료 70%',
+    bookmarked: false,
+  },
 ]

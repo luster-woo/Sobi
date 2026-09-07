@@ -1,21 +1,27 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import Card from '@/shared/ui/Card'
-import Badge from '@/shared/ui/Badge'
-import Button from '@/shared/ui/Button'
-import Select from '@/shared/ui/Select'
-import Input from '@/shared/ui/Input'
-import ProductCard from '@/shared/ui/ProductCard'
-import CardCarousel from '@/shared/ui/CardCarousel'
-import { IconCheckCircle, IconChevronRight, IconSearch } from '@/shared/ui/Icon'
-import InsuranceModal from './InsuranceModal'
-import { useRole } from '@/shared/lib/session'
-import { mockInsurances, mockUser } from '@/mocks/user.mock'
-import { mockDashboardLoans, mockPreDashboardLoans, type DashboardProduct } from '@/mocks/loans.mock'
-import { mockDashboardSupports, mockPreDashboardSupports } from '@/mocks/supports.mock'
+
+import Badge from '@/components/common/Badge'
+import Button from '@/components/common/Button'
+import Card from '@/components/common/Card'
+import CardCarousel from '@/components/common/CardCarousel'
+import { IconCheckCircle, IconChevronRight, IconSearch } from '@/components/common/Icon'
+import Input from '@/components/common/Input'
+import ProductCard from '@/components/common/ProductCard'
+import Select from '@/components/common/Select'
+import {
+  type DashboardProduct,
+  mockDashboardLoans,
+  mockPreDashboardLoans,
+} from '@/mocks/loans.mock'
 import { businessCodes, defaultMarketCondition } from '@/mocks/market.mock'
-import type { Insurance } from '@/shared/types'
-import { cn } from '@/shared/lib/format'
+import { mockDashboardSupports, mockPreDashboardSupports } from '@/mocks/supports.mock'
+import { mockInsurances, mockUser } from '@/mocks/user.mock'
+import type { Insurance } from '@/types'
+import { cn } from '@/utils/format'
+import { useRole } from '@/utils/session'
+
+import InsuranceModal from './InsuranceModal'
 
 const SALES = [
   { m: '3월', v: 58 },
@@ -77,9 +83,11 @@ function InsuranceCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="typo-caption text-text-muted">업종별 필수 가입 항목</p>
-          <p className="mt-0.5 typo-h4">{compact ? '의무보험 체크 리스트' : '의무보험'}</p>
+          <p className="typo-h4 mt-0.5">{compact ? '의무보험 체크 리스트' : '의무보험'}</p>
         </div>
-        {!compact && <span className="shrink-0 typo-body2 text-text-secondary">{missing}건 미가입</span>}
+        {!compact && (
+          <span className="typo-body2 text-text-secondary shrink-0">{missing}건 미가입</span>
+        )}
       </div>
 
       <ul className="space-y-3">
@@ -88,22 +96,22 @@ function InsuranceCard({
             {compact ? (
               <div className="flex items-center justify-between gap-2">
                 <span className="typo-body2">✓ {i.name}</span>
-                <span className="shrink-0 typo-caption text-text-muted">{i.law}</span>
+                <span className="typo-caption text-text-muted shrink-0">{i.law}</span>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => onSelect?.(i)}
-                className="-mx-2 flex w-[calc(100%+16px)] items-start gap-3 rounded-md px-2 py-1 text-left transition-colors hover:bg-surface-muted"
+                className="hover:bg-surface-muted -mx-2 flex w-[calc(100%+16px)] items-start gap-3 rounded-md px-2 py-1 text-left transition-colors"
               >
                 {i.status === 'joined' ? (
-                  <IconCheckCircle size={18} className="mt-0.5 shrink-0 text-primary" />
+                  <IconCheckCircle size={18} className="text-primary mt-0.5 shrink-0" />
                 ) : (
-                  <span className="mt-0.5 size-[18px] shrink-0 rounded-full border-2 border-border-strong" />
+                  <span className="border-border-strong mt-0.5 size-[18px] shrink-0 rounded-full border-2" />
                 )}
                 <span className="min-w-0">
-                  <span className="block typo-body1">{i.name}</span>
-                  <span className="mt-0.5 block typo-caption text-text-muted">
+                  <span className="typo-body1 block">{i.name}</span>
+                  <span className="typo-caption text-text-muted mt-0.5 block">
                     {i.law} · {i.status === 'joined' ? '가입 완료' : '가입 안내 보기'}
                   </span>
                 </span>
@@ -122,7 +130,7 @@ function NoticeCard({ items }: { items: [string, string][] }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="typo-caption text-text-muted">내 자격에 맞는 공고만</p>
-          <p className="mt-0.5 typo-h4">새 공고 알림</p>
+          <p className="typo-h4 mt-0.5">새 공고 알림</p>
         </div>
         <Badge variant="solid">신규 3</Badge>
       </div>
@@ -130,7 +138,7 @@ function NoticeCard({ items }: { items: [string, string][] }) {
         {items.map(([t, d]) => (
           <li key={t}>
             <p className="typo-body2">· {t}</p>
-            <p className="mt-0.5 pl-3 typo-caption text-text-muted">{d}</p>
+            <p className="typo-caption text-text-muted mt-0.5 pl-3">{d}</p>
           </li>
         ))}
       </ul>
@@ -145,7 +153,9 @@ function OwnerDashboard() {
 
   const toggleStatus = (id: string) => {
     setInsurances((xs) =>
-      xs.map((i) => (i.id === id ? { ...i, status: i.status === 'joined' ? 'required' : 'joined' } : i)),
+      xs.map((i) =>
+        i.id === id ? { ...i, status: i.status === 'joined' ? 'required' : 'joined' } : i,
+      ),
     )
     setSelected(null)
   }
@@ -158,7 +168,7 @@ function OwnerDashboard() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="typo-caption text-text-muted">마이데이터 · 2026. 9. 2 갱신</p>
-              <p className="mt-0.5 typo-h4">내 사업장 정보</p>
+              <p className="typo-h4 mt-0.5">내 사업장 정보</p>
             </div>
             <Badge variant="solid">연동 중</Badge>
           </div>
@@ -170,7 +180,10 @@ function OwnerDashboard() {
                 {SALES.map((s, i) => (
                   <div key={s.m} className="flex w-9 flex-col items-center gap-1.5">
                     <div
-                      className={cn('w-full rounded-t-sm', i === SALES.length - 1 ? 'bg-primary' : 'bg-border')}
+                      className={cn(
+                        'w-full rounded-t-sm',
+                        i === SALES.length - 1 ? 'bg-primary' : 'bg-border',
+                      )}
                       style={{ height: `${s.v}%` }}
                     />
                     <span className="typo-caption text-text-muted">{s.m}</span>
@@ -184,9 +197,11 @@ function OwnerDashboard() {
                 <div key={r.label} className="flex items-end justify-between gap-4">
                   <div>
                     <dt className="typo-caption text-text-muted">{r.label}</dt>
-                    <dd className="mt-0.5 font-heading text-[22px] leading-[30px] font-semibold">{r.value}</dd>
+                    <dd className="font-heading mt-0.5 text-[22px] leading-[30px] font-semibold">
+                      {r.value}
+                    </dd>
                   </div>
-                  <span className="shrink-0 pb-1 typo-caption text-text-muted">{r.note}</span>
+                  <span className="typo-caption text-text-muted shrink-0 pb-1">{r.note}</span>
                 </div>
               ))}
             </dl>
@@ -196,17 +211,17 @@ function OwnerDashboard() {
         {/* 판정 요약 */}
         <Card className="space-y-5">
           <div className="flex items-center gap-4">
-            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-background text-text-muted">
+            <span className="bg-bg text-text-muted inline-flex size-10 shrink-0 items-center justify-center rounded-full">
               <IconSearch size={18} />
             </span>
             <div>
               <p className="typo-h4">{mockUser.name} 님이 받을 수 있는 정책자금</p>
-              <p className="mt-1 typo-caption text-text-muted">
+              <p className="typo-caption text-text-muted mt-1">
                 매출·업력·부채비율·신용등급을 상품 요건과 대조해 판정해요
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-4 divide-x divide-border-subtle border-t border-border-subtle pt-4 text-center">
+          <div className="divide-border-subtle border-border-subtle grid grid-cols-4 divide-x border-t pt-4 text-center">
             {[
               ['신청 가능', '18건'],
               ['마감 임박', '5건'],
@@ -221,7 +236,12 @@ function OwnerDashboard() {
           </div>
         </Card>
 
-        <ProductSection title="지원 가능한 대출" linkLabel="대출 자격 판정 전체 보기" to="/loans" items={mockDashboardLoans} />
+        <ProductSection
+          title="지원 가능한 대출"
+          linkLabel="대출 자격 판정 전체 보기"
+          to="/loans"
+          items={mockDashboardLoans}
+        />
         <ProductSection
           title="지원 가능한 정부 지원금"
           linkLabel="지원금 자격 판정 전체 보기"
@@ -237,9 +257,9 @@ function OwnerDashboard() {
           <Link to="/repayments" className="flex items-start justify-between gap-3">
             <div>
               <p className="typo-caption text-text-muted">다음 상환일 9. 15 · 13일 남음</p>
-              <p className="mt-0.5 typo-h4">상환 관리</p>
+              <p className="typo-h4 mt-0.5">상환 관리</p>
             </div>
-            <IconChevronRight size={16} className="mt-1 shrink-0 text-text-muted" />
+            <IconChevronRight size={16} className="text-text-muted mt-1 shrink-0" />
           </Link>
           <div className="grid grid-cols-2 gap-3">
             {[
@@ -248,13 +268,13 @@ function OwnerDashboard() {
             ].map(([k, v]) => (
               <div key={k}>
                 <p className="typo-caption text-text-muted">{k}</p>
-                <p className="mt-0.5 font-heading text-[20px] leading-[28px] font-semibold">{v}</p>
+                <p className="font-heading mt-0.5 text-[20px] leading-[28px] font-semibold">{v}</p>
               </div>
             ))}
           </div>
           <Card variant="flat" className="rounded-md p-3">
             <p className="typo-body2">매출이 5개월 연속 올랐어요</p>
-            <p className="mt-0.5 typo-caption text-text-muted">금리 인하 요구 가능</p>
+            <p className="typo-caption text-text-muted mt-0.5">금리 인하 요구 가능</p>
           </Card>
         </Card>
 
@@ -266,7 +286,11 @@ function OwnerDashboard() {
         />
       </div>
 
-      <InsuranceModal item={selected} onClose={() => setSelected(null)} onToggleStatus={toggleStatus} />
+      <InsuranceModal
+        item={selected}
+        onClose={() => setSelected(null)}
+        onToggleStatus={toggleStatus}
+      />
     </div>
   )
 }
@@ -280,27 +304,67 @@ function PreDashboard() {
     <div className="space-y-5">
       <div>
         <h2 className="typo-h1">어떤 가게를 준비 중이세요?</h2>
-        <p className="mt-2 typo-body2 text-text-muted">입력한 조건으로 상권을 분석하고 필요한 지원금을 안내해요.</p>
+        <p className="typo-body2 text-text-muted mt-2">
+          입력한 조건으로 상권을 분석하고 필요한 지원금을 안내해요.
+        </p>
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)_300px] gap-6">
         <div className="space-y-6">
           <Card className="space-y-5">
             <div className="grid grid-cols-3 gap-4">
-              <Select label="업종 대분류" options={businessCodes.large} value={cond.large} onChange={(e) => setCond({ ...cond, large: e.target.value })} />
-              <Select label="업종 중분류" options={businessCodes.mid} value={cond.mid} onChange={(e) => setCond({ ...cond, mid: e.target.value })} />
-              <Select label="업종 소분류" options={businessCodes.small} value={cond.small} onChange={(e) => setCond({ ...cond, small: e.target.value })} />
-              <Select label="지역" options={businessCodes.regions} value={cond.region} onChange={(e) => setCond({ ...cond, region: e.target.value })} />
-              <Input label="규모" value={cond.size} onChange={(e) => setCond({ ...cond, size: e.target.value })} />
-              <Input label="예산" value={cond.budget} onChange={(e) => setCond({ ...cond, budget: e.target.value })} />
+              <Select
+                label="업종 대분류"
+                options={businessCodes.large}
+                value={cond.large}
+                onChange={(e) => setCond({ ...cond, large: e.target.value })}
+              />
+              <Select
+                label="업종 중분류"
+                options={businessCodes.mid}
+                value={cond.mid}
+                onChange={(e) => setCond({ ...cond, mid: e.target.value })}
+              />
+              <Select
+                label="업종 소분류"
+                options={businessCodes.small}
+                value={cond.small}
+                onChange={(e) => setCond({ ...cond, small: e.target.value })}
+              />
+              <Select
+                label="지역"
+                options={businessCodes.regions}
+                value={cond.region}
+                onChange={(e) => setCond({ ...cond, region: e.target.value })}
+              />
+              <Input
+                label="규모"
+                value={cond.size}
+                onChange={(e) => setCond({ ...cond, size: e.target.value })}
+              />
+              <Input
+                label="예산"
+                value={cond.budget}
+                onChange={(e) => setCond({ ...cond, budget: e.target.value })}
+              />
             </div>
             <div className="flex justify-end">
               <Button onClick={() => navigate('/market')}>상권 분석하기</Button>
             </div>
           </Card>
 
-          <ProductSection title="지원 가능한 대출" linkLabel="대출 전체 보기" to="/loans" items={mockPreDashboardLoans} />
-          <ProductSection title="지원 가능한 정부 지원금" linkLabel="지원금 전체 보기" to="/supports" items={mockPreDashboardSupports} />
+          <ProductSection
+            title="지원 가능한 대출"
+            linkLabel="대출 전체 보기"
+            to="/loans"
+            items={mockPreDashboardLoans}
+          />
+          <ProductSection
+            title="지원 가능한 정부 지원금"
+            linkLabel="지원금 전체 보기"
+            to="/supports"
+            items={mockPreDashboardSupports}
+          />
         </div>
 
         <div className="space-y-4">

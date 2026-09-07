@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
+import Button from '@/components/common/Button'
+import Input from '@/components/common/Input'
+import Select from '@/components/common/Select'
+
 import OnboardingShell from './OnboardingShell'
-import Input from '@/shared/ui/Input'
-import Select from '@/shared/ui/Select'
-import Button from '@/shared/ui/Button'
 
 /** 07. 휴대폰 본인 인증 */
 export default function BusinessPhonePage() {
@@ -32,16 +34,23 @@ export default function BusinessPhonePage() {
       </div>
 
       <div className="grid grid-cols-[150px_1fr_auto] items-end gap-3">
-        <Select label="통신사" options={['SKT', 'KT', 'LG U+', '알뜰폰']} value={carrier} onChange={(e) => setCarrier(e.target.value)} />
+        <Select
+          label="통신사"
+          options={['SKT', 'KT', 'LG U+', '알뜰폰']}
+          value={carrier}
+          onChange={(e) => setCarrier(e.target.value)}
+        />
         <Input label="휴대폰 번호" value={phone} onChange={(e) => setPhone(e.target.value)} />
         <Button onClick={() => setSent(true)}>인증번호 받기</Button>
       </div>
 
       {sent && (
         <>
-          <div className="flex items-center justify-between rounded-md bg-surface-muted px-4 py-3">
+          <div className="bg-surface-muted flex items-center justify-between rounded-md px-4 py-3">
             <span className="typo-body2">인증번호를 보냈어요. 문자를 확인해 주세요.</span>
-            <span className="typo-caption text-text-muted">유효 시간 03:00·재전송은 1분 후 가능</span>
+            <span className="typo-caption text-text-muted">
+              유효 시간 03:00·재전송은 1분 후 가능
+            </span>
           </div>
           <div className="flex items-end gap-3">
             <Input
@@ -56,10 +65,18 @@ export default function BusinessPhonePage() {
         </>
       )}
 
-      <Button className="w-full" disabled={!sent || code.length < 6} onClick={() => navigate('/mydata/consent')}>
+      <Button
+        className="w-full"
+        disabled={!sent || code.length < 6}
+        onClick={() => navigate('/mydata/consent')}
+      >
         인증 완료
       </Button>
-      {!sent && <p className="text-center typo-caption text-text-disabled">목업 안내: 인증번호 받기 → 6자리 입력 → 인증 완료</p>}
+      {!sent && (
+        <p className="typo-caption text-text-disabled text-center">
+          목업 안내: 인증번호 받기 → 6자리 입력 → 인증 완료
+        </p>
+      )}
     </OnboardingShell>
   )
 }

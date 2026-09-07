@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Card from '@/shared/ui/Card'
-import Button from '@/shared/ui/Button'
-import Badge from '@/shared/ui/Badge'
+
+import Badge from '@/components/common/Badge'
+import Button from '@/components/common/Button'
+import Card from '@/components/common/Card'
 import { mockFundingMixes } from '@/mocks/funding.mock'
-import { formatManWon } from '@/shared/lib/format'
+import { formatManWon } from '@/utils/format'
 
 const man = (n: number) => `${(n / 10_000).toLocaleString('ko-KR')}만`
 
@@ -20,11 +21,11 @@ export default function FundingPage() {
         <input
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="h-11 w-[260px] rounded-md border border-border-strong px-3.5 typo-body1"
+          className="border-border-strong typo-body1 h-11 w-[260px] rounded-md border px-3.5"
           aria-label="필요 금액"
         />
         <Button>조합 찾기</Button>
-        <span className="rounded-full bg-background px-4 py-2 typo-body2 text-text-muted">
+        <span className="bg-bg typo-body2 text-text-muted rounded-full px-4 py-2">
           정렬 <span className="text-text">이자 적은 순</span>
         </span>
       </Card>
@@ -35,7 +36,7 @@ export default function FundingPage() {
             <p className="typo-h4">{first.title}</p>
             {first.badge && <Badge variant="solid">{first.badge}</Badge>}
           </div>
-          <ul className="divide-y divide-border-subtle">
+          <ul className="divide-border-subtle divide-y">
             {first.items.map((it, i) => (
               <li key={it.name} className="flex items-center justify-between py-2.5">
                 <span className={i === 0 ? 'typo-h4' : 'typo-body1'}>
@@ -43,7 +44,7 @@ export default function FundingPage() {
                 </span>
                 <span className="flex items-baseline gap-3">
                   <span className="typo-h4 font-semibold">{formatManWon(it.amount)}</span>
-                  <span className="w-12 text-right typo-caption text-text-muted">
+                  <span className="typo-caption text-text-muted w-12 text-right">
                     {it.rate === null ? '무상' : `연 ${it.rate}%`}
                   </span>
                 </span>
@@ -88,12 +89,22 @@ export default function FundingPage() {
             <div className="space-y-1">
               <p className="typo-body2 text-text-secondary">{m.title}</p>
               <p className="typo-h4">
-                {m.items.map((it) => `${it.name.replace('소진공 ', '').replace('지역신보 ', '').replace(' 대출', '')} ${man(it.amount)}`).join(' + ')}
+                {m.items
+                  .map(
+                    (it) =>
+                      `${it.name.replace('소진공 ', '').replace('지역신보 ', '').replace(' 대출', '')} ${man(it.amount)}`,
+                  )
+                  .join(' + ')}
                 {m.items.length === 1 && `·연 ${m.avgRate}%`}
               </p>
               <p className="typo-caption text-text-muted">{m.notes[0]}</p>
             </div>
-            <Button variant="outline" size="sm" className="shrink-0" onClick={() => navigate('/loans/ln-1/apply')}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => navigate('/loans/ln-1/apply')}
+            >
               이 조합 선택
             </Button>
           </Card>
@@ -113,9 +124,9 @@ export default function FundingPage() {
           </thead>
           <tbody className="typo-body2">
             {mockFundingMixes.map((m, i) => (
-              <tr key={m.id} className="border-t border-border-subtle">
-                <td className="px-5 py-3 typo-label-sm">조합 {i + 1}</td>
-                <td className="px-5 py-3 typo-body1">{m.summary}</td>
+              <tr key={m.id} className="border-border-subtle border-t">
+                <td className="typo-label-sm px-5 py-3">조합 {i + 1}</td>
+                <td className="typo-body1 px-5 py-3">{m.summary}</td>
                 <td className="px-5 py-3">{formatManWon(m.total)}</td>
                 <td className="px-5 py-3">연 {m.avgRate}%</td>
                 <td className="px-5 py-3">{man(m.monthly)} 원</td>
@@ -124,7 +135,9 @@ export default function FundingPage() {
             ))}
           </tbody>
         </table>
-        <p className="px-5 py-3 typo-caption text-text-muted">무상 지원금 포함 총 조달액 기준 ·36개월 원리금균등 단순 비교</p>
+        <p className="typo-caption text-text-muted px-5 py-3">
+          무상 지원금 포함 총 조달액 기준 ·36개월 원리금균등 단순 비교
+        </p>
       </Card>
     </div>
   )

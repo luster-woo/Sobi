@@ -1,13 +1,14 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import Card from '@/shared/ui/Card'
-import Button from '@/shared/ui/Button'
-import Stepper from '@/shared/ui/Stepper'
-import StatCard from '@/shared/ui/StatCard'
-import DefinitionList from '@/shared/ui/DefinitionList'
-import { IconCheckCircle } from '@/shared/ui/Icon'
+
+import Button from '@/components/common/Button'
+import Card from '@/components/common/Card'
+import DefinitionList from '@/components/common/DefinitionList'
+import { IconCheckCircle } from '@/components/common/Icon'
+import StatCard from '@/components/common/StatCard'
+import Stepper from '@/components/common/Stepper'
 import { mockLoans } from '@/mocks/loans.mock'
 import { mockContracts } from '@/mocks/repayments.mock'
-import { formatDate, formatWon } from '@/shared/lib/format'
+import { formatDate, formatWon } from '@/utils/format'
 
 /** 13-3. 대출 진행 현황 (실행 완료) */
 export default function LoanStatusPage() {
@@ -52,9 +53,15 @@ export default function LoanStatusPage() {
           <DefinitionList
             labelWidth={96}
             items={[
-              { label: '입금 계좌', value: `${ct.account.bank} ${ct.account.masked} (신청 시 입력한 출금 계좌)` },
+              {
+                label: '입금 계좌',
+                value: `${ct.account.bank} ${ct.account.masked} (신청 시 입력한 출금 계좌)`,
+              },
               { label: '입금 일시', value: `${formatDate(ct.executedAt)} 14:20` },
-              { label: '실행 금액', value: <span className="typo-h4 font-semibold">{formatWon(ct.principal)}</span> },
+              {
+                label: '실행 금액',
+                value: <span className="typo-h4 font-semibold">{formatWon(ct.principal)}</span>,
+              },
               { label: '취급 기관', value: ct.agency },
               { label: '계약 번호', value: ct.contractNo },
             ]}
@@ -76,8 +83,8 @@ export default function LoanStatusPage() {
         <Card className="space-y-4">
           <p className="typo-h4">자동상환 안내</p>
           <p className="typo-body2 text-text-secondary">
-            신청 시 입력한 출금 계좌({ct.account.bank} {ct.account.masked})가 자동이체 계좌로 등록됐어요, 매월{' '}
-            {ct.account.day}일에 수시 입출금 계좌에서 자동상환돼요.
+            신청 시 입력한 출금 계좌({ct.account.bank} {ct.account.masked})가 자동이체 계좌로
+            등록됐어요, 매월 {ct.account.day}일에 수시 입출금 계좌에서 자동상환돼요.
           </p>
           <Button className="w-full" onClick={() => navigate('/repayments')}>
             상환 관리로 이동

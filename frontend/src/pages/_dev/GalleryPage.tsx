@@ -1,15 +1,16 @@
 import { useState } from 'react'
-import Button from '@/shared/ui/Button'
-import Badge from '@/shared/ui/Badge'
-import Card, { CardHeader, CardDivider, CardRow } from '@/shared/ui/Card'
-import Input from '@/shared/ui/Input'
-import Modal from '@/shared/ui/Modal'
+
+import Badge from '@/components/common/Badge'
+import Button from '@/components/common/Button'
+import Card, { CardDivider, CardHeader, CardRow } from '@/components/common/Card'
+import Input from '@/components/common/Input'
+import Modal from '@/components/common/Modal'
 
 export default function GalleryPage() {
   const [modalOpen, setModalOpen] = useState(false)
 
   return (
-    <div className="p-10 space-y-8">
+    <div className="space-y-8 p-10">
       <section className="space-y-3">
         <h2 className="typo-h3">variants</h2>
         <div className="flex gap-3">
@@ -34,7 +35,9 @@ export default function GalleryPage() {
         <div className="flex gap-3">
           <Button loading>처리 중</Button>
           <Button disabled>비활성</Button>
-          <Button variant="outline" disabled>비활성</Button>
+          <Button variant="outline" disabled>
+            비활성
+          </Button>
         </div>
       </section>
 
@@ -48,13 +51,23 @@ export default function GalleryPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="solid">연동 중</Badge>
-          <Badge variant="solid" tone="warning">마감 임박 D-3</Badge>
-          <Badge variant="solid" tone="danger">반려</Badge>
-          <Badge variant="solid" tone="neutral">전체 52건</Badge>
+          <Badge variant="solid" tone="warning">
+            마감 임박 D-3
+          </Badge>
+          <Badge variant="solid" tone="danger">
+            반려
+          </Badge>
+          <Badge variant="solid" tone="neutral">
+            전체 52건
+          </Badge>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Badge variant="dot" tone="danger">연체</Badge>
-          <Badge variant="dot" tone="neutral">심사 중</Badge>
+          <Badge variant="dot" tone="danger">
+            연체
+          </Badge>
+          <Badge variant="dot" tone="neutral">
+            심사 중
+          </Badge>
         </div>
       </section>
 
@@ -72,7 +85,9 @@ export default function GalleryPage() {
               <CardRow label="출금일" value="2026. 8. 15" />
               <CardRow label="금액" value="92만 원" strong />
             </div>
-            <Button variant="outline" size="sm">전체 보기</Button>
+            <Button variant="outline" size="sm">
+              전체 보기
+            </Button>
           </Card>
 
           <div className="space-y-4">
@@ -140,7 +155,9 @@ export default function GalleryPage() {
           <p className="typo-body1">자격 판정 · 자금 조합 결과도 함께 삭제돼요.</p>
 
           <Card variant="flat" className="mt-5 rounded-md p-4">
-            <p className="typo-body2 text-text-secondary">다시 연동하면 처음부터 정보를 가져와요.</p>
+            <p className="typo-body2 text-text-secondary">
+              다시 연동하면 처음부터 정보를 가져와요.
+            </p>
             <p className="typo-body2 text-text-secondary">가져오기에는 1~2분이 걸려요.</p>
           </Card>
         </Modal>

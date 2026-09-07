@@ -1,4 +1,4 @@
-import type { LoanContract } from '@/shared/types'
+import type { LoanContract } from '@/types'
 
 export const mockContracts: LoanContract[] = [
   {

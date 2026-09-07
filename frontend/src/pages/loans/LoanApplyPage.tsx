@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import Card from '@/shared/ui/Card'
-import Button from '@/shared/ui/Button'
-import Tag from '@/shared/ui/Tag'
-import Select from '@/shared/ui/Select'
-import DocumentList from '@/shared/ui/DocumentList'
-import DefinitionList from '@/shared/ui/DefinitionList'
-import { IconCheckCircle, IconChevronRight } from '@/shared/ui/Icon'
-import { mockLoans } from '@/mocks/loans.mock'
+
+import Button from '@/components/common/Button'
+import Card from '@/components/common/Card'
+import DefinitionList from '@/components/common/DefinitionList'
+import DocumentList from '@/components/common/DocumentList'
+import { IconCheckCircle, IconChevronRight } from '@/components/common/Icon'
+import Select from '@/components/common/Select'
+import Tag from '@/components/common/Tag'
 import { mockLoanSubmitDocs, mockLoanWriteDocs } from '@/mocks/applications.mock'
+import { mockLoans } from '@/mocks/loans.mock'
 import { mockDepositAccounts } from '@/mocks/user.mock'
-import { formatManWon, formatMonthDay } from '@/shared/lib/format'
+import { formatManWon, formatMonthDay } from '@/utils/format'
 
 /** 13-2. 대출 신청·서류 제출 */
 export default function LoanApplyPage() {
@@ -20,7 +21,8 @@ export default function LoanApplyPage() {
   const [docs, setDocs] = useState(mockLoanSubmitDocs)
   const withdraw = mockDepositAccounts.find((a) => a.isWithdraw)!
 
-  const upload = (id: string) => setDocs((xs) => xs.map((d) => (d.id === id ? { ...d, status: 'passed' } : d)))
+  const upload = (id: string) =>
+    setDocs((xs) => xs.map((d) => (d.id === id ? { ...d, status: 'passed' } : d)))
   const ready = docs.every((d) => d.status === 'passed' || d.status === 'checking')
 
   return (
@@ -43,7 +45,9 @@ export default function LoanApplyPage() {
             <Card className="space-y-3">
               <Select
                 label="계좌번호"
-                options={mockDepositAccounts.map((a) => `${a.bank}  ${a.masked.replace('****', '508-12')}`)}
+                options={mockDepositAccounts.map(
+                  (a) => `${a.bank}  ${a.masked.replace('****', '508-12')}`,
+                )}
               />
               <div className="flex items-center gap-2">
                 <IconCheckCircle size={18} className="text-primary" />
@@ -55,11 +59,16 @@ export default function LoanApplyPage() {
             </Card>
           </section>
 
-          <Button size="lg" className="w-full" disabled={!ready} onClick={() => navigate(`/loans/${loan.id}/status`)}>
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={!ready}
+            onClick={() => navigate(`/loans/${loan.id}/status`)}
+          >
             신청하기
           </Button>
           {!ready && (
-            <p className="text-center typo-caption text-text-disabled">
+            <p className="typo-caption text-text-disabled text-center">
               목업 안내: 검증 실패·미제출 서류의 업로드 버튼을 누르면 통과 처리돼요
             </p>
           )}
@@ -69,19 +78,20 @@ export default function LoanApplyPage() {
           <Card className="space-y-3">
             <p className="typo-h4">제출·작성 서류</p>
             <ol className="space-y-2.5">
-              {[...docs.map((d) => [d.name, d.source]), ...mockLoanWriteDocs.map((w) => [w.name, '화면에서 작성'])].map(
-                ([n, s], i) => (
-                  <li key={n} className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-2 typo-body2">
-                      <span className="inline-flex size-5 items-center justify-center rounded-full border border-border-strong typo-caption text-text-muted">
-                        {i + 1}
-                      </span>
-                      {n}
+              {[
+                ...docs.map((d) => [d.name, d.source]),
+                ...mockLoanWriteDocs.map((w) => [w.name, '화면에서 작성']),
+              ].map(([n, s], i) => (
+                <li key={n} className="flex items-center justify-between gap-2">
+                  <span className="typo-body2 flex items-center gap-2">
+                    <span className="border-border-strong typo-caption text-text-muted inline-flex size-5 items-center justify-center rounded-full border">
+                      {i + 1}
                     </span>
-                    <span className="typo-caption text-text-muted">{s}</span>
-                  </li>
-                ),
-              )}
+                    {n}
+                  </span>
+                  <span className="typo-caption text-text-muted">{s}</span>
+                </li>
+              ))}
             </ol>
           </Card>
 
@@ -108,7 +118,7 @@ export default function LoanApplyPage() {
               <br />
               실행금 입금과 자동상환에 사용돼요.
             </p>
-            <IconChevronRight size={16} className="absolute bottom-4 right-4 text-text-muted" />
+            <IconChevronRight size={16} className="text-text-muted absolute right-4 bottom-4" />
           </Card>
         </div>
       </div>

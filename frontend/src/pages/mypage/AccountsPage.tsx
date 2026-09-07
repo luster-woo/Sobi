@@ -1,18 +1,28 @@
-import Card from '@/shared/ui/Card'
-import Button from '@/shared/ui/Button'
-import Badge from '@/shared/ui/Badge'
-import Tag from '@/shared/ui/Tag'
-import StatCard from '@/shared/ui/StatCard'
-import PageTitle from '@/shared/ui/PageTitle'
-import { IconChevronRight, IconWon } from '@/shared/ui/Icon'
-import { mockDepositAccounts } from '@/mocks/user.mock'
+import Badge from '@/components/common/Badge'
+import Button from '@/components/common/Button'
+import Card from '@/components/common/Card'
+import { IconChevronRight, IconWon } from '@/components/common/Icon'
+import PageTitle from '@/components/common/PageTitle'
+import StatCard from '@/components/common/StatCard'
+import Tag from '@/components/common/Tag'
 import { mockContracts } from '@/mocks/repayments.mock'
-import { formatManWon, formatMonthDay } from '@/shared/lib/format'
+import { mockDepositAccounts } from '@/mocks/user.mock'
+import { formatManWon, formatMonthDay } from '@/utils/format'
 
-function Row({ title, sub, right, badges }: { title: string; sub: string; right: string; badges?: React.ReactNode }) {
+function Row({
+  title,
+  sub,
+  right,
+  badges,
+}: {
+  title: string
+  sub: string
+  right: string
+  badges?: React.ReactNode
+}) {
   return (
-    <li className="flex items-center gap-4 border-t border-border-subtle px-5 py-3 first:border-t-0">
-      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-text-muted">
+    <li className="border-border-subtle flex items-center gap-4 border-t px-5 py-3 first:border-t-0">
+      <span className="border-border text-text-muted inline-flex size-8 shrink-0 items-center justify-center rounded-full border">
         <IconWon size={16} />
       </span>
       <div className="min-w-0 flex-1">
@@ -38,8 +48,12 @@ export default function AccountsPage() {
         title="연동 계좌"
         right={
           <div className="flex items-center gap-4">
-            <span className="typo-caption text-text-muted">마이데이터로 불러온 계좌예요 · 2026. 9. 2 14:20 갱신</span>
-            <Button variant="outline" size="sm">지금 갱신</Button>
+            <span className="typo-caption text-text-muted">
+              마이데이터로 불러온 계좌예요 · 2026. 9. 2 14:20 갱신
+            </span>
+            <Button variant="outline" size="sm">
+              지금 갱신
+            </Button>
           </div>
         }
       />
@@ -92,7 +106,9 @@ export default function AccountsPage() {
             ))}
           </ul>
         </Card>
-        <p className="typo-caption text-text-muted">계좌를 누르면 최근 거래 내역과 연동 상태를 볼 수 있어요</p>
+        <p className="typo-caption text-text-muted">
+          계좌를 누르면 최근 거래 내역과 연동 상태를 볼 수 있어요
+        </p>
       </section>
     </div>
   )

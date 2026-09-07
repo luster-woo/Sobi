@@ -1,4 +1,4 @@
-import type { Loan } from '@/shared/types'
+import type { Loan } from '@/types'
 
 export const mockLoans: Loan[] = [
   {
@@ -101,21 +101,119 @@ export interface DashboardProduct {
 
 /** 대시보드 "지원 가능한 대출" 카로셀 */
 export const mockDashboardLoans: DashboardProduct[] = [
-  { id: 'ln-2', name: '지역신보\n보증부 대출', tags: ['운전자금', '보증서 필요'], metricLabel: '금리', metricValue: '연 4.1%', bookmarked: true },
-  { id: 'ln-3', name: '소상공인\n성장촉진자금', tags: ['운전자금', '업력 3년 이상'], metricLabel: '금리', metricValue: '연 3.0%', bookmarked: false },
-  { id: 'ln-6', name: '소상공인\n재도전 특별자금', tags: ['운전자금', '상시 접수'], metricLabel: '금리', metricValue: '연 3.2%', bookmarked: false },
-  { id: 'ln-10', name: '소진공\n소상공인 특별경영안정자금', tags: ['운전자금', '재해 피해'], metricLabel: '금리', metricValue: '연 2.9%', bookmarked: false },
-  { id: 'ln-11', name: '대구은행\n소상공인 이자 지원 대출', tags: ['운전자금', '대구 소재'], metricLabel: '금리', metricValue: '연 3.5%', bookmarked: false },
-  { id: 'ln-12', name: '기업은행\n소상공인 희망 대출', tags: ['운전자금', '무담보'], metricLabel: '금리', metricValue: '연 3.8%', bookmarked: false },
-  { id: 'ln-13', name: '신용보증기금\n햇살론 사업자', tags: ['운전자금', '보증서 필요'], metricLabel: '금리', metricValue: '연 4.3%', bookmarked: false },
-  { id: 'ln-14', name: '소진공\n스마트상점 시설자금', tags: ['시설자금', '~ 10. 20'], metricLabel: '금리', metricValue: '연 2.7%', bookmarked: false },
+  {
+    id: 'ln-2',
+    name: '지역신보\n보증부 대출',
+    tags: ['운전자금', '보증서 필요'],
+    metricLabel: '금리',
+    metricValue: '연 4.1%',
+    bookmarked: true,
+  },
+  {
+    id: 'ln-3',
+    name: '소상공인\n성장촉진자금',
+    tags: ['운전자금', '업력 3년 이상'],
+    metricLabel: '금리',
+    metricValue: '연 3.0%',
+    bookmarked: false,
+  },
+  {
+    id: 'ln-6',
+    name: '소상공인\n재도전 특별자금',
+    tags: ['운전자금', '상시 접수'],
+    metricLabel: '금리',
+    metricValue: '연 3.2%',
+    bookmarked: false,
+  },
+  {
+    id: 'ln-10',
+    name: '소진공\n소상공인 특별경영안정자금',
+    tags: ['운전자금', '재해 피해'],
+    metricLabel: '금리',
+    metricValue: '연 2.9%',
+    bookmarked: false,
+  },
+  {
+    id: 'ln-11',
+    name: '대구은행\n소상공인 이자 지원 대출',
+    tags: ['운전자금', '대구 소재'],
+    metricLabel: '금리',
+    metricValue: '연 3.5%',
+    bookmarked: false,
+  },
+  {
+    id: 'ln-12',
+    name: '기업은행\n소상공인 희망 대출',
+    tags: ['운전자금', '무담보'],
+    metricLabel: '금리',
+    metricValue: '연 3.8%',
+    bookmarked: false,
+  },
+  {
+    id: 'ln-13',
+    name: '신용보증기금\n햇살론 사업자',
+    tags: ['운전자금', '보증서 필요'],
+    metricLabel: '금리',
+    metricValue: '연 4.3%',
+    bookmarked: false,
+  },
+  {
+    id: 'ln-14',
+    name: '소진공\n스마트상점 시설자금',
+    tags: ['시설자금', '~ 10. 20'],
+    metricLabel: '금리',
+    metricValue: '연 2.7%',
+    bookmarked: false,
+  },
 ]
 
 export const mockPreDashboardLoans: DashboardProduct[] = [
-  { id: 'ln-7', name: '소진공\n창업기반자금', tags: ['운전자금', '업력 1년 미만'], metricLabel: '금리', metricValue: '연 3.0%', bookmarked: true },
-  { id: 'ln-8', name: '창업초기\n보증부 대출', tags: ['운전자금', '보증서 필요'], metricLabel: '금리', metricValue: '연 3.8%', bookmarked: false },
-  { id: 'ln-9', name: '신사업창업사관학교\n연계자금', tags: ['시설자금', '교육 수료 필요'], metricLabel: '금리', metricValue: '연 2.0%', bookmarked: false },
-  { id: 'ln-15', name: '청년전용\n창업자금', tags: ['운전자금', '만 39세 이하'], metricLabel: '금리', metricValue: '연 2.5%', bookmarked: false },
-  { id: 'ln-16', name: '대구광역시\n예비창업자 특별자금', tags: ['시설자금', '대구 소재'], metricLabel: '금리', metricValue: '연 2.3%', bookmarked: false },
-  { id: 'ln-17', name: '소진공\n재창업 지원자금', tags: ['운전자금', '재창업'], metricLabel: '금리', metricValue: '연 3.1%', bookmarked: false },
+  {
+    id: 'ln-7',
+    name: '소진공\n창업기반자금',
+    tags: ['운전자금', '업력 1년 미만'],
+    metricLabel: '금리',
+    metricValue: '연 3.0%',
+    bookmarked: true,
+  },
+  {
+    id: 'ln-8',
+    name: '창업초기\n보증부 대출',
+    tags: ['운전자금', '보증서 필요'],
+    metricLabel: '금리',
+    metricValue: '연 3.8%',
+    bookmarked: false,
+  },
+  {
+    id: 'ln-9',
+    name: '신사업창업사관학교\n연계자금',
+    tags: ['시설자금', '교육 수료 필요'],
+    metricLabel: '금리',
+    metricValue: '연 2.0%',
+    bookmarked: false,
+  },
+  {
+    id: 'ln-15',
+    name: '청년전용\n창업자금',
+    tags: ['운전자금', '만 39세 이하'],
+    metricLabel: '금리',
+    metricValue: '연 2.5%',
+    bookmarked: false,
+  },
+  {
+    id: 'ln-16',
+    name: '대구광역시\n예비창업자 특별자금',
+    tags: ['시설자금', '대구 소재'],
+    metricLabel: '금리',
+    metricValue: '연 2.3%',
+    bookmarked: false,
+  },
+  {
+    id: 'ln-17',
+    name: '소진공\n재창업 지원자금',
+    tags: ['운전자금', '재창업'],
+    metricLabel: '금리',
+    metricValue: '연 3.1%',
+    bookmarked: false,
+  },
 ]

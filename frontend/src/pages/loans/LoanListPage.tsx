@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import SearchBar from '@/shared/ui/SearchBar'
-import FilterChip from '@/shared/ui/FilterChip'
-import ProductRow from '@/shared/ui/ProductRow'
-import Pagination from '@/shared/ui/Pagination'
-import Card from '@/shared/ui/Card'
-import Spinner from '@/shared/ui/Spinner'
-import ProgressBar from '@/shared/ui/ProgressBar'
-import LoanDetailModal from './LoanDetailModal'
+
+import Card from '@/components/common/Card'
+import FilterChip from '@/components/common/FilterChip'
+import Pagination from '@/components/common/Pagination'
+import ProductRow from '@/components/common/ProductRow'
+import ProgressBar from '@/components/common/ProgressBar'
+import SearchBar from '@/components/common/SearchBar'
+import Spinner from '@/components/common/Spinner'
 import { mockLoans } from '@/mocks/loans.mock'
-import { formatManWon, formatMonthDay } from '@/shared/lib/format'
+import { formatManWon, formatMonthDay } from '@/utils/format'
+
+import LoanDetailModal from './LoanDetailModal'
 
 const JUDGED_KEY = 'sobi.mock.loansJudged'
 
@@ -18,15 +20,17 @@ function JudgingLoading({ progress }: { progress: number }) {
   return (
     <div className="flex flex-col items-center pt-32">
       <Spinner />
-      <h2 className="mt-8 typo-h2">내 사업체 기준으로 상품을 고르고 있어요</h2>
-      <p className="mt-2 typo-body2 text-text-muted">매출·업력·부채비율·신용등급을 상품 요건과 대조하는 중 ·약 10초</p>
+      <h2 className="typo-h2 mt-8">내 사업체 기준으로 상품을 고르고 있어요</h2>
+      <p className="typo-body2 text-text-muted mt-2">
+        매출·업력·부채비율·신용등급을 상품 요건과 대조하는 중 ·약 10초
+      </p>
       <Card className="mt-10 w-[420px] space-y-3">
         <div className="flex items-center justify-between">
           <span className="typo-label-sm">20개 상품 중 {Math.round(progress / 5)}개 판정 완료</span>
           <span className="typo-caption text-text-muted">{progress}%</span>
         </div>
         <ProgressBar value={progress} />
-        <ul className="space-y-1.5 border-t border-border-subtle pt-3 typo-caption text-text-muted">
+        <ul className="border-border-subtle typo-caption text-text-muted space-y-1.5 border-t pt-3">
           <li>✓ 사업자 정보 확인 완료</li>
           <li>✓ 마이데이터 최신본 불러오기 완료</li>
           <li>·상품별 자격 요건 대조 중...</li>
@@ -80,7 +84,7 @@ export default function LoanListPage() {
         <FilterChip dropdown>판정 결과</FilterChip>
         <FilterChip dropdown>취급 기관</FilterChip>
         <FilterChip dropdown>즐겨찾기만</FilterChip>
-        <span className="ml-3 typo-body2 text-text-muted">
+        <span className="typo-body2 text-text-muted ml-3">
           정렬 <span className="text-text">금리 낮은 순</span>
         </span>
       </div>
@@ -118,7 +122,11 @@ export default function LoanListPage() {
 
       <Pagination page={page} total={4} onChange={setPage} />
 
-      <LoanDetailModal loan={selected} onClose={() => navigate('/loans')} onToggleBookmark={toggleBookmark} />
+      <LoanDetailModal
+        loan={selected}
+        onClose={() => navigate('/loans')}
+        onToggleBookmark={toggleBookmark}
+      />
     </div>
   )
 }

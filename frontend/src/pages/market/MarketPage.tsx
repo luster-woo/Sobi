@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Card from '@/shared/ui/Card'
-import Button from '@/shared/ui/Button'
-import Modal from '@/shared/ui/Modal'
-import Select from '@/shared/ui/Select'
-import Input from '@/shared/ui/Input'
-import StatCard from '@/shared/ui/StatCard'
-import Tag from '@/shared/ui/Tag'
-import { IconChevronRight } from '@/shared/ui/Icon'
-import type { MarketAnalysis, MarketCondition } from '@/shared/types'
+
+import Button from '@/components/common/Button'
+import Card from '@/components/common/Card'
+import { IconChevronRight } from '@/components/common/Icon'
+import Input from '@/components/common/Input'
+import Modal from '@/components/common/Modal'
+import Select from '@/components/common/Select'
+import StatCard from '@/components/common/StatCard'
+import Tag from '@/components/common/Tag'
 import { businessCodes, defaultMarketCondition, mockMarketAnalysis } from '@/mocks/market.mock'
+import type { MarketAnalysis, MarketCondition } from '@/types'
 
 /** 11-1. 상권 분석·조건 입력 모달 */
 function ConditionModal({
@@ -24,7 +25,8 @@ function ConditionModal({
   onSubmit: (c: MarketCondition) => void
 }) {
   const [c, setC] = useState(initial)
-  const set = (k: keyof MarketCondition) => (e: { target: { value: string } }) => setC({ ...c, [k]: e.target.value })
+  const set = (k: keyof MarketCondition) => (e: { target: { value: string } }) =>
+    setC({ ...c, [k]: e.target.value })
 
   return (
     <Modal
@@ -35,10 +37,30 @@ function ConditionModal({
       className="max-w-[720px]"
     >
       <div className="grid grid-cols-3 gap-4">
-        <Select label="업종 대분류" options={businessCodes.large} value={c.large} onChange={set('large')} />
-        <Select label="업종 중분류" options={businessCodes.mid} value={c.mid} onChange={set('mid')} />
-        <Select label="업종 소분류" options={businessCodes.small} value={c.small} onChange={set('small')} />
-        <Select label="지역" options={businessCodes.regions} value={c.region} onChange={set('region')} />
+        <Select
+          label="업종 대분류"
+          options={businessCodes.large}
+          value={c.large}
+          onChange={set('large')}
+        />
+        <Select
+          label="업종 중분류"
+          options={businessCodes.mid}
+          value={c.mid}
+          onChange={set('mid')}
+        />
+        <Select
+          label="업종 소분류"
+          options={businessCodes.small}
+          value={c.small}
+          onChange={set('small')}
+        />
+        <Select
+          label="지역"
+          options={businessCodes.regions}
+          value={c.region}
+          onChange={set('region')}
+        />
         <Input label="규모" value={c.size} onChange={set('size')} />
         <Input label="예산" value={c.budget} onChange={set('budget')} />
       </div>
@@ -54,8 +76,11 @@ function ConditionModal({
 
 function Bar({ value, max }: { value: number; max: number }) {
   return (
-    <div className="h-1.5 flex-1 rounded-full bg-border">
-      <div className="h-full rounded-full bg-border-strong" style={{ width: `${(value / max) * 100}%` }} />
+    <div className="bg-border h-1.5 flex-1 rounded-full">
+      <div
+        className="bg-border-strong h-full rounded-full"
+        style={{ width: `${(value / max) * 100}%` }}
+      />
     </div>
   )
 }
@@ -71,7 +96,7 @@ function Result({ a, onReset }: { a: MarketAnalysis; onReset: () => void }) {
           <h2 className="typo-h3">
             {c.region} 산격동·{c.large} &gt; {c.mid} &gt; {c.small}
           </h2>
-          <p className="mt-1 typo-caption text-text-muted">반경 500m · 2026. 8 기준</p>
+          <p className="typo-caption text-text-muted mt-1">반경 500m · 2026. 8 기준</p>
         </div>
         <Button variant="outline" size="sm" onClick={onReset}>
           조건 재설정
@@ -90,7 +115,7 @@ function Result({ a, onReset }: { a: MarketAnalysis; onReset: () => void }) {
           <Card className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="typo-h4">동종업종 밀집도 — 지역 평균 대비</p>
-              <span className="inline-flex h-6 items-center rounded-full border border-border-strong px-3 typo-badge text-text-secondary">
+              <span className="border-border-strong typo-badge text-text-secondary inline-flex h-6 items-center rounded-full border px-3">
                 평균보다 높음
               </span>
             </div>
@@ -100,9 +125,9 @@ function Result({ a, onReset }: { a: MarketAnalysis; onReset: () => void }) {
                 ['산격동', a.density.here],
               ].map(([k, v]) => (
                 <div key={k} className="flex items-center gap-4">
-                  <span className="w-16 typo-caption text-text-muted">{k}</span>
+                  <span className="typo-caption text-text-muted w-16">{k}</span>
                   <Bar value={v as number} max={30} />
-                  <span className="w-10 text-right typo-body2">{v}곳</span>
+                  <span className="typo-body2 w-10 text-right">{v}곳</span>
                 </div>
               ))}
             </div>
@@ -110,7 +135,7 @@ function Result({ a, onReset }: { a: MarketAnalysis; onReset: () => void }) {
           </Card>
 
           <Card className="space-y-3 p-0">
-            <p className="px-5 pt-5 typo-h4">주변 상권 비교</p>
+            <p className="typo-h4 px-5 pt-5">주변 상권 비교</p>
             <table className="w-full text-left">
               <thead className="bg-surface-muted typo-caption text-text-muted">
                 <tr>
@@ -123,12 +148,12 @@ function Result({ a, onReset }: { a: MarketAnalysis; onReset: () => void }) {
               </thead>
               <tbody className="typo-body2">
                 {a.nearby.map((n) => (
-                  <tr key={n.dong} className="border-t border-border-subtle">
+                  <tr key={n.dong} className="border-border-subtle border-t">
                     <td className="px-5 py-3">{n.dong}</td>
                     <td className="px-5 py-3">{n.count}곳</td>
                     <td className="px-5 py-3">{n.traffic}</td>
                     <td className="px-5 py-3">{n.rent}</td>
-                    <td className="px-5 py-3 typo-label-sm">{n.sales}</td>
+                    <td className="typo-label-sm px-5 py-3">{n.sales}</td>
                   </tr>
                 ))}
               </tbody>
@@ -151,14 +176,17 @@ function Result({ a, onReset }: { a: MarketAnalysis; onReset: () => void }) {
             <p className="typo-h4">업종 구성 - 반경 500m</p>
             {a.composition.map((c2) => (
               <div key={c2.name} className="space-y-1">
-                <div className="flex justify-between typo-body2">
+                <div className="typo-body2 flex justify-between">
                   <span>{c2.name}</span>
                   <span className="text-text-secondary">
                     {c2.count}곳·{c2.ratio}%
                   </span>
                 </div>
-                <div className="h-1 w-1/2 rounded-full bg-border">
-                  <div className="h-full rounded-full bg-border-strong" style={{ width: `${c2.ratio * 2}%` }} />
+                <div className="bg-border h-1 w-1/2 rounded-full">
+                  <div
+                    className="bg-border-strong h-full rounded-full"
+                    style={{ width: `${c2.ratio * 2}%` }}
+                  />
                 </div>
               </div>
             ))}
@@ -175,13 +203,17 @@ function Result({ a, onReset }: { a: MarketAnalysis; onReset: () => void }) {
           </Card>
 
           <Card className="space-y-2">
-            <button type="button" onClick={() => navigate('/loans')} className="flex w-full items-start justify-between text-left">
+            <button
+              type="button"
+              onClick={() => navigate('/loans')}
+              className="flex w-full items-start justify-between text-left"
+            >
               <div>
                 <p className="typo-caption text-text-muted">이 조건으로 받을 수 있는</p>
                 <p className="typo-h4">예비창업자 대출 4건</p>
                 <p className="typo-caption text-text-muted">예비창업대출</p>
               </div>
-              <IconChevronRight size={16} className="mt-1 text-text-muted" />
+              <IconChevronRight size={16} className="text-text-muted mt-1" />
             </button>
             <div className="flex flex-wrap gap-1.5">
               <Tag>운전자금 3</Tag>

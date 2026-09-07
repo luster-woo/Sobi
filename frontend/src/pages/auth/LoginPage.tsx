@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import AuthCard, { OrDivider } from '@/shared/ui/AuthCard'
-import Input from '@/shared/ui/Input'
-import Button from '@/shared/ui/Button'
-import Checkbox from '@/shared/ui/Checkbox'
+
+import AuthCard, { OrDivider } from '@/components/common/AuthCard'
+import Button from '@/components/common/Button'
+import Checkbox from '@/components/common/Checkbox'
+import Input from '@/components/common/Input'
 
 /** 02. 로그인 */
 export default function LoginPage() {
@@ -31,11 +32,25 @@ export default function LoginPage() {
           navigate('/dashboard')
         }}
       >
-        <Input label="아이디 (이메일)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <Input label="비밀번호" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Input
+          label="아이디 (이메일)"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <Input
+          label="비밀번호"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
         <div className="flex items-center justify-between pt-1">
-          <Checkbox label="로그인 유지" checked={keep} onChange={(e) => setKeep(e.target.checked)} />
+          <Checkbox
+            label="로그인 유지"
+            checked={keep}
+            onChange={(e) => setKeep(e.target.checked)}
+          />
           <Link to="/password/reset" className="typo-body2 text-text hover:underline">
             비밀번호 찾기
           </Link>

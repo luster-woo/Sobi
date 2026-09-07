@@ -1,4 +1,4 @@
-import type { Application, SubmitDocument, WriteDocument } from '@/shared/types'
+import type { Application, SubmitDocument, WriteDocument } from '@/types'
 
 export const mockApplications: Application[] = [
   {
@@ -54,17 +54,65 @@ export const mockApplications: Application[] = [
 ]
 
 export const mockLoanSubmitDocs: SubmitDocument[] = [
-  { id: 'd1', name: '부가세 과세표준증명원', status: 'passed', detail: '발급일 2026.08. 20·직인 확인·필수 필드 완료', source: '홈택스' },
-  { id: 'd2', name: '재무제표', status: 'checking', detail: '서명 / 도장 / 발급 유효기간 / 필수 필드를 확인하고 있어요', source: '홈택스' },
-  { id: 'd3', name: '등기부등본', status: 'failed', detail: '인감 도장이 확인되지 않아요. 날인 후 다시 올려주세요.', source: '인터넷등기소' },
-  { id: 'd4', name: '국세 납세증명서', status: 'missing', detail: '홈택스·정부24에서 즉시 발급받을 수 있어요', source: '홈택스·정부24' },
+  {
+    id: 'd1',
+    name: '부가세 과세표준증명원',
+    status: 'passed',
+    detail: '발급일 2026.08. 20·직인 확인·필수 필드 완료',
+    source: '홈택스',
+  },
+  {
+    id: 'd2',
+    name: '재무제표',
+    status: 'checking',
+    detail: '서명 / 도장 / 발급 유효기간 / 필수 필드를 확인하고 있어요',
+    source: '홈택스',
+  },
+  {
+    id: 'd3',
+    name: '등기부등본',
+    status: 'failed',
+    detail: '인감 도장이 확인되지 않아요. 날인 후 다시 올려주세요.',
+    source: '인터넷등기소',
+  },
+  {
+    id: 'd4',
+    name: '국세 납세증명서',
+    status: 'missing',
+    detail: '홈택스·정부24에서 즉시 발급받을 수 있어요',
+    source: '홈택스·정부24',
+  },
 ]
 export const mockLoanWriteDocs: WriteDocument[] = [{ id: 'w1', name: '자금 사용 계획서' }]
 
 export const mockSupportSubmitDocs: SubmitDocument[] = [
-  { id: 'd1', name: '사업자등록증명', status: 'passed', detail: '발급일 2026. 08. 22·필수 필드 확인 완료', source: '홈택스' },
-  { id: 'd2', name: '부가세 과세표준증명원', status: 'checking', detail: '서명 / 도장 / 발급 유효기간 / 필수 필드를 확인하고 있어요', source: '홈택스' },
-  { id: 'd3', name: '국세 납세증명서', status: 'failed', detail: '발급일이 3개월을 초과했어요. 재발급 후 다시 올려주세요.', source: '홈택스·정부24' },
-  { id: 'd4', name: '통장 사본', status: 'missing', detail: '바우처 정산 계좌로 등록돼요', source: '직접 준비' },
+  {
+    id: 'd1',
+    name: '사업자등록증명',
+    status: 'passed',
+    detail: '발급일 2026. 08. 22·필수 필드 확인 완료',
+    source: '홈택스',
+  },
+  {
+    id: 'd2',
+    name: '부가세 과세표준증명원',
+    status: 'checking',
+    detail: '서명 / 도장 / 발급 유효기간 / 필수 필드를 확인하고 있어요',
+    source: '홈택스',
+  },
+  {
+    id: 'd3',
+    name: '국세 납세증명서',
+    status: 'failed',
+    detail: '발급일이 3개월을 초과했어요. 재발급 후 다시 올려주세요.',
+    source: '홈택스·정부24',
+  },
+  {
+    id: 'd4',
+    name: '통장 사본',
+    status: 'missing',
+    detail: '바우처 정산 계좌로 등록돼요',
+    source: '직접 준비',
+  },
 ]
 export const mockSupportWriteDocs: WriteDocument[] = [{ id: 'w1', name: '사업계획서' }]

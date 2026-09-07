@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom'
-import type { Support } from '@/shared/types'
-import Modal from '@/shared/ui/Modal'
-import Button from '@/shared/ui/Button'
-import Tag from '@/shared/ui/Tag'
-import JudgementBadge from '@/shared/ui/JudgementBadge'
-import DefinitionList from '@/shared/ui/DefinitionList'
-import { IconBookmark } from '@/shared/ui/Icon'
-import { dday, formatDate, formatMonthDay } from '@/shared/lib/format'
+
+import Button from '@/components/common/Button'
+import DefinitionList from '@/components/common/DefinitionList'
+import { IconBookmark } from '@/components/common/Icon'
+import JudgementBadge from '@/components/common/JudgementBadge'
+import Modal from '@/components/common/Modal'
+import Tag from '@/components/common/Tag'
+import type { Support } from '@/types'
+import { dday, formatDate, formatMonthDay } from '@/utils/format'
 
 interface Props {
   support: Support | null
@@ -34,8 +35,16 @@ export default function SupportDetailModal({ support, onClose, onToggleBookmark 
           <p className="typo-body2 text-text-secondary">{s.description}</p>
           <div className="flex shrink-0 items-center gap-3">
             <JudgementBadge value={s.judgement} />
-            <button type="button" onClick={() => onToggleBookmark(s.id)} className="inline-flex items-center gap-1 typo-body2">
-              <IconBookmark size={16} filled={s.bookmarked} className={s.bookmarked ? 'text-primary' : 'text-text-muted'} />
+            <button
+              type="button"
+              onClick={() => onToggleBookmark(s.id)}
+              className="typo-body2 inline-flex items-center gap-1"
+            >
+              <IconBookmark
+                size={16}
+                filled={s.bookmarked}
+                className={s.bookmarked ? 'text-primary' : 'text-text-muted'}
+              />
               {s.bookmarked ? '저장됨' : '저장'}
             </button>
           </div>
@@ -48,16 +57,21 @@ export default function SupportDetailModal({ support, onClose, onToggleBookmark 
           {s.deadline && <Tag>~{formatMonthDay(s.deadline)}</Tag>}
         </div>
 
-        <hr className="border-0 h-px bg-border-subtle" />
+        <hr className="bg-border-subtle h-px border-0" />
 
         <DefinitionList
           items={[
             { label: '소관', value: s.agency },
             { label: '유형', value: s.type },
-            { label: '금액', value: <span className="typo-h4 font-semibold">{s.amountLabel}</span> },
+            {
+              label: '금액',
+              value: <span className="typo-h4 font-semibold">{s.amountLabel}</span>,
+            },
             {
               label: '접수',
-              value: s.deadline ? `~ ${formatDate(s.deadline)} 18:00 · D-${dday(s.deadline)}` : '상시 접수',
+              value: s.deadline
+                ? `~ ${formatDate(s.deadline)} 18:00 · D-${dday(s.deadline)}`
+                : '상시 접수',
             },
           ]}
         />

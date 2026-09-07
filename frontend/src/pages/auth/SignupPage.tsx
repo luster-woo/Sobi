@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AuthCard, { OrDivider } from '@/shared/ui/AuthCard'
-import Input from '@/shared/ui/Input'
-import Button from '@/shared/ui/Button'
+
+import AuthCard, { OrDivider } from '@/components/common/AuthCard'
+import Button from '@/components/common/Button'
+import Input from '@/components/common/Input'
 
 /** 04. 회원가입 */
 export default function SignupPage() {
@@ -34,11 +35,17 @@ export default function SignupPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <Button type="button" variant="outline" size="md" className="shrink-0" onClick={() => setCodeSent(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            className="shrink-0"
+            onClick={() => setCodeSent(true)}
+          >
             인증 코드 발송
           </Button>
         </div>
-        <p className="-mt-3 typo-caption text-primary">사용할 수 있는 이메일입니다.</p>
+        <p className="typo-caption text-primary -mt-3">사용할 수 있는 이메일입니다.</p>
 
         {codeSent && (
           <div className="flex items-end gap-2">
@@ -49,7 +56,12 @@ export default function SignupPage() {
               onChange={(e) => setCode(e.target.value)}
               rightSlot={<span className="typo-body2 text-danger">4:45</span>}
             />
-            <Button type="button" variant="outline" className="shrink-0" onClick={() => setVerified(true)}>
+            <Button
+              type="button"
+              variant="outline"
+              className="shrink-0"
+              onClick={() => setVerified(true)}
+            >
               {verified ? '확인됨' : '확인'}
             </Button>
           </div>

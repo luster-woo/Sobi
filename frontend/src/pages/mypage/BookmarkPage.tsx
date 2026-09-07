@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PageTitle from '@/shared/ui/PageTitle'
-import FilterChip from '@/shared/ui/FilterChip'
-import ProductRow from '@/shared/ui/ProductRow'
+
+import FilterChip from '@/components/common/FilterChip'
+import PageTitle from '@/components/common/PageTitle'
+import ProductRow from '@/components/common/ProductRow'
 import { mockLoans } from '@/mocks/loans.mock'
 import { mockSupports } from '@/mocks/supports.mock'
-import { dday, formatMonthDay } from '@/shared/lib/format'
+import { dday, formatMonthDay } from '@/utils/format'
 
 type Kind = 'all' | 'loan' | 'support'
 
@@ -22,7 +23,9 @@ export default function BookmarkPage() {
       kind: 'support' as const,
       name: s.name,
       agency: `지원사업 · ${s.agency}`,
-      tags: s.deadline ? [...s.tags.slice(0, 1), `~ ${formatMonthDay(s.deadline)} · D-${dday(s.deadline)}`] : s.tags,
+      tags: s.deadline
+        ? [...s.tags.slice(0, 1), `~ ${formatMonthDay(s.deadline)} · D-${dday(s.deadline)}`]
+        : s.tags,
       metrics: [{ label: '지원 금액', value: s.amountLabel }],
       judgement: s.judgement,
       deadline: s.deadline,
@@ -34,7 +37,9 @@ export default function BookmarkPage() {
       kind: 'loan' as const,
       name: l.name,
       agency: `대출 · ${l.agency}`,
-      tags: l.deadline ? [...l.tags.slice(0, 1), `~ ${formatMonthDay(l.deadline)} · D-${dday(l.deadline)}`] : l.tags,
+      tags: l.deadline
+        ? [...l.tags.slice(0, 1), `~ ${formatMonthDay(l.deadline)} · D-${dday(l.deadline)}`]
+        : l.tags,
       metrics: [{ label: '금리', value: `연 ${l.rate.toFixed(1)}%` }],
       judgement: l.judgement,
       deadline: l.deadline,
@@ -47,13 +52,22 @@ export default function BookmarkPage() {
 
   return (
     <div className="space-y-5">
-      <PageTitle crumbs={[{ label: '마이페이지', to: '/mypage' }, { label: '관심 목록' }]} title="관심 목록" />
+      <PageTitle
+        crumbs={[{ label: '마이페이지', to: '/mypage' }, { label: '관심 목록' }]}
+        title="관심 목록"
+      />
 
       <div className="flex items-center gap-2">
-        <FilterChip active={kind === 'all'} onClick={() => setKind('all')}>전체 {loans.length + supports.length}</FilterChip>
-        <FilterChip active={kind === 'loan'} onClick={() => setKind('loan')}>대출 {loans.length}</FilterChip>
-        <FilterChip active={kind === 'support'} onClick={() => setKind('support')}>지원사업 {supports.length}</FilterChip>
-        <span className="ml-3 typo-body2 text-text-muted">
+        <FilterChip active={kind === 'all'} onClick={() => setKind('all')}>
+          전체 {loans.length + supports.length}
+        </FilterChip>
+        <FilterChip active={kind === 'loan'} onClick={() => setKind('loan')}>
+          대출 {loans.length}
+        </FilterChip>
+        <FilterChip active={kind === 'support'} onClick={() => setKind('support')}>
+          지원사업 {supports.length}
+        </FilterChip>
+        <span className="typo-body2 text-text-muted ml-3">
           정렬 <span className="text-text">마감 임박 순</span>
         </span>
       </div>
@@ -72,7 +86,9 @@ export default function BookmarkPage() {
             onToggleBookmark={r.toggle}
           />
         ))}
-        {rows.length === 0 && <p className="py-16 text-center typo-body2 text-text-muted">관심 목록이 비어 있어요</p>}
+        {rows.length === 0 && (
+          <p className="typo-body2 text-text-muted py-16 text-center">관심 목록이 비어 있어요</p>
+        )}
       </div>
     </div>
   )

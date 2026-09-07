@@ -1,9 +1,19 @@
-@import "tailwindcss";
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+@import url('https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.css');
+@import 'tailwindcss';
 
-/* ------------------------------------------------------------------
-   소상공인 도우미 — Design Tokens
-   ※ 컴포넌트에서 헥사코드 직접 사용 금지. 반드시 아래 토큰만 사용할 것.
------------------------------------------------------------------- */
+/*
+ * 디자인 토큰 — 소상공인 도우미 Design System
+ *
+ * Tailwind v4는 JS config 대신 @theme 에서 토큰을 정의합니다.
+ * 토큰 이름이 곧 유틸리티 클래스입니다.
+ *   --color-primary       → bg-primary, text-primary, border-primary, bg-primary/10
+ *   --radius-lg           → rounded-lg
+ *   --spacing-card        → p-card, gap-card
+ *   --text-h1             → text-h1 (font-size + line-height + weight 동시 적용)
+ *
+ * 값을 바꿀 때는 이 파일만 수정합니다. 컴포넌트에 hex를 직접 쓰지 마세요.
+ */
 @theme {
   /* ---------- Brand ---------- */
   --color-primary: #05a66b;
@@ -14,13 +24,9 @@
   --color-secondary: #303432;
   --color-secondary-hover: #292d2b;
 
-  /* Success 는 Primary 를 공유 */
-  --color-success: #05a66b;
-  --color-success-soft: #e6f6f0;
-
   /* ---------- Background · Surface · Border ---------- */
-  --color-background: #f4f6f5;
-  --color-canvas: #e4e7e6;
+  --color-bg: #f4f6f5;
+  --color-bg-canvas: #e4e7e6;
   --color-surface: #ffffff;
   --color-surface-muted: #fafafa;
 
@@ -35,32 +41,51 @@
   --color-text-disabled: #969e9a;
   --color-text-inverse: #ffffff;
 
-  /* ---------- Status ---------- */
+  /* 모달·드로어 딤 처리 */
+  --color-overlay: rgb(25 27 26 / 0.45);
+
+  /* ---------- Status (Success 는 Primary 공유) ---------- */
+  --color-success: #05a66b;
+  --color-success-soft: #e6f6f0;
   --color-warning: #b45309;
   --color-warning-soft: #faeedd;
   --color-danger: #b42318;
   --color-danger-hover: #9a1e15;
   --color-danger-soft: #f6e3e1;
 
-  /* ---------- Font family ---------- */
-  --font-sans: "Pretendard Variable", Pretendard, system-ui, sans-serif;
-  --font-heading: "SUIT Variable", SUIT, system-ui, sans-serif;
+  /* ---------- Typography ---------- */
+  /* 제목은 SUIT, 본문은 Pretendard */
+  --font-heading: 'SUIT Variable', 'SUIT', system-ui, sans-serif;
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
-  /* ---------- Font size / line-height ---------- */
-  --text-h1: 28px;
-  --text-h1--line-height: 38px;
-  --text-h2: 22px;
-  --text-h2--line-height: 30px;
-  --text-h3: 18px;
-  --text-h3--line-height: 26px;
-  --text-h4: 16px;
-  --text-h4--line-height: 24px;
-  --text-body1: 15px;
-  --text-body1--line-height: 24px;
-  --text-body2: 13px;
-  --text-body2--line-height: 20px;
-  --text-caption: 12px;
-  --text-caption--line-height: 18px;
+  --text-h1: 1.75rem; /* 28 / 38 / 700 */
+  --text-h1--line-height: 2.375rem;
+  --text-h1--font-weight: 700;
+
+  --text-h2: 1.375rem; /* 22 / 30 / 700 */
+  --text-h2--line-height: 1.875rem;
+  --text-h2--font-weight: 700;
+
+  --text-h3: 1.125rem; /* 18 / 26 / 700 */
+  --text-h3--line-height: 1.625rem;
+  --text-h3--font-weight: 700;
+
+  --text-h4: 1rem; /* 16 / 24 / 600 */
+  --text-h4--line-height: 1.5rem;
+  --text-h4--font-weight: 600;
+
+  --text-body1: 0.9375rem; /* 15 / 24 / 400 */
+  --text-body1--line-height: 1.5rem;
+  --text-body1--font-weight: 400;
+
+  --text-body2: 0.8125rem; /* 13 / 20 / 400 */
+  --text-body2--line-height: 1.25rem;
+  --text-body2--font-weight: 400;
+
+  --text-caption: 0.75rem; /* 12 / 18 / 400 */
+  --text-caption--line-height: 1.125rem;
+  --text-caption--font-weight: 400;
 
   /* ---------- Radius ---------- */
   --radius-sm: 6px;
@@ -68,37 +93,39 @@
   --radius-lg: 14px;
   --radius-xl: 20px;
 
-  /* ---------- Spacing (named) ---------- */
-  --spacing-card: 20px;      /* 카드 내부 패딩   → p-card    */
-  --spacing-section: 24px;   /* 섹션 간 간격     → gap-section */
-  --spacing-header: 56px;    /* 상단 헤더 높이   → h-header  */
-  --spacing-sidebar: 224px;  /* 좌측 사이드바 폭 → w-sidebar */
+  /* ---------- Spacing (레이아웃 고정값) ---------- */
+  --spacing-card: 20px; /* 카드 내부 패딩 */
+  --spacing-section: 24px; /* 섹션 간격 */
+  --spacing-header: 56px; /* 헤더 높이 */
+  --spacing-sidebar: 224px; /* 사이드바 너비 */
 
   /* ---------- Shadow ---------- */
   --shadow-card: 0 1px 2px rgb(25 27 26 / 0.04), 0 2px 8px rgb(25 27 26 / 0.06);
+  --shadow-modal: 0 8px 32px rgb(25 27 26 / 0.16);
+  --shadow-dropdown: 0 4px 16px rgb(25 27 26 / 0.12);
 }
 
-/* ------------------------------------------------------------------
-   Base
------------------------------------------------------------------- */
 @layer base {
   html {
-    -webkit-text-size-adjust: 100%;
-  }
-
-  body {
-    background-color: var(--color-background);
-    color: var(--color-text);
-    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* 제목 태그는 기본으로 SUIT */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
+  body {
+    @apply bg-bg text-text font-sans;
   }
 
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading text-text;
+  }
+}
+
+@layer base {
   /* 포커스 링을 브랜드 컬러로 통일 */
   :focus-visible {
     outline: 2px solid var(--color-primary);
@@ -108,20 +135,41 @@
 
 /* ------------------------------------------------------------------
    Typography 유틸리티
-   글꼴·크기·행간·굵기가 한 세트로 묶여 있음.
-   제목/본문에는 이 클래스만 쓰면 디자인 보드와 항상 일치함.
+   --text-* 토큰은 크기·행간·굵기를 담고 있고, 여기서 글꼴까지 묶어
+   한 클래스로 쓸 수 있게 한다.  예) <h1 className="typo-h1">
 ------------------------------------------------------------------ */
 @layer components {
-  .typo-h1     { @apply font-heading text-h1 font-bold; }
-  .typo-h2     { @apply font-heading text-h2 font-bold; }
-  .typo-h3     { @apply font-heading text-h3 font-bold; }
-  .typo-h4     { @apply font-heading text-h4 font-semibold; }
-  .typo-body1  { @apply font-sans text-body1 font-normal; }
-  .typo-body2  { @apply font-sans text-body2 font-normal; }
-  .typo-caption{ @apply font-sans text-caption font-normal; }
+  .typo-h1 {
+    @apply font-heading text-h1;
+  }
+  .typo-h2 {
+    @apply font-heading text-h2;
+  }
+  .typo-h3 {
+    @apply font-heading text-h3;
+  }
+  .typo-h4 {
+    @apply font-heading text-h4;
+  }
 
-  /* 버튼·뱃지 라벨은 SUIT 600 (디자인 보드 기준) */
-  .typo-label  { @apply font-heading text-body1 font-semibold; }
-  .typo-label-sm { @apply font-heading text-body2 font-semibold; }
-  .typo-badge { @apply font-heading text-caption font-semibold; }
+  .typo-body1 {
+    @apply text-body1 font-sans;
+  }
+  .typo-body2 {
+    @apply text-body2 font-sans;
+  }
+  .typo-caption {
+    @apply text-caption font-sans;
+  }
+
+  /* 버튼·뱃지 라벨은 SUIT 600 */
+  .typo-label {
+    @apply font-heading text-body1 font-semibold;
+  }
+  .typo-label-sm {
+    @apply font-heading text-body2 font-semibold;
+  }
+  .typo-badge {
+    @apply font-heading text-caption font-semibold;
+  }
 }

@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import OnboardingShell from './OnboardingShell'
-import Input from '@/shared/ui/Input'
-import Button from '@/shared/ui/Button'
-import Badge from '@/shared/ui/Badge'
-import { OrDivider } from '@/shared/ui/AuthCard'
-import { setRole } from '@/shared/lib/session'
+
+import { OrDivider } from '@/components/common/AuthCard'
+import Badge from '@/components/common/Badge'
+import Button from '@/components/common/Button'
+import Input from '@/components/common/Input'
 import { mockBusiness } from '@/mocks/user.mock'
-import { formatDate } from '@/shared/lib/format'
+import { formatDate } from '@/utils/format'
+import { setRole } from '@/utils/session'
+
+import OnboardingShell from './OnboardingShell'
 
 type Result = 'idle' | 'success' | 'fail'
 
@@ -54,10 +56,25 @@ export default function BusinessVerifyPage() {
         )
       }
     >
-      <Input label="사업자등록번호" placeholder="000-00-00000" value={regNo} onChange={(e) => setRegNo(e.target.value)} />
+      <Input
+        label="사업자등록번호"
+        placeholder="000-00-00000"
+        value={regNo}
+        onChange={(e) => setRegNo(e.target.value)}
+      />
       <div className="grid grid-cols-2 gap-4">
-        <Input label="대표자명" placeholder="홍길동" value={owner} onChange={(e) => setOwner(e.target.value)} />
-        <Input label="개업연월일" placeholder="YYYY-MM-DD" value={openedAt} onChange={(e) => setOpenedAt(e.target.value)} />
+        <Input
+          label="대표자명"
+          placeholder="홍길동"
+          value={owner}
+          onChange={(e) => setOwner(e.target.value)}
+        />
+        <Input
+          label="개업연월일"
+          placeholder="YYYY-MM-DD"
+          value={openedAt}
+          onChange={(e) => setOpenedAt(e.target.value)}
+        />
       </div>
 
       {result === 'idle' ? (
@@ -71,13 +88,15 @@ export default function BusinessVerifyPage() {
       )}
 
       {/* 조회 결과 카드 */}
-      <div className="overflow-hidden rounded-lg border border-border bg-surface">
-        <div className="flex items-center justify-between bg-surface-muted px-5 py-3">
+      <div className="border-border bg-surface overflow-hidden rounded-lg border">
+        <div className="bg-surface-muted flex items-center justify-between px-5 py-3">
           <span className="typo-label-sm">조회 결과</span>
-          {result === 'idle' && <span className="h-6 w-14 rounded-full bg-border" aria-hidden="true" />}
+          {result === 'idle' && (
+            <span className="bg-border h-6 w-14 rounded-full" aria-hidden="true" />
+          )}
           {result === 'success' && <Badge variant="solid">계속사업자</Badge>}
           {result === 'fail' && (
-            <span className="inline-flex h-6 items-center rounded-full border border-danger px-3 typo-badge text-danger">
+            <span className="border-danger typo-badge text-danger inline-flex h-6 items-center rounded-full border px-3">
               인증 실패
             </span>
           )}
@@ -85,9 +104,11 @@ export default function BusinessVerifyPage() {
 
         {result === 'idle' && (
           <div className="flex flex-col items-center gap-3 px-5 py-9 text-center">
-            <span className="size-8 rounded-md bg-border" aria-hidden="true" />
+            <span className="bg-border size-8 rounded-md" aria-hidden="true" />
             <p className="typo-label-sm">사업자 인증을 하면 조회 결과가 여기에 표시돼요</p>
-            <p className="typo-caption text-text-muted">사업자 유형·과세유형·업종·사업장 주소·개업일</p>
+            <p className="typo-caption text-text-muted">
+              사업자 유형·과세유형·업종·사업장 주소·개업일
+            </p>
           </div>
         )}
 
@@ -104,8 +125,8 @@ export default function BusinessVerifyPage() {
                   key={k}
                   className={[
                     'space-y-1 px-5 py-4',
-                    i % 2 === 1 ? 'border-l border-border-subtle' : '',
-                    i >= 2 ? 'border-t border-border-subtle' : '',
+                    i % 2 === 1 ? 'border-border-subtle border-l' : '',
+                    i >= 2 ? 'border-border-subtle border-t' : '',
                   ].join(' ')}
                 >
                   <dt className="typo-caption text-text-muted">{k}</dt>
@@ -113,7 +134,7 @@ export default function BusinessVerifyPage() {
                 </div>
               ))}
             </dl>
-            <p className="bg-surface-muted px-5 py-3 typo-caption text-text-muted">
+            <p className="bg-surface-muted typo-caption text-text-muted px-5 py-3">
               입력한 대표자명·개업연월일이 국세청 등록 정보와 일치해요.
             </p>
           </>
@@ -131,7 +152,9 @@ export default function BusinessVerifyPage() {
                 <dd className="typo-body1">2026. 09. 02 14:02</dd>
               </div>
             </dl>
-            <p className="bg-surface-muted px-5 py-3 typo-caption text-text-muted">인증이 실패되었습니다. 다시 조회해주세요.</p>
+            <p className="bg-surface-muted typo-caption text-text-muted px-5 py-3">
+              인증이 실패되었습니다. 다시 조회해주세요.
+            </p>
           </>
         )}
       </div>
@@ -141,10 +164,12 @@ export default function BusinessVerifyPage() {
       </Button>
 
       {result === 'fail' ? (
-        <div className="flex items-center justify-between gap-4 rounded-md bg-surface-muted p-5">
+        <div className="bg-surface-muted flex items-center justify-between gap-4 rounded-md p-5">
           <div>
             <p className="typo-label-sm">사업자 인증이 어렵다면</p>
-            <p className="mt-1 typo-caption text-text-muted">인증 없이 예비 창업자로 시작하고, 나중에 다시 인증 수 있어요.</p>
+            <p className="typo-caption text-text-muted mt-1">
+              인증 없이 예비 창업자로 시작하고, 나중에 다시 인증 수 있어요.
+            </p>
           </div>
           <Button variant="outline" size="sm" onClick={startAsPre}>
             예비 창업자로 시작
@@ -159,7 +184,9 @@ export default function BusinessVerifyPage() {
         </>
       )}
 
-      <p className="text-center typo-caption text-text-disabled">목업 안내: 대표자명에 &quot;실패&quot;를 넣으면 인증 실패 화면이 보여요</p>
+      <p className="typo-caption text-text-disabled text-center">
+        목업 안내: 대표자명에 &quot;실패&quot;를 넣으면 인증 실패 화면이 보여요
+      </p>
     </OnboardingShell>
   )
 }

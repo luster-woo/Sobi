@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom'
-import type { Loan } from '@/shared/types'
-import Modal from '@/shared/ui/Modal'
-import Button from '@/shared/ui/Button'
-import Tag from '@/shared/ui/Tag'
-import JudgementBadge from '@/shared/ui/JudgementBadge'
-import DefinitionList from '@/shared/ui/DefinitionList'
-import { IconBookmark } from '@/shared/ui/Icon'
-import { formatManWon, formatMonthDay } from '@/shared/lib/format'
+
+import Button from '@/components/common/Button'
+import DefinitionList from '@/components/common/DefinitionList'
+import { IconBookmark } from '@/components/common/Icon'
+import JudgementBadge from '@/components/common/JudgementBadge'
+import Modal from '@/components/common/Modal'
+import Tag from '@/components/common/Tag'
+import type { Loan } from '@/types'
+import { formatManWon, formatMonthDay } from '@/utils/format'
 
 interface Props {
   loan: Loan | null
@@ -36,9 +37,13 @@ export default function LoanDetailModal({ loan, onClose, onToggleBookmark }: Pro
             <button
               type="button"
               onClick={() => onToggleBookmark(loan.id)}
-              className="inline-flex items-center gap-1 typo-body2 text-text"
+              className="typo-body2 text-text inline-flex items-center gap-1"
             >
-              <IconBookmark size={16} filled={loan.bookmarked} className={loan.bookmarked ? 'text-primary' : 'text-text-muted'} />
+              <IconBookmark
+                size={16}
+                filled={loan.bookmarked}
+                className={loan.bookmarked ? 'text-primary' : 'text-text-muted'}
+              />
               {loan.bookmarked ? '저장됨' : '저장'}
             </button>
           </div>
@@ -51,11 +56,14 @@ export default function LoanDetailModal({ loan, onClose, onToggleBookmark }: Pro
           {loan.deadline && <Tag>~ {formatMonthDay(loan.deadline)}</Tag>}
         </div>
 
-        <hr className="border-0 h-px bg-border-subtle" />
+        <hr className="bg-border-subtle h-px border-0" />
 
         <DefinitionList
           items={[
-            { label: '금리', value: <span className="typo-h4 font-semibold">연 {loan.rate}% (고정)</span> },
+            {
+              label: '금리',
+              value: <span className="typo-h4 font-semibold">연 {loan.rate}% (고정)</span>,
+            },
             {
               label: '한도',
               value: loan.minAmount

@@ -123,4 +123,5 @@
   /* 버튼·뱃지 라벨은 SUIT 600 (디자인 보드 기준) */
   .typo-label  { @apply font-heading text-body1 font-semibold; }
   .typo-label-sm { @apply font-heading text-body2 font-semibold; }
+  .typo-badge { @apply font-heading text-caption font-semibold; }
 }

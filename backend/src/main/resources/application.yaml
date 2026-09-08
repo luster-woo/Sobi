@@ -9,7 +9,10 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
+    flyway:
+      enabled: true
+      baseline-on-migrate: true   # 기존 빈 DB에 처음 붙을 때 안전장치
     properties:
       hibernate:
         format_sql: true

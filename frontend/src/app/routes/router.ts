@@ -1,5 +1,6 @@
 import { createBrowserRouter, redirect } from 'react-router'
 
+import { AppLayout } from '@/app/layouts/AppLayout'
 import { RootLayout } from '@/app/layouts/RootLayout'
 import { ProtectedRoute } from '@/app/routes/ProtectedRoute'
 import { PublicOnlyRoute } from '@/app/routes/PublicOnlyRoute'
@@ -40,10 +41,16 @@ export const router = createBrowserRouter([
         Component: ProtectedRoute,
         children: [
           {
-            path: ROUTES.DASHBOARD,
-            lazy: async () => ({
-              Component: (await import('@/pages/DashboardPage')).DashboardPage,
-            }),
+            // 사이드바·상단바가 붙는 자리. 로그인 화면은 위 PublicOnlyRoute 쪽이라 안 붙는다
+            Component: AppLayout,
+            children: [
+              {
+                path: ROUTES.DASHBOARD,
+                lazy: async () => ({
+                  Component: (await import('@/pages/DashboardPage')).DashboardPage,
+                }),
+              },
+            ],
           },
         ],
       },

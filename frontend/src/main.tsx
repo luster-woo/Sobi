@@ -3,7 +3,7 @@ import './index.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import App from './App.tsx'
+import App from '@/app/App'
 
 /**
  * 개발 환경에서만 MSW를 켭니다.
@@ -12,7 +12,7 @@ import App from './App.tsx'
 async function enableMocking() {
   if (!import.meta.env.DEV) return
 
-  const { worker } = await import('./mocks/browser')
+  const { worker } = await import('@/mocks/browser')
 
   // 핸들러가 없는 요청은 실제 서버로 통과시킵니다
   return worker.start({ onUnhandledRequest: 'bypass' })

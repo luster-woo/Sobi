@@ -19,6 +19,12 @@ export const queryKeys = {
     me: ['auth', 'me'] as const,
   },
 
+  business: {
+    all: ['business'] as const,
+    /** 사이드바 하단 업체 요약. 업체 정보를 수정하면 여기를 무효화한다 */
+    meSummary: ['business', 'me', 'summary'] as const,
+  },
+
   loan: {
     all: ['loan'] as const,
     list: (params: object) => ['loan', 'list', params] as const,

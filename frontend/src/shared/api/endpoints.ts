@@ -21,6 +21,11 @@ export const endpoints = {
     me: '/auth/me',
     emailCheck: '/auth/email/check',
   },
+
+  business: {
+    /** 사이드바 하단 카드에 쓰는 내 업체 요약(상호·지역·업종명). 미등록이면 404 */
+    meSummary: '/businesses/me/summary',
+  },
 } as const
 
 /**

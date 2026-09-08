@@ -7,6 +7,12 @@ interface SpinnerProps {
   thickness?: number
   /** 화면 낭독기가 읽을 문구 */
   label?: string
+  /**
+   * 옆에 같은 뜻의 텍스트가 이미 있을 때 true.
+   * role·aria-label 을 떼고 aria-hidden 을 붙여서, 화면 낭독기가 같은 내용을
+   * 두 번 읽지 않게 합니다. ('로딩 중, 작성 중' → '작성 중')
+   */
+  decorative?: boolean
   className?: string
 }
 
@@ -23,12 +29,14 @@ export default function Spinner({
   size = 48,
   thickness,
   label = '로딩 중',
+  decorative = false,
   className,
 }: SpinnerProps) {
   return (
     <span
-      role="status"
-      aria-label={label}
+      role={decorative ? undefined : 'status'}
+      aria-label={decorative ? undefined : label}
+      aria-hidden={decorative || undefined}
       className={cn(
         'border-border border-t-primary inline-block animate-spin rounded-full',
         // 접근성 설정에서 애니메이션을 줄인 사용자에게는 회전을 멈춥니다

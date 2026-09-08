@@ -17,3 +17,8 @@ export async function getMe() {
   const { data } = await api.get<User>(endpoints.auth.me)
   return data
 }
+
+/** 로그아웃. 서버가 refreshToken 쿠키를 지운다. 프론트 상태 정리는 `useLogout` 이 한다 */
+export async function logout() {
+  await api.post(endpoints.auth.logout)
+}

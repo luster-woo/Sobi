@@ -123,6 +123,16 @@ export function MypageIcon(props: IconProps) {
   )
 }
 
+/** 알림 — 상단바 벨. 빨간 점은 감싸는 쪽에서 겹쳐 그린다 */
+export function BellIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M18.5 16.5V10a6.5 6.5 0 0 0-13 0v6.5l-1.5 2.5h16z" />
+      <path d="M9.5 19a2.5 2.5 0 0 0 5 0" />
+    </svg>
+  )
+}
+
 /** 업체 — 사이드바 하단 카드의 자리 표시 */
 export function StoreIcon(props: IconProps) {
   return (

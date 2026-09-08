@@ -17,6 +17,8 @@ export const endpoints = {
     signUp: '/auth/signup',
     /** refreshToken 쿠키로 accessToken 재발급 */
     reissue: '/auth/reissue',
+    /** 로그인한 본인 정보. 세션 복구에서 재발급 직후 호출한다 */
+    me: '/auth/me',
     emailCheck: '/auth/email/check',
   },
 } as const

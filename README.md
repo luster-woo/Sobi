@@ -12,8 +12,8 @@
 |---|---|
 | Host | localhost |
 | Port | 5432 (Redis 6379) |
-| Database | sogong |
-| User | sogong |
+| Database | sobi |
+| User | sobi |
 | Password | localdev |
 
 **서버 DB에 직접 붙어서 작업하지 마세요.** 서로 데이터를 깨뜨립니다.

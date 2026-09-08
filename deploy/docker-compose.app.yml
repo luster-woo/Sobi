@@ -4,7 +4,7 @@
 
 services:
   backend:
-    image: sogong-backend:latest
+    image: sobi-backend:latest
     container_name: backend
     environment:
       TZ: Asia/Seoul
@@ -31,7 +31,7 @@ services:
           memory: 1024M
 
   ai:
-    image: sogong-ai:latest
+    image: sobi-ai:latest
     container_name: ai
     environment:
       TZ: Asia/Seoul
@@ -62,7 +62,7 @@ services:
           memory: 4096M
 
   frontend:
-    image: sogong-frontend:latest
+    image: sobi-frontend:latest
     container_name: frontend
     networks: [backend]
     restart: unless-stopped

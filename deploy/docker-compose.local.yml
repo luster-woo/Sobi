@@ -5,10 +5,10 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: sogong-postgres-local
+    container_name: sobi-postgres-local
     environment:
-      POSTGRES_DB: sogong
-      POSTGRES_USER: sogong
+      POSTGRES_DB: sobi
+      POSTGRES_USER: sobi
       POSTGRES_PASSWORD: localdev
       TZ: Asia/Seoul
     ports:
@@ -17,14 +17,14 @@ services:
       - pgdata-local:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sogong"]
+      test: ["CMD-SHELL", "pg_isready -U sobi"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: sogong-redis-local
+    container_name: sobi-redis-local
     command: >
       redis-server --requirepass localdev
       --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly no

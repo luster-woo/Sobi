@@ -1,0 +1,126 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+@import url('https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.css');
+@import 'tailwindcss';
+
+/*
+ * 디자인 토큰 — 소상공인 도우미 Design System
+ *
+ * Tailwind v4는 JS config 대신 @theme 에서 토큰을 정의합니다.
+ * 토큰 이름이 곧 유틸리티 클래스입니다.
+ *   --color-primary       → bg-primary, text-primary, border-primary, bg-primary/10
+ *   --radius-lg           → rounded-lg
+ *   --spacing-card        → p-card, gap-card
+ *   --text-h1             → text-h1 (font-size + line-height + weight 동시 적용)
+ *
+ * 값을 바꿀 때는 이 파일만 수정합니다. 컴포넌트에 hex를 직접 쓰지 마세요.
+ */
+@theme {
+  /* ---------- Brand ---------- */
+  --color-primary: #05a66b;
+  --color-primary-hover: #048f5c;
+  --color-primary-active: #037a4e;
+  --color-primary-soft: #e6f6f0;
+
+  --color-secondary: #303432;
+  --color-secondary-hover: #292d2b;
+
+  /* ---------- Background · Surface · Border ---------- */
+  --color-bg: #f4f6f5;
+  --color-bg-canvas: #e4e7e6;
+  --color-surface: #ffffff;
+  --color-surface-muted: #fafafa;
+
+  --color-border: #e7e9e8;
+  --color-border-strong: #c7cbc9;
+  --color-border-subtle: #eef0ef;
+
+  /* ---------- Text ---------- */
+  --color-text: #191b1a;
+  --color-text-secondary: #565e5a;
+  --color-text-muted: #858f8a;
+  --color-text-disabled: #969e9a;
+  --color-text-inverse: #ffffff;
+
+  /* 모달·드로어 딤 처리 */
+  --color-overlay: rgb(25 27 26 / 0.45);
+
+  /* ---------- Status (Success 는 Primary 공유) ---------- */
+  --color-success: #05a66b;
+  --color-success-soft: #e6f6f0;
+  --color-warning: #b45309;
+  --color-warning-soft: #faeedd;
+  --color-danger: #b42318;
+  --color-danger-hover: #9a1e15;
+  --color-danger-soft: #f6e3e1;
+
+  /* ---------- Typography ---------- */
+  /* 제목은 SUIT, 본문은 Pretendard */
+  --font-heading: 'SUIT Variable', 'SUIT', system-ui, sans-serif;
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  --text-h1: 1.75rem; /* 28 / 38 / 700 */
+  --text-h1--line-height: 2.375rem;
+  --text-h1--font-weight: 700;
+
+  --text-h2: 1.375rem; /* 22 / 30 / 700 */
+  --text-h2--line-height: 1.875rem;
+  --text-h2--font-weight: 700;
+
+  --text-h3: 1.125rem; /* 18 / 26 / 700 */
+  --text-h3--line-height: 1.625rem;
+  --text-h3--font-weight: 700;
+
+  --text-h4: 1rem; /* 16 / 24 / 600 */
+  --text-h4--line-height: 1.5rem;
+  --text-h4--font-weight: 600;
+
+  --text-body1: 0.9375rem; /* 15 / 24 / 400 */
+  --text-body1--line-height: 1.5rem;
+  --text-body1--font-weight: 400;
+
+  --text-body2: 0.8125rem; /* 13 / 20 / 400 */
+  --text-body2--line-height: 1.25rem;
+  --text-body2--font-weight: 400;
+
+  --text-caption: 0.75rem; /* 12 / 18 / 400 */
+  --text-caption--line-height: 1.125rem;
+  --text-caption--font-weight: 400;
+
+  /* ---------- Radius ---------- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* ---------- Spacing (레이아웃 고정값) ---------- */
+  --spacing-card: 20px; /* 카드 내부 패딩 */
+  --spacing-section: 24px; /* 섹션 간격 */
+  --spacing-header: 56px; /* 헤더 높이 */
+  --spacing-sidebar: 224px; /* 사이드바 너비 */
+
+  /* ---------- Shadow ---------- */
+  --shadow-card: 0 1px 2px rgb(25 27 26 / 0.04), 0 2px 8px rgb(25 27 26 / 0.06);
+  --shadow-modal: 0 8px 32px rgb(25 27 26 / 0.16);
+  --shadow-dropdown: 0 4px 16px rgb(25 27 26 / 0.12);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-bg text-text font-sans;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading text-text;
+  }
+}

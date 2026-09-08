@@ -1,8 +1,10 @@
+import { QueryProvider } from '@/app/providers/QueryProvider'
+
 /**
  * 디자인 토큰 확인용 임시 화면입니다.
- * 실제 페이지 작업(127 라우팅)이 시작되면 교체됩니다.
+ * 실제 페이지 작업(127 라우팅)이 시작되면 RouterProvider 로 교체됩니다.
  */
-function App() {
+function TokenPreview() {
   return (
     <div className="p-section flex min-h-screen items-center justify-center">
       <div className="bg-surface p-card shadow-card w-full max-w-md rounded-lg">
@@ -39,6 +41,14 @@ function App() {
         </div>
       </div>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <QueryProvider>
+      <TokenPreview />
+    </QueryProvider>
   )
 }
 

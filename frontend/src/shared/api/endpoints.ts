@@ -26,6 +26,11 @@ export const endpoints = {
     /** 사이드바 하단 카드에 쓰는 내 업체 요약(상호·지역·업종명). 미등록이면 404 */
     meSummary: '/businesses/me/summary',
   },
+
+  notification: {
+    /** 상단바 벨의 미확인 표시용. 목록 전체를 받지 않고 개수만 받는다 */
+    unreadCount: '/notifications/unread-count',
+  },
 } as const
 
 /**

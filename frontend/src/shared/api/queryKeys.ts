@@ -25,6 +25,12 @@ export const queryKeys = {
     meSummary: ['business', 'me', 'summary'] as const,
   },
 
+  notification: {
+    all: ['notification'] as const,
+    /** 상단바 벨의 미확인 개수. 알림을 읽으면 여기를 무효화한다 */
+    unreadCount: ['notification', 'unread-count'] as const,
+  },
+
   loan: {
     all: ['loan'] as const,
     list: (params: object) => ['loan', 'list', params] as const,

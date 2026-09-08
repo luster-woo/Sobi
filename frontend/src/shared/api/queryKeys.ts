@@ -1,0 +1,27 @@
+/**
+ * 쿼리 키.
+ *
+ * 키를 문자열 배열로 직접 쓰면 무효화할 때 어긋난다. 한쪽은 `['loans', params]`,
+ * 다른 쪽은 `['loan', 'list', params]` 로 쓰면 무효화가 안 먹고 화면이 갱신되지 않는다.
+ * 그래서 키는 전부 여기서만 만든다.
+ *
+ * 도메인마다 `all` 을 두는 이유는 앞부분만 맞으면 무효화가 걸리기 때문이다.
+ * 대출을 신청한 뒤 목록·상세를 한 번에 갱신할 때:
+ *
+ *   queryClient.invalidateQueries({ queryKey: queryKeys.loan.all })
+ *
+ * feature 작업을 시작할 때 여기에 도메인을 추가한다. 형태는 아래 loan 을 따른다.
+ */
+export const queryKeys = {
+  auth: {
+    all: ['auth'] as const,
+    /** 로그인한 본인 정보. 세션 복구(127)에서 쓴다 */
+    me: ['auth', 'me'] as const,
+  },
+
+  loan: {
+    all: ['loan'] as const,
+    list: (params: object) => ['loan', 'list', params] as const,
+    detail: (loanId: number) => ['loan', 'detail', loanId] as const,
+  },
+} as const

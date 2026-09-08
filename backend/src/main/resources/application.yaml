@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: sobi-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sobi
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD}
+
+  jackson:
+    mapper:
+      sort-properties-alphabetically: false

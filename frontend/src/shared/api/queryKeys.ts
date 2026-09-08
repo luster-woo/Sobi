@@ -29,6 +29,8 @@ export const queryKeys = {
     all: ['notification'] as const,
     /** 상단바 벨의 미확인 개수. 알림을 읽으면 여기를 무효화한다 */
     unreadCount: ['notification', 'unread-count'] as const,
+    /** 드롭다운 목록 */
+    list: ['notification', 'list'] as const,
   },
 
   loan: {

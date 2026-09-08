@@ -30,6 +30,11 @@ export const endpoints = {
   notification: {
     /** 상단바 벨의 미확인 표시용. 목록 전체를 받지 않고 개수만 받는다 */
     unreadCount: '/notifications/unread-count',
+    /** 드롭다운을 열 때 받는 목록 */
+    list: '/notifications',
+    readAll: '/notifications/read-all',
+    /** 개별 읽음 처리. 경로에 id 가 들어가 함수다 */
+    read: (notificationId: number) => `/notifications/${notificationId}/read`,
   },
 } as const
 

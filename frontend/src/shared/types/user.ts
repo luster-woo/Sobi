@@ -3,6 +3,8 @@ import type { ID, ISODateTime } from '@/shared/types/common'
 /**
  * 이 값에 따라 붙는 업체 테이블이 갈린다.
  * OWNER → `business_info`, PRE_OWNER → `pre_business_info`.
+ * 
+ * 여기 erd에 나와있는 역할명이랑 달라서 나중에 변경 체크해야함
  */
 export const USER_ROLE = {
   OWNER: 'OWNER', // 창업자 — 사업자등록 완료

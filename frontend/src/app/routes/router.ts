@@ -48,6 +48,12 @@ export const router = createBrowserRouter([
                 path: ROUTES.SIGN_UP,
                 lazy: async () => ({ Component: (await import('@/pages/SignUpPage')).SignUpPage }),
               },
+              {
+                path: ROUTES.PASSWORD_RESET,
+                lazy: async () => ({
+                  Component: (await import('@/pages/PasswordResetPage')).PasswordResetPage,
+                }),
+              },
             ],
           },
         ],

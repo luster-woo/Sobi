@@ -57,6 +57,12 @@ export const router = createBrowserRouter([
                   Component: (await import('@/pages/DashboardPage')).DashboardPage,
                 }),
               },
+              {
+                path: ROUTES.LOANS,
+                lazy: async () => ({
+                  Component: (await import('@/pages/LoanListPage')).LoanListPage,
+                }),
+              },
             ],
           },
         ],

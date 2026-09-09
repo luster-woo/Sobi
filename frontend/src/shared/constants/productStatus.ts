@@ -16,11 +16,29 @@ export const PRODUCT_STATUS = {
 
 export type ProductStatus = (typeof PRODUCT_STATUS)[keyof typeof PRODUCT_STATUS]
 
-export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
+/** 값에 공통인 라벨. APPROVED 만 도메인마다 다르다 */
+const SHARED_LABEL = {
   POSSIBLE: '가능',
   IMPOSSIBLE: '불가',
   WRITING: '작성 중',
   SUBMITTED: '신청 완료',
   REVIEW: '검토 중',
+} as const
+
+/**
+ * APPROVED 의 뜻이 도메인마다 다르다. 서버가 주는 값은 같고 문구만 갈린다.
+ *   대출     승인돼서 이미 받은 상품 → '보유중'
+ *   지원사업 지원금·지원대출·기타를 겸해서 '보유' 라는 말이 어색하다 → '선정'
+ */
+export const LOAN_STATUS_LABEL: Record<ProductStatus, string> = {
+  ...SHARED_LABEL,
+  APPROVED: '보유중',
+}
+
+export const SUPPORT_STATUS_LABEL: Record<ProductStatus, string> = {
+  ...SHARED_LABEL,
   APPROVED: '선정',
 }
+
+/** @deprecated SUPPORT_STATUS_LABEL 과 같다. ProductCard 재작성 때 정리한다 */
+export const PRODUCT_STATUS_LABEL = SUPPORT_STATUS_LABEL

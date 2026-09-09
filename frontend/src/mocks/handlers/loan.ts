@@ -96,12 +96,19 @@ export const loanHandlers = [
     const url = new URL(request.url)
     const page = Number(url.searchParams.get('page') ?? 0)
     const size = Number(url.searchParams.get('size') ?? 20)
+    const keyword = url.searchParams.get('keyword')
     const bankName = url.searchParams.get('bankName')
     const isPossible = url.searchParams.get('isPossible')
     const isBookmark = url.searchParams.get('isBookmark')
     const sort = url.searchParams.get('sort')
 
     let filtered = mockLoans
+    // "검색: 상품명·기관" 이라 두 필드를 함께 본다
+    if (keyword) {
+      filtered = filtered.filter(
+        (loan) => loan.accountName.includes(keyword) || loan.bankName.includes(keyword),
+      )
+    }
     if (bankName) filtered = filtered.filter((loan) => loan.bankName === bankName)
     if (isPossible === 'true') filtered = filtered.filter((loan) => loan.status === 'POSSIBLE')
     if (isBookmark === 'true') filtered = filtered.filter((loan) => loan.isBookmark)

@@ -31,6 +31,8 @@ export interface LoanListParams {
   /** 0-base. 화면의 1-base 를 toServerPage 로 변환해서 넣는다 */
   page: number
   size: number
+  /** 상품명·기관명 부분 일치 검색 */
+  keyword?: string
   isPossible?: boolean
   bankName?: string
   isBookmark?: boolean

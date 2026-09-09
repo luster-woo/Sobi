@@ -26,7 +26,7 @@ export function useBusinessSummary() {
   return useQuery({
     queryKey: queryKeys.business.meSummary,
     queryFn: getBusinessSummary,
-    enabled: status === 'authenticated' && role === USER_ROLE.OWNER,
+    enabled: status === 'authenticated' && role === USER_ROLE.ENTREPRENEUR,
     staleTime: STALE_TIME_MS,
     retry: (failureCount, error) => {
       if (isAxiosError(error) && error.response?.status === 404) return false

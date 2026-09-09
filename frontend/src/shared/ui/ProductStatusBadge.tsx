@@ -1,12 +1,8 @@
-import type { ComponentProps } from 'react'
-
 import type { ProductStatus } from '@/shared/constants/productStatus'
+import { PRODUCT_STATUS_VARIANT } from '@/shared/constants/statusBadge'
 import Badge from '@/shared/ui/Badge'
 
 // TODO: 나중에 서류 작성창에서 사용하는 Badge도 shared/ui에 있는 공용 뱃지들로 교체
-
-/** Badge 가 Variant 타입을 export 하지 않아 props 에서 꺼낸다. 변형이 늘면 자동으로 따라간다 */
-type BadgeVariant = NonNullable<ComponentProps<typeof Badge>['variant']>
 
 interface ProductStatusBadgeProps {
   status: ProductStatus
@@ -20,31 +16,18 @@ interface ProductStatusBadgeProps {
   className?: string
 }
 
-/*
- * 리디자인 시안(화면흐름-리디자인.html)의 배지 사용을 세어서 맞춘 표다.
- *   bdg-go   채운 초록  → '가능' 16회, '검증 통과', '실행 완료'
- *   bdg-mid  회색       → '신청 완료' 8회, '검증 중', '보유 중'
- *   bdg-no   회색 테두리 → '불가' 6회, '미제출', '대기'
- *   bdg-warn 빨강       → '검증 실패', '반려', '미가입', 'D-3' 등 마감 임박
+/**
+ * 자금 상품 상태 배지.
  *
- * '가능' 만 채운다. 지금 행동할 수 있는 유일한 상태라 다른 것과 무게가 같으면 안 된다.
- * '보유 중' 과 '신청 완료' 는 이미 끝났거나 기다리는 상태라 강조하지 않는다.
+ * 색은 shared/constants/statusBadge.ts 의 PRODUCT_STATUS_VARIANT 를 그대로 쓴다.
+ * 여기서 다시 정의하면 같은 '검토 중' 이 화면마다 다른 색으로 나온다.
  *
- * ⚠️ IMPOSSIBLE 은 시안이 회색 테두리(bdg-no)로 쓰지만, 눈에 띄게 하자는 요청으로
- *    빨강(danger)으로 뒀다. 시안대로 돌리려면 'outline' 으로 바꾸면 된다.
+ * 이 컴포넌트가 하는 일은 라벨을 도메인별로 갈라 받는 것뿐이다. 색은 상태만 보면
+ * 정해지지만 문구는 대출·지원사업이 달라서 그 부분만 바깥에서 받는다.
  */
-const statusVariant: Record<ProductStatus, BadgeVariant> = {
-  POSSIBLE: 'success',
-  IMPOSSIBLE: 'danger',
-  WRITING: 'neutral',
-  SUBMITTED: 'neutral',
-  REVIEW: 'neutral',
-  APPROVED: 'neutral',
-}
-
 export default function ProductStatusBadge({ status, labels, className }: ProductStatusBadgeProps) {
   return (
-    <Badge variant={statusVariant[status]} className={className}>
+    <Badge variant={PRODUCT_STATUS_VARIANT[status]} className={className}>
       {labels[status]}
     </Badge>
   )

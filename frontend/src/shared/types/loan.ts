@@ -1,4 +1,5 @@
 import type { ID, ISODateTime } from '@/shared/types/common'
+import type { ProgramDocumentType } from '@/shared/types/supportProgram'
 
 /**
  * 대출 상품. is_start·employee_num·firm_age·rating_name 이 가입 자격 조건이고,
@@ -6,14 +7,16 @@ import type { ID, ISODateTime } from '@/shared/types/common'
  */
 export interface Loan {
   id: ID
-  /** ⚠️ 상품명이다. ERD 컬럼명이 account_name 이라 계좌명으로 읽히기 쉽다 */
+  /** ⚠️ 상품명이다. 컬럼명이 account_name 이라 계좌명으로 읽히기 쉽다 */
   accountName: string
+  /** 싸피 금융망 상품 고유번호. 신청(`POST /application/finan`)에 쓴다 */
+  accountTypeUniqueNo: string | null
   bankName: string
   /** 기본 금리(%) */
   interestRate: number
   minLoanBalance: number
   maxLoanBalance: number
-  /** 개월 */
+  /** 납입 횟수(개월). 상품 카드의 '납입 횟수 36회' 가 이 값이다 */
   period: number
   description: string | null
   /** 가입 가능한 최소 신용등급명. `User.creditRating` 과 비교하는 값 */
@@ -33,6 +36,10 @@ export interface LoanDocument {
   id: ID
   loanId: ID
   docName: string
+  /** SUBMIT(발급받아 제출) / WRITE(양식을 채워 작성) */
+  type: ProgramDocumentType
+  /** 첨부 양식 URL. SUBMIT 은 null 인 경우가 많다 */
+  url: string | null
 }
 
 /** 업체별 추천 대출. 서버 배치가 채우는 매핑 테이블이라 PK 없이 두 FK 조합이다 */

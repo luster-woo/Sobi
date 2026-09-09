@@ -9,7 +9,7 @@ interface Option {
 }
 
 const sizeClass = {
-  md: 'text-body1 h-11 px-3.5 pr-10',
+  md: 'text-body1 h-[42px] px-3 pr-10',
   sm: 'text-body2 h-[30px] px-3 pr-8',
 } as const
 

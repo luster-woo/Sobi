@@ -1,4 +1,4 @@
-import type { AuthProvider, User, UserRole } from '@/shared/types/user'
+import type { AuthProvider, User } from '@/shared/types/user'
 
 /**
  * 인증 요청·응답.
@@ -16,12 +16,14 @@ export interface LoginRequest {
   password: string
 }
 
+/**
+ * 명세가 받는 필드는 셋뿐이다. `role` 은 가입 시점에 정해지지 않고
+ * `POST /business` 로 업체를 등록하면 ENTREPRENEUR 가 된다.
+ */
 export interface SignUpRequest {
   email: string
   password: string
   name: string
-  role: UserRole
-  phoneNumber?: string
 }
 
 export interface TokenResponse {

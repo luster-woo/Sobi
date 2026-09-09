@@ -83,7 +83,7 @@ export function LoginPage() {
             />
 
             <Link
-              to={ROUTES.PASSWORD_CHANGE}
+              to={ROUTES.PASSWORD_RESET}
               className="text-body2 text-text-secondary hover:text-text font-medium hover:underline"
             >
               비밀번호 찾기

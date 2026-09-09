@@ -10,12 +10,17 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    flyway:
-      enabled: true
-      baseline-on-migrate: true   # 기존 빈 DB에 처음 붙을 때 안전장치
     properties:
       hibernate:
         format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true   # 기존 빈 DB에 처음 붙을 때 안전장치
+    locations:
+      - classpath:db/migration
+      - classpath:db/seed/local # 더미데이터용 경로. 이거는 배포시에는 삭제해야함
+
 
   data:
     redis:

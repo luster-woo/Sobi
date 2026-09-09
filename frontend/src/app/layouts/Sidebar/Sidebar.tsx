@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router'
 import { NAV_ITEMS } from '@/app/layouts/Sidebar/navItems'
 import { SidebarBusinessCard } from '@/app/layouts/Sidebar/SidebarBusinessCard'
 import { ROUTES } from '@/shared/constants/routes'
+import BrandLogo from '@/shared/ui/BrandLogo'
 import { cn } from '@/shared/utils/cn'
 
 /**
@@ -25,20 +26,14 @@ export function Sidebar() {
       <div className="h-header flex shrink-0 items-center px-4">
         <Link
           to={ROUTES.DASHBOARD}
-          className="flex items-center gap-2.5 rounded-md px-1 py-1 transition-opacity hover:opacity-80"
+          className="rounded-sm px-1 py-1 transition-opacity hover:opacity-80"
         >
-          <span
-            aria-hidden="true"
-            className="bg-secondary text-text-inverse font-heading flex size-7 shrink-0 items-center justify-center rounded-md text-[13px] font-bold"
-          >
-            돕
-          </span>
-          <span className="font-heading text-text text-[15px] font-bold">소상공인 도우미</span>
+          <BrandLogo />
         </Link>
       </div>
 
       {/* 메뉴가 늘어나면 여기만 스크롤된다. 로고와 업체 카드는 자리에 남는다 */}
-      <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-[11px] py-1.5">
         <ul className="space-y-0.5">
           {NAV_ITEMS.map(({ label, to, Icon }) => (
             <li key={to}>
@@ -46,9 +41,9 @@ export function Sidebar() {
                 to={to}
                 className={({ isActive }) =>
                   cn(
-                    'text-body1 relative flex items-center gap-3 rounded-md py-2.5 pr-3 pl-4 transition-colors',
+                    'text-body2 relative flex items-center gap-2.5 rounded-sm py-2 pr-3 pl-[11px] transition-colors',
                     isActive
-                      ? 'bg-primary-soft text-primary font-semibold'
+                      ? 'bg-primary-soft text-primary font-medium'
                       : 'text-text-secondary hover:bg-surface-muted hover:text-text',
                   )
                 }
@@ -59,10 +54,10 @@ export function Sidebar() {
                     {isActive && (
                       <span
                         aria-hidden="true"
-                        className="bg-primary absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r-full"
+                        className="bg-primary absolute top-1/2 left-0 h-[15px] w-[3px] -translate-y-1/2 rounded-r-full"
                       />
                     )}
-                    <Icon className="size-5 shrink-0" />
+                    <Icon className="size-[17px] shrink-0" />
                     <span className="truncate">{label}</span>
                   </>
                 )}

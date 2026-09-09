@@ -14,7 +14,7 @@ export default function BrandLogo({ markOnly = false, className }: BrandLogoProp
     <span className={cn('flex items-center gap-2.5', className)}>
       <span
         aria-hidden="true"
-        className="bg-primary text-text-inverse font-heading flex size-[25px] shrink-0 items-center justify-center rounded-md text-[12px] font-bold"
+        className="bg-primary text-text-inverse font-heading flex size-[25px] shrink-0 items-center justify-center rounded-sm text-[12px] font-bold"
       >
         돕
       </span>

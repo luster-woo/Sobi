@@ -3,9 +3,9 @@ import { PRODUCT_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { cn } from '@/shared/utils/cn'
 
 export interface ProductMetric {
-  /** '금리' · '한도' · '지원 금액' · '접수 기간' */
+  /** '금리' · '납입 횟수' · '대출 금액' · '지원 금액' · '마감' */
   label: string
-  /** 포맷팅이 끝난 표시값. '연 3.4%' · '7,000만 원' · 'D-10' */
+  /** 포맷팅이 끝난 표시값. '연 3.4%' · '36회' · '1,000만~7,000만 원' · 'D-10' */
   value: string
 }
 
@@ -14,11 +14,17 @@ interface ProductCardProps {
   /** 기관명 */
   organization?: string
   /**
-   * 표시할 지표. 지원사업 type 별로 항목이 다릅니다.
-   *   SUPPORT → 지원 금액 · 접수 기간
-   *   LOAN    → 금리 · 한도
-   *   ETC     → 없음
-   * 대출 목록은 항상 금리 · 한도입니다.
+   * 표시할 지표. 어떤 항목을 넣을지는 카드가 아니라 부르는 화면이 정합니다.
+   * 팀에서 정한 기준(스키마 컬럼 기준)은 이렇습니다.
+   *
+   *   대출   → 납입 횟수(`loan.period`) · 대출 금액(`min_loan_balance`~`max_loan_balance`)
+   *            금리(`interest_rate`)
+   *   지원금 → 마감(`support_program.end_date`) · 금리(`interest_rate`)
+   *            지원 금액(`min_balance`~`max_balance`)
+   *
+   * 지원사업에 금리가 있는 건 융자성 사업(이자 지원·보증부)이 섞여 있어서입니다.
+   * `support_program.type` 으로 보조금인지 융자인지 갈립니다 — 보조금이면 금리 항목을
+   * 넣지 마세요.
    */
   metrics?: ProductMetric[]
   status: ProductStatus
@@ -34,8 +40,9 @@ interface ProductCardProps {
  * 와이어프레임이 흑백이라 색은 토큰으로 옮겼습니다. 기준은 "지금 사용자가 뭘 해야 하나".
  *  - POSSIBLE    지금 행동할 수 있는 유일한 상태라 유일하게 채웁니다
  *  - IMPOSSIBLE  점선 + 흐린 글씨. 눌러도 되는 것처럼 보이면 안 됩니다
- *  - WRITING     이어서 할 일이 남아 있어 주의색
- *  - SUBMITTED · REVIEW  기다리는 상태라 중립 테두리
+ *  - WRITING     사용자가 이어서 할 일이 남아 있어 주의색
+ *  - SUBMITTED   접수만 된 상태. 할 일이 없어 중립 테두리
+ *  - REVIEW      서버(기관)가 처리 중이라 진행색. SUBMITTED 와 같은 색이면 구분이 안 됩니다
  *  - APPROVED    결과가 좋은 상태이되 행동 유도가 아니라서 soft 배경
  */
 const statusClass: Record<ProductStatus, string> = {
@@ -43,7 +50,7 @@ const statusClass: Record<ProductStatus, string> = {
   IMPOSSIBLE: 'border-border-strong text-text-disabled border-dashed',
   WRITING: 'border-warning text-warning',
   SUBMITTED: 'border-border-strong text-text-secondary',
-  REVIEW: 'border-border-strong text-text-secondary',
+  REVIEW: 'border-progress/30 bg-progress-soft text-progress',
   APPROVED: 'border-primary bg-primary-soft text-primary',
 }
 

@@ -52,7 +52,7 @@ export function useListParams<K extends string>({ keys }: UseListParamsOptions<K
    * 빈 문자열·null 은 키를 지운다. '?bankName=' 이 남으면 서버가 빈 문자열로
    * 필터링을 시도한다.
    */
-    const setValues = (patch: Partial<Record<K, string | null>>) => {
+  const setValues = (patch: Partial<Record<K, string | null>>) => {
     const params = new URLSearchParams(searchParams)
 
     // Object.entries 는 제네릭 Partial<Record<K, ...>> 에서 값 타입을 {} 로 추론한다.

@@ -16,7 +16,7 @@ export function DashboardPage() {
   // 세션 복구 중에는 user 가 아직 null
   if (!user) return null
 
-  if (user.role === USER_ROLE.PRE_OWNER) return <PreOwnerDashboard />
+  if (user.role === USER_ROLE.PREENTREPRENEUR) return <PreOwnerDashboard />
 
   // TODO: 사업자 대시보드는 176 하위 티켓에서 OwnerDashboard 컴포넌트로 교체
   return <div className="text-body1">사업자 대시보드 (준비 중)</div>

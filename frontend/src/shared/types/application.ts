@@ -11,23 +11,25 @@ export const APPLICATION_STATUS = {
 export type ApplicationStatus = (typeof APPLICATION_STATUS)[keyof typeof APPLICATION_STATUS]
 
 /**
- * 지원사업 신청과 대출 신청을 한 테이블에서 겸한다.
- * supportProgramId·loanId 중 하나만 채워지고 나머지는 null 이므로,
- * 목록 화면에서 어느 쪽 신청인지는 이 두 필드로 판별한다.
+ * 🔴 스키마와 명세가 어긋난다. `V1__init.sql` 의 `application` 컬럼은
+ *    `user_id` · `business_id` · `loan_id` · `status` · `reject_reason` ·
+ *    `subject_at` · `complete_at` 이고 **`support_program_id` 가 없다.**
+ *    그런데 명세는 `POST /application?type=loan|support` 로 지원사업 신청도 받는다.
+ *    지원사업 신청을 어디에 저장할지 백엔드 확인이 필요하다.
  *
- * ⚠️ ERD 컬럼명은 `business_id` 인데 한글 라벨이 '지원사업 아이디' 다.
- *    `support_program_id` 오타로 보고 supportProgramId 로 뒀다 — 백엔드 확인 필요.
- *    실제로 업체 id 라면 목록 조회 기준이 유저가 아니라 업체가 되므로 영향이 크다.
+ *    아래는 스키마 기준이다. `support_program_id` 컬럼이 추가되면 여기에 넣는다.
  */
 export interface Application {
   id: ID
   userId: ID
-  supportProgramId: ID | null
+  /** 신청 당시의 업체. 업체가 지워지면 null 이 된다 (ON DELETE SET NULL) */
+  businessId: ID | null
   loanId: ID | null
   status: ApplicationStatus
   /** status 가 REJECTED 일 때만 채워진다 */
   rejectReason: string | null
-  createdAt: ISODateTime
-  /** 처리 날짜. 심사 상태가 바뀔 때 갱신된다 */
-  updatedAt: ISODateTime
+  /** 접수 시각 (`subject_at`) */
+  subjectAt: ISODateTime
+  /** 심사 완료 시각 (`complete_at`). 진행 중이면 null */
+  completeAt: ISODateTime | null
 }

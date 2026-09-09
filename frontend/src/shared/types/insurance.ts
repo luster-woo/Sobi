@@ -20,15 +20,14 @@ export interface CodeInsurance {
 }
 
 /**
- * ⚠️ ERD 주석에는 한글 값('가입 완료' / '확인 필요' / '가입 필요' / '가입 제외')으로
- *    적혀 있다. 서버 enum 은 영문 상수로 내려준다고 가정했다 — 백엔드 확인 필요.
- *    한글로 확정되면 이 객체의 값만 바꾸면 되고 타입은 그대로 따라간다.
+ * `V1__init.sql` 의 `chk_insurance_checklist_status` 제약값이다.
+ *   CHECK (status IN ('COMPLETED', 'NEEDS_VERIFICATION', 'REQUIRED', 'EXEMPT'))
  */
 export const INSURANCE_STATUS = {
-  ENROLLED: 'ENROLLED', // 가입 완료
-  NEEDS_CHECK: 'NEEDS_CHECK', // 확인 필요 — 가입 여부를 판단할 근거가 부족
-  NOT_ENROLLED: 'NOT_ENROLLED', // 가입 필요
-  EXCLUDED: 'EXCLUDED', // 가입 제외 — 업종은 해당되나 이 업체는 조건 미달
+  COMPLETED: 'COMPLETED', // 가입 완료
+  NEEDS_VERIFICATION: 'NEEDS_VERIFICATION', // 확인 필요 — 가입 여부를 판단할 근거가 부족
+  REQUIRED: 'REQUIRED', // 가입 필요
+  EXEMPT: 'EXEMPT', // 가입 제외 — 업종은 해당되나 이 업체는 조건 미달
 } as const
 
 export type InsuranceStatus = (typeof INSURANCE_STATUS)[keyof typeof INSURANCE_STATUS]

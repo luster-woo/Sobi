@@ -17,11 +17,15 @@ export function Topbar() {
   const title = resolvePageTitle(pathname)
 
   return (
-    <header className="bg-surface border-border h-header flex shrink-0 items-center justify-between gap-4 border-b px-6">
+    <header className="bg-surface border-border h-header flex shrink-0 items-center justify-between gap-4 border-b px-5">
       {/* h1 은 사이드바 로고가 아니라 이 문구다. 로고를 h1 으로 두면 모든 화면 제목이 같아진다 */}
-      {title ? <h1 className="text-h3 truncate">{title}</h1> : <span />}
+      {title ? (
+        <h1 className="font-heading truncate text-[16.5px] font-bold">{title}</h1>
+      ) : (
+        <span />
+      )}
 
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2.5">
         <NotificationBell />
 
         {/* 세션 복구 중이거나 소셜 가입 직후에는 이름이 없다 */}
@@ -35,7 +39,7 @@ export function Topbar() {
           type="button"
           onClick={() => requestLogout()}
           disabled={isPending}
-          className="text-body2 text-text-secondary hover:text-text rounded-md px-2 py-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          className="text-body2 text-text-secondary hover:text-text rounded-sm px-2 py-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
           로그아웃
         </button>

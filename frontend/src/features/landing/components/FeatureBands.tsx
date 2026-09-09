@@ -87,7 +87,7 @@ function DemoPanel({ demo, onSurface }: { demo: Band['demo']; onSurface: boolean
   return (
     <div
       className={cn(
-        'border-border overflow-hidden rounded-lg border',
+        'border-border overflow-hidden rounded-md border',
         // 흰 밴드에서 패널까지 흰색이면 경계가 테두리 하나로만 남는다
         onSurface ? 'bg-bg' : 'bg-surface',
       )}

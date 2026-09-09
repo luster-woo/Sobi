@@ -1,14 +1,16 @@
 import type { ID, ISODateTime } from '@/shared/types/common'
 
 /**
- * 이 값에 따라 붙는 업체 테이블이 갈린다.
- * OWNER → `business_info`, PRE_OWNER → `pre_business_info`.
- * 
- * 여기 erd에 나와있는 역할명이랑 달라서 나중에 변경 체크해야함
+ * `V1__init.sql` 의 `chk_users_role` 제약값이다.
+ *   CHECK (role IN ('ENTREPRENEUR', 'PREENTREPRENEUR'))
+ *
+ * ENTREPRENEUR 는 `business_info` 레코드를 갖고, PREENTREPRENEUR 는 갖지 않는다.
+ * ERD 에 있던 `pre_business_info` 테이블은 실제 스키마에 없다 — 예비 창업자의
+ * 희망 업종·지역을 저장할 곳이 아직 없다.
  */
 export const USER_ROLE = {
-  OWNER: 'OWNER', // 창업자 — 사업자등록 완료
-  PRE_OWNER: 'PRE_OWNER', // 예비 창업자 — 창업 준비 단계
+  ENTREPRENEUR: 'ENTREPRENEUR', // 창업자 — 사업자등록 완료
+  PREENTREPRENEUR: 'PREENTREPRENEUR', // 예비 창업자 — 창업 준비 단계
 } as const
 
 export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE]
@@ -31,9 +33,10 @@ export interface User {
   email: string
   name: string
   role: UserRole
-  /** 소셜 가입 직후에는 없다. 업체 등록 단계에서 받는다 */
-  phoneNumber: string | null
-  /** 신용등급명 (VARCHAR(3), 예: 'AA'). 대출 상품의 ratingName 과 비교하는 값 */
+  /**
+   * 신용등급명 (VARCHAR(3), 예: 'AA'). 대출 상품의 ratingName 과 비교하는 값.
+   * 마이데이터 연동으로 채워지므로 연동 전에는 null 이다.
+   */
   creditRating: string | null
   provider: AuthProvider
   /** provider 가 LOCAL 이면 null */

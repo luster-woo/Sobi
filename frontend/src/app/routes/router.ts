@@ -1,4 +1,4 @@
-import { createBrowserRouter, redirect } from 'react-router'
+import { createBrowserRouter } from 'react-router'
 
 import { AppLayout } from '@/app/layouts/AppLayout'
 import { RootLayout } from '@/app/layouts/RootLayout'
@@ -23,14 +23,13 @@ export const router = createBrowserRouter([
     ErrorBoundary: RouteError,
     children: [
       {
-        index: true,
-        // 랜딩 페이지가 정해지기 전까지는 대시보드로 보낸다.
-        // 비로그인이면 ProtectedRoute 가 다시 /login 으로 넘긴다.
-        loader: () => redirect(ROUTES.DASHBOARD),
-      },
-      {
         Component: PublicOnlyRoute,
         children: [
+          {
+            // 로그인 상태면 PublicOnlyRoute 가 대시보드로 넘긴다
+            index: true,
+            lazy: async () => ({ Component: (await import('@/pages/LandingPage')).LandingPage }),
+          },
           {
             path: ROUTES.LOGIN,
             lazy: async () => ({ Component: (await import('@/pages/LoginPage')).LoginPage }),

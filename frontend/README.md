@@ -40,6 +40,7 @@ src/
 │  └─ App.tsx
 ├─ pages/               라우트 단위 페이지. features 를 조합만 한다
 ├─ features/            도메인별 기능. 각 폴더 안에 api/ hooks/ components/
+│  ├─ landing/          비로그인 랜딩 — 히어로·기능 소개        (133)
 │  ├─ auth/             인증, 온보딩(업체 등록·진위확인)        (133)
 │  ├─ business/         업체 정보 수정, 매출·세액
 │  ├─ dashboard/        대시보드, 의무보험 체크리스트            (176)
@@ -80,6 +81,10 @@ src/
 | `bookmark`            | 토글 버튼을 쓰는 `features/loan/`·`support-program/`    |
 
 여러 feature 가 같이 쓰게 되면 그때 `shared/` 로 올리거나 독립 feature 로 뺍니다.
+
+반대로 `landing/` 은 ERD 도메인이 없습니다. 서버에서 받아오는 게 없고 카피와 예시 숫자가
+화면과 같이 배포되는 마케팅 페이지라 `api/` `hooks/` 없이 `components/` 만 있습니다.
+에픽은 133(인증·온보딩)이지만 인증 로직과 섞이지 않게 폴더를 따로 뒀습니다.
 
 빈 폴더는 `.gitkeep` 으로 추적 중입니다. 실제 파일이 들어가면 지워주세요.
 

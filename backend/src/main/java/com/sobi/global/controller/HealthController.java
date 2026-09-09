@@ -43,10 +43,10 @@ public class HealthController {
     }
 
     // businessException globalExceptionHandler 테스트
-    @GetMapping("/health/business-error")
-    public ResponseEntity<ApiResponse<Void>> businessError() {
-        throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-    }
+//    @GetMapping("/health/business-error")
+//    public ResponseEntity<ApiResponse<Void>> businessError() {
+//        throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+//    }
 
     // runtimeException globalExceptionHandler 테스트
     @GetMapping("/health/server-error")

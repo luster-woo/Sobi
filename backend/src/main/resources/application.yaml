@@ -4,25 +4,36 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/sobi
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
+    username: ${POSTGRES_USER:sobi}
+    password: ${POSTGRES_PASSWORD:localdev}
 
   jpa:
     hibernate:
       ddl-auto: validate
-    flyway:
-      enabled: true
-      baseline-on-migrate: true   # 기존 빈 DB에 처음 붙을 때 안전장치
     properties:
       hibernate:
         format_sql: true
+
+  # Flyway는 spring 바로 아래 (spring.jpa 아래가 아님)
+  flyway:
+    enabled: true
+    baseline-on-migrate: true   # 기존 빈 DB에 처음 붙을 때 안전장치
 
   data:
     redis:
       host: localhost
       port: 6379
-      password: ${REDIS_PASSWORD}
+      password: ${REDIS_PASSWORD:localdev}
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 50MB
 
   jackson:
     mapper:
       sort-properties-alphabetically: false
+
+server:
+  servlet:
+    context-path: /api

@@ -37,6 +37,7 @@ export default function Select({
   helperText,
   error,
   disabled,
+  required,
   id,
   className,
   ...rest
@@ -53,6 +54,7 @@ export default function Select({
       {label && (
         <label htmlFor={selectId} className="font-heading text-body2 text-text font-semibold">
           {label}
+          {required && <span className="text-danger ml-0.5">*</span>}
         </label>
       )}
 
@@ -60,6 +62,7 @@ export default function Select({
         <select
           id={selectId}
           disabled={disabled}
+          required={required}
           aria-invalid={hasError || undefined}
           aria-describedby={message ? messageId : undefined}
           className={cn(

@@ -44,6 +44,10 @@ export const router = createBrowserRouter([
                 path: ROUTES.TERMS,
                 lazy: async () => ({ Component: (await import('@/pages/TermsPage')).TermsPage }),
               },
+              {
+                path: ROUTES.SIGN_UP,
+                lazy: async () => ({ Component: (await import('@/pages/SignUpPage')).SignUpPage }),
+              },
             ],
           },
         ],

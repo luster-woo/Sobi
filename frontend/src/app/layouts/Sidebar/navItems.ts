@@ -31,7 +31,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: '대시보드', to: ROUTES.DASHBOARD, Icon: DashboardIcon },
   { label: '상권 분석', to: ROUTES.MARKET_ANALYSIS, Icon: MarketAnalysisIcon },
   { label: '대출', to: ROUTES.LOANS, Icon: LoanIcon },
-  { label: '지원금', to: ROUTES.SUPPORT_PROGRAMS, Icon: SupportProgramIcon },
+  { label: '지원사업', to: ROUTES.SUPPORT_PROGRAMS, Icon: SupportProgramIcon },
   { label: '자금 조합', to: ROUTES.FUNDING_PLAN, Icon: FundingPlanIcon },
   { label: '상환 관리', to: ROUTES.LOAN_REPAYMENTS, Icon: RepaymentIcon },
   { label: '신청 현황', to: ROUTES.APPLICATIONS, Icon: ApplicationIcon },

@@ -8,8 +8,16 @@ export const ROUTES = {
   HOME: '/',
 
   LOGIN: '/login',
+  TERMS: '/terms',
   SIGN_UP: '/signup',
+  PASSWORD_CHANGE: '/password',
   ONBOARDING: '/onboarding',
+
+  /** 온보딩 — 사업자 인증, 마이데이터 연동. 가입 직후 순서대로 지난다 */
+  BUSINESS_VERIFY: '/verify',
+  MYDATA_IDENTITY: '/mydata/identity',
+  MYDATA_CONSENT: '/mydata/consent',
+  MYDATA_COLLECT: '/mydata/collect',
 
   DASHBOARD: '/dashboard',
   MARKET_ANALYSIS: '/market-analysis',

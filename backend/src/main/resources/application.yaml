@@ -14,10 +14,14 @@ spring:
       hibernate:
         format_sql: true
 
-  # Flyway는 spring 바로 아래 (spring.jpa 아래가 아님)
+
   flyway:
     enabled: true
     baseline-on-migrate: true   # 기존 빈 DB에 처음 붙을 때 안전장치
+    locations:
+      - classpath:db/migration
+      - classpath:db/seed/local # 더미데이터용 경로. 이거는 배포시에는 삭제해야함
+
 
   data:
     redis:

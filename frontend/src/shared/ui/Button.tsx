@@ -7,7 +7,7 @@ type Size = 'sm' | 'md' | 'lg'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
-  /** sm 36 · md 44 · lg 48 (px) */
+  /** sm 34 · md 42 · lg 48 (px) */
   size?: Size
   /** 스피너 표시 + 클릭 차단 */
   loading?: boolean
@@ -22,8 +22,8 @@ const variantClass: Record<Variant, string> = {
 }
 
 const sizeClass: Record<Size, string> = {
-  sm: 'h-9 px-4 text-body2',
-  md: 'h-11 px-5 text-body1',
+  sm: 'h-[34px] px-3 text-body2',
+  md: 'h-[42px] px-4 text-body1',
   lg: 'h-12 px-6 text-body1',
 }
 
@@ -49,8 +49,9 @@ export default function Button({
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        'font-heading inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors',
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        'font-heading inline-flex items-center justify-center gap-2 rounded-sm font-medium transition-colors',
+        // 시안의 비활성 버튼은 투명도가 아니라 색 자체가 다르다 (.btn-off)
+        'disabled:bg-border-subtle disabled:text-text-disabled disabled:cursor-not-allowed disabled:border-transparent',
         variantClass[variant],
         sizeClass[size],
         className,

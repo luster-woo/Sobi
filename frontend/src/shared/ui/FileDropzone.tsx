@@ -97,14 +97,14 @@ export default function FileDropzone({
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         className={cn(
-          'w-full rounded-lg border px-5 py-4 text-left transition-colors',
+          'w-full rounded-md border px-5 py-4 text-left transition-colors',
           'focus-visible:outline-primary focus-visible:outline focus-visible:-outline-offset-2',
           'disabled:cursor-not-allowed disabled:opacity-60',
           isDragging
             ? 'border-primary bg-primary-soft'
             : variant === 'dashed'
-                ? 'border-border-strong border-dashed bg-surface-muted'
-                : 'border-border-strong bg-surface',
+              ? 'border-border-strong bg-surface-muted border-dashed'
+              : 'border-border-strong bg-surface',
           className,
         )}
       >

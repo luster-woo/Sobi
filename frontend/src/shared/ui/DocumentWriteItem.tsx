@@ -55,7 +55,7 @@ export default function DocumentWriteItem({
   return (
     <div
       className={cn(
-        'border-border bg-surface flex flex-wrap items-center gap-3 rounded-lg border px-5 py-4',
+        'border-border bg-surface flex flex-wrap items-center gap-3 rounded-md border px-5 py-4',
         className,
       )}
     >

@@ -52,7 +52,7 @@ export default function Input({
           aria-invalid={hasError || undefined}
           aria-describedby={message ? messageId : undefined}
           className={cn(
-            'text-body1 text-text h-11 w-full rounded-md border px-3.5 transition-colors',
+            'text-body1 text-text h-11 w-full rounded-sm border px-3.5 transition-colors',
             'placeholder:text-text-disabled',
             'disabled:bg-surface-muted disabled:text-text-disabled disabled:cursor-not-allowed',
             hasError

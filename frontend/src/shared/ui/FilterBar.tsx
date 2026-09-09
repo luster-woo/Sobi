@@ -37,7 +37,7 @@ export default function FilterBar({
       role="group"
       aria-label="목록 필터"
       className={cn(
-        'border-border bg-surface p-card flex flex-wrap items-end gap-3 rounded-lg border',
+        'border-border bg-surface p-card flex flex-wrap items-end gap-3 rounded-md border',
         className,
       )}
     >

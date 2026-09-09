@@ -12,7 +12,7 @@ interface PaginationProps {
 }
 
 const itemBase =
-  'inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-body2 transition-colors'
+  'inline-flex h-9 min-w-9 items-center justify-center rounded-sm px-2 text-body2 transition-colors'
 const itemIdle = 'text-text-secondary hover:bg-surface-muted'
 const itemActive = 'bg-primary text-text-inverse font-semibold'
 

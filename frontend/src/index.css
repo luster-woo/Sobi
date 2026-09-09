@@ -16,13 +16,14 @@
  */
 @theme {
   /* ---------- Brand ---------- */
-  --color-primary: #05a66b;
-  --color-primary-hover: #048f5c;
-  --color-primary-active: #037a4e;
-  --color-primary-soft: #e6f6f0;
+  --color-primary: #0a6e5c;
+  --color-primary-hover: #085c4d;
+  --color-primary-active: #064a3e;ㄴ
+  --color-primary-soft: #e3efec;
 
-  --color-secondary: #303432;
-  --color-secondary-hover: #292d2b;
+  /* 리디자인의 --ink / --ink-hover */
+  --color-secondary: #1f2422;
+  --color-secondary-hover: #171b19;
 
   /* ---------- Background · Surface · Border ---------- */
   --color-bg: #f4f6f5;
@@ -31,24 +32,30 @@
   --color-surface-muted: #fafafa;
 
   --color-border: #e7e9e8;
-  --color-border-strong: #c7cbc9;
+  --color-border-strong: #c2c8c5;
   --color-border-subtle: #eef0ef;
 
   /* ---------- Text ---------- */
   --color-text: #191b1a;
   --color-text-secondary: #565e5a;
-  --color-text-muted: #858f8a;
-  --color-text-disabled: #969e9a;
+  --color-text-muted: #6b7370;
+  --color-text-disabled: #a2aaa6;
   --color-text-inverse: #ffffff;
 
   /* 모달·드로어 딤 처리 */
   --color-overlay: rgb(25 27 26 / 0.45);
 
   /* ---------- Status (Success 는 Primary 공유) ---------- */
-  --color-success: #05a66b;
-  --color-success-soft: #e6f6f0;
+  --color-success: #0a6e5c;
+  --color-success-soft: #e3efec;
+  /*
+   * 리디자인 시안에는 warning 색이 없습니다. 경고 상태가 있는 화면이 시안에 안 들어간
+   * 것으로 보고 유지합니다 — Toast 의 warning 변형과 '작성 중' 배지가 이미 쓰고 있어
+   * 지우면 그 코드가 깨집니다. 시안에 확정되면 그때 맞춥니다.
+   */
   --color-warning: #b45309;
   --color-warning-soft: #faeedd;
+  /* 리디자인의 --urgent / --urgent-soft 와 값이 같습니다 */
   --color-danger: #b42318;
   --color-danger-hover: #9a1e15;
   --color-danger-soft: #f6e3e1;
@@ -89,7 +96,7 @@
 
   /* ---------- Radius ---------- */
   --radius-sm: 6px;
-  --radius-md: 10px;
+  --radius-md: 8px;
   --radius-lg: 14px;
   --radius-xl: 20px;
 

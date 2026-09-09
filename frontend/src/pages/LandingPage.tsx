@@ -23,8 +23,9 @@ export function LandingPage() {
           <Link to={ROUTES.LOGIN} className="text-body2 text-text-secondary hover:text-text">
             로그인
           </Link>
+          {/* 가입은 약관 동의(03)부터 시작한다. /signup 으로 바로 보내면 동의 단계가 빠진다 */}
           <Link
-            to={ROUTES.SIGN_UP}
+            to={ROUTES.TERMS}
             className="border-border-strong bg-surface text-text font-heading text-body2 inline-flex h-[34px] items-center rounded-sm border px-3 font-medium"
           >
             회원가입

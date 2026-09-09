@@ -1,0 +1,2 @@
+ALTER TABLE verify
+DROP CONSTRAINT verify_business_code_id_fkey;

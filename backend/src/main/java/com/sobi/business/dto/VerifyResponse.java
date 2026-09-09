@@ -16,6 +16,7 @@ public class VerifyResponse {
     private String businessType;
     private String businessName;
     private String address;
+    private Boolean isClose;
     private LocalDate openDate;
 
     public static VerifyResponse from(Verify verify) {
@@ -24,6 +25,7 @@ public class VerifyResponse {
                 .businessType(verify.getBusinessCodeName())
                 .businessName(verify.getBusinessName())
                 .address(verify.getAddress())
+                .isClose(verify.isClose())
                 .openDate(verify.getOpenDate())
                 .build();
     }

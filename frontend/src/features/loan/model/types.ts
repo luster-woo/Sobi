@@ -38,3 +38,30 @@ export interface LoanListParams {
   isBookmark?: boolean
   sort?: string
 }
+
+/**
+ * 대출 상품 상세.
+ *
+ * LoanListItem 을 상속하지 않는다. 상세 응답에는 loanId 가 없고(경로 파라미터로 넘긴
+ * 값이라 다시 오지 않는다) bankName 도 없다. 서버 응답을 그대로 옮기는 타입이라
+ * 억지로 묶으면 없는 필드를 있다고 믿게 된다.
+ */
+export interface LoanDetail {
+  accountName: string
+  /** DB 컬럼이 nullable 이다. 없으면 모달에서 설명 줄을 생략한다 */
+  description: string | null
+  status: ProductStatus
+  isBookmark: boolean
+  /** 연 이율(%) */
+  interestRate: number
+  minLoanBalance: number
+  maxLoanBalance: number
+  /** 상환 기간(개월) */
+  period: number
+  /** 가입 가능 최소 업력(개월) */
+  firmAge: number
+  /** 지원 대상. '소상공인' 같은 문구 */
+  target: string
+  /** 최소 가입 가능 신용등급명. 'B' 같은 값 */
+  rating: string
+}

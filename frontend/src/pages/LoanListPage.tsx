@@ -1,6 +1,9 @@
+import { Outlet, useLocation, useNavigate } from 'react-router'
+
 import { loanColumns } from '@/features/loan/components/loanColumns'
 import LoanFilterBar from '@/features/loan/components/LoanFilterBar'
 import { useLoans } from '@/features/loan/hooks/useLoans'
+import { routeTo } from '@/shared/constants/routes'
 import { useListParams } from '@/shared/hooks/useListParams'
 import EmptyState from '@/shared/ui/EmptyState'
 import Pagination from '@/shared/ui/Pagination'
@@ -24,6 +27,8 @@ const PAGE_SIZE = 20
  */
 export function LoanListPage() {
   const { page, values, setPage, setValues } = useListParams({ keys: FILTER_KEYS })
+  const navigate = useNavigate()
+  const location = useLocation()
 
   const { data, isLoading, isFetching, isError } = useLoans({
     page: toServerPage(page),
@@ -87,6 +92,10 @@ export function LoanListPage() {
           columns={loanColumns}
           rows={loans}
           getRowId={(loan) => loan.loanId}
+          // 검색어·필터를 들고 이동한다. 모달을 닫으면 그대로 돌아온다
+          onRowClick={(loan) =>
+            navigate({ pathname: routeTo.loanDetail(loan.loanId), search: location.search })
+          }
           isLoading={isLoading}
           skeletonRows={8}
           bordered={false}
@@ -116,6 +125,9 @@ export function LoanListPage() {
           </div>
         )}
       </Panel>
+
+      {/* /loans/:loanId — 상품 상세 모달이 이 자리에 렌더된다 */}
+      <Outlet />
     </div>
   )
 }

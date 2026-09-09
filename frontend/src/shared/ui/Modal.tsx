@@ -13,6 +13,11 @@ interface ModalProps {
   title: string
   /** 제목 바로 아래 한 줄 설명 */
   description?: string
+  /**
+   * 제목 오른쪽, 닫기 버튼 왼쪽에 들어갈 요소. 상태 배지·북마크처럼 제목과
+   * 한 줄에 놓여야 하는 것들.
+   */
+  headerRight?: ReactNode
   children?: ReactNode
   /** 하단 버튼 영역. 넘기면 위에 구분선이 생깁니다. 보통 <Button> 두 개 */
   footer?: ReactNode
@@ -45,6 +50,7 @@ export default function Modal({
   onClose,
   title,
   description,
+  headerRight,
   children,
   footer,
   size = 'md',
@@ -148,6 +154,8 @@ export default function Modal({
               </p>
             )}
           </div>
+
+          {headerRight && <div className="flex shrink-0 items-center gap-2">{headerRight}</div>}
 
           <button
             type="button"

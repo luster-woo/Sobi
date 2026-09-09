@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router'
 
 import { AppLayout } from '@/app/layouts/AppLayout'
+import { AuthLayout } from '@/app/layouts/AuthLayout'
 import { RootLayout } from '@/app/layouts/RootLayout'
 import { ProtectedRoute } from '@/app/routes/ProtectedRoute'
 import { PublicOnlyRoute } from '@/app/routes/PublicOnlyRoute'
@@ -26,13 +27,20 @@ export const router = createBrowserRouter([
         Component: PublicOnlyRoute,
         children: [
           {
-            // 로그인 상태면 PublicOnlyRoute 가 대시보드로 넘긴다
+            // 로그인 상태면 PublicOnlyRoute 가 대시보드로 넘긴다.
+            // 랜딩은 자체 헤더를 갖는 마케팅 페이지라 AuthLayout 아래가 아니다
             index: true,
             lazy: async () => ({ Component: (await import('@/pages/LandingPage')).LandingPage }),
           },
           {
-            path: ROUTES.LOGIN,
-            lazy: async () => ({ Component: (await import('@/pages/LoginPage')).LoginPage }),
+            // 브랜드 바 + 가운데 정렬 카드가 붙는 자리
+            Component: AuthLayout,
+            children: [
+              {
+                path: ROUTES.LOGIN,
+                lazy: async () => ({ Component: (await import('@/pages/LoginPage')).LoginPage }),
+              },
+            ],
           },
         ],
       },

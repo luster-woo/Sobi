@@ -107,7 +107,7 @@ export default function ProductCard({
     <div
       onClick={onClick}
       className={cn(
-        'border-border bg-surface p-card flex flex-wrap items-center gap-x-6 gap-y-3 rounded-lg border transition-colors',
+        'border-border bg-surface p-card flex flex-wrap items-center gap-x-6 gap-y-3 rounded-md border transition-colors',
         onClick && 'hover:border-border-strong cursor-pointer',
         className,
       )}

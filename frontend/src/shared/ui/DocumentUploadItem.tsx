@@ -82,7 +82,7 @@ export default function DocumentUploadItem({
          * 실제 button 이 아니라 span 입니다. 바깥이 이미 button 이라 중첩을 피해야 하고,
          * 클릭은 어차피 바깥으로 전달돼 파일 선택이 열립니다.
          */
-        <span className="border-border-strong text-body2 text-text bg-surface inline-flex h-9 shrink-0 items-center rounded-md border px-4 font-semibold">
+        <span className="border-border-strong text-body2 text-text bg-surface inline-flex h-9 shrink-0 items-center rounded-sm border px-4 font-semibold">
           다시 업로드
         </span>
       )}
@@ -105,7 +105,7 @@ export default function DocumentUploadItem({
   }
 
   return (
-    <div className={cn('border-border bg-surface rounded-lg border px-5 py-4', className)}>
+    <div className={cn('border-border bg-surface rounded-md border px-5 py-4', className)}>
       {body}
     </div>
   )

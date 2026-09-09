@@ -132,7 +132,7 @@ export default function Modal({
         // 오버레이의 onClick 이 패널 클릭에도 걸리지 않게 전파를 끊습니다
         onClick={(event) => event.stopPropagation()}
         className={cn(
-          'bg-surface shadow-modal flex max-h-[calc(100vh-4rem)] w-full flex-col rounded-xl',
+          'bg-surface shadow-modal flex max-h-[calc(100vh-4rem)] w-full flex-col rounded-md',
           sizeClass[size],
           className,
         )}

@@ -1,6 +1,8 @@
 import { cn } from '@/shared/utils/cn'
 import { getPageItems, PAGE_ELLIPSIS } from '@/shared/utils/pagination'
 
+// 서버 페이징(PageMeta) 용 페이지네이션.
+
 interface PaginationProps {
   /** 현재 페이지 (1-base) */
   page: number

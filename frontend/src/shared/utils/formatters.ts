@@ -6,6 +6,9 @@
  *   onBlur={() => setBizNo(formatBizNo(bizNo))}
  */
 
+const TEN_THOUSAND = 10_000
+const HUNDRED_MILLION = 100_000_000
+
 /** '1234567890' → '123-45-67890' (10자리가 아니면 원본을 그대로 돌려줍니다) */
 export function formatBizNo(value: string): string {
   const digits = value.replace(/\D/g, '')
@@ -37,4 +40,25 @@ export function formatCountdown(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${m}:${String(s).padStart(2, '0')}`
+}
+
+/**
+ * 원 단위 금액 → 한국식 축약. 서버가 maxLoanBalance 를 원으로 준다.
+ *   50_000_000 → '5,000만 원'    100_000_000 → '1억 원'
+ *   120_000_000 → '1억 2,000만 원'
+ *
+ * 만 원 미만은 버립니다. 상품 한도에 1원 단위가 의미 있는 경우가 없습니다.
+ */
+export function formatMoneyShort(won: number): string {
+  if (!Number.isFinite(won) || won < 0) return '-'
+
+  const eok = Math.floor(won / HUNDRED_MILLION)
+  const man = Math.floor((won % HUNDRED_MILLION) / TEN_THOUSAND)
+
+  const parts: string[] = []
+  if (eok > 0) parts.push(`${eok.toLocaleString('ko-KR')}억`)
+  if (man > 0) parts.push(`${man.toLocaleString('ko-KR')}만`)
+
+  if (parts.length === 0) return `${won.toLocaleString('ko-KR')}원`
+  return `${parts.join(' ')} 원`
 }

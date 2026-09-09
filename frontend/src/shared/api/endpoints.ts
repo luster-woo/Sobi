@@ -27,6 +27,12 @@ export const endpoints = {
     meSummary: '/businesses/me/summary',
   },
 
+  loan: {
+    /** 대출 상품 목록. 필터·정렬·페이징은 쿼리 파라미터로 붙인다 */
+    list: '/loan',
+    detail: (loanId: number) => `/loan/${loanId}`,
+  },
+
   notification: {
     /** 상단바 벨의 미확인 표시용. 목록 전체를 받지 않고 개수만 받는다 */
     unreadCount: '/notifications/unread-count',

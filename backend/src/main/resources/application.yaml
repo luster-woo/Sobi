@@ -4,8 +4,8 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/sobi
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
+    username: ${POSTGRES_USER:sobi}
+    password: ${POSTGRES_PASSWORD:localdev}
 
   jpa:
     hibernate:
@@ -13,6 +13,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
 
   flyway:
     enabled: true
@@ -26,8 +27,17 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: ${REDIS_PASSWORD}
+      password: ${REDIS_PASSWORD:localdev}
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 50MB
 
   jackson:
     mapper:
       sort-properties-alphabetically: false
+
+server:
+  servlet:
+    context-path: /api

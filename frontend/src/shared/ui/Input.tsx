@@ -26,6 +26,7 @@ export default function Input({
   error,
   rightSlot,
   disabled,
+  required,
   id,
   className,
   ...rest
@@ -42,6 +43,8 @@ export default function Input({
       {label && (
         <label htmlFor={inputId} className="font-heading text-body2 text-text font-semibold">
           {label}
+          {/* 폼에 noValidate 를 걸어도 required 는 낭독기에 필수 항목임을 알린다 */}
+          {required && <span className="text-danger ml-0.5">*</span>}
         </label>
       )}
 
@@ -49,6 +52,7 @@ export default function Input({
         <input
           id={inputId}
           disabled={disabled}
+          required={required}
           aria-invalid={hasError || undefined}
           aria-describedby={message ? messageId : undefined}
           className={cn(

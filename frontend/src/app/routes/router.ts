@@ -76,6 +76,20 @@ export const router = createBrowserRouter([
                 lazy: async () => ({
                   Component: (await import('@/pages/LoanListPage')).LoanListPage,
                 }),
+                children: [
+                  {
+                    /*
+                     * 상품 상세 모달. 목록 위에 뜨고 목록은 뒤에 남는다.
+                     * ROUTES.LOAN_DETAIL 은 '/loans/:loanId' 전체 경로라 여기서는
+                     * 상대 경로를 쓴다. 링크는 routeTo.loanDetail() 로 만든다.
+                     */
+                    path: ':loanId',
+                    lazy: async () => ({
+                      Component: (await import('@/features/loan/components/LoanDetailModal'))
+                        .default,
+                    }),
+                  },
+                ],
               },
             ],
           },

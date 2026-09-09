@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 
-import type { LoanListData, LoanListItem } from '@/features/loan/model/types'
+import type { LoanDetail, LoanListData, LoanListItem } from '@/features/loan/model/types'
 import type { ProductStatus } from '@/shared/constants/productStatus'
 import type { ApiResponse } from '@/shared/types'
 
@@ -145,5 +145,43 @@ export const loanHandlers = [
     }
 
     return HttpResponse.json(body)
+  }),
+
+  // GET /api/v1/loan/:loanId
+  http.get('/api/v1/loan/:loanId', ({ params }) => {
+    const loanId = Number(params.loanId)
+    const found = mockLoans.find((loan) => loan.loanId === loanId)
+
+    if (!found) {
+      return HttpResponse.json({ message: '상품을 찾을 수 없습니다' }, { status: 404 })
+    }
+
+    /*
+     * 목록에 없는 필드는 여기서 만든다. 목록 응답에는 최대 한도만 오고 최소 한도·상환
+     * 기간·업력·대상·등급은 상세에만 있다. loanId 로 값을 흔들어 화면에서 상품마다
+     * 다르게 보이게 했다.
+     */
+    const detail: ApiResponse<LoanDetail> = {
+      statusCode: 200,
+      timestamp: new Date().toISOString(),
+      path: `/api/v1/loan/${loanId}`,
+      message: '대출 상품 상세 조회 성공',
+      data: {
+        accountName: found.accountName,
+        description: `업력 ${6 + (loanId % 3) * 6}개월 이상 소상공인 대상 · 대리대출(시중은행 취급)로 실행돼요.`,
+        status: found.status,
+        isBookmark: found.isBookmark,
+        interestRate: found.interestRate,
+        minLoanBalance: Math.round((found.maxLoanBalance * 0.4) / 10_000_000) * 10_000_000,
+        maxLoanBalance: found.maxLoanBalance,
+        period: 18 + (loanId % 4) * 6,
+        firmAge: 6 + (loanId % 3) * 6,
+        target: '소상공인',
+        rating: ['A', 'B', 'C'][loanId % 3],
+      },
+      error: null,
+    }
+
+    return HttpResponse.json(detail)
   }),
 ]

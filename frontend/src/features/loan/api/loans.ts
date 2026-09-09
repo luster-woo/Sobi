@@ -1,4 +1,4 @@
-import type { LoanListData, LoanListParams } from '@/features/loan/model/types'
+import type { LoanDetail, LoanListData, LoanListParams } from '@/features/loan/model/types'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
 import type { ApiResponse } from '@/shared/types'
@@ -14,5 +14,11 @@ import type { ApiResponse } from '@/shared/types'
  */
 export async function getLoans(params: LoanListParams) {
   const { data } = await api.get<ApiResponse<LoanListData>>(endpoints.loan.list, { params })
+  return data.data
+}
+
+/** 대출 상품 상세. 모달에서 쓴다 */
+export async function getLoanDetail(loanId: number) {
+  const { data } = await api.get<ApiResponse<LoanDetail>>(endpoints.loan.detail(loanId))
   return data.data
 }

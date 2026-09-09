@@ -26,7 +26,7 @@ export function SidebarBusinessCard() {
   const role = useAuthStore((s) => s.user?.role)
   const { data, isPending, isError } = useBusinessSummary()
 
-  if (role !== USER_ROLE.OWNER) return null
+  if (role !== USER_ROLE.ENTREPRENEUR) return null
 
   if (isPending) {
     return (
@@ -34,7 +34,7 @@ export function SidebarBusinessCard() {
         <div
           role="status"
           aria-label="업체 정보를 불러오는 중"
-          className="bg-surface-muted space-y-1.5 rounded-lg px-3 py-2.5"
+          className="bg-surface-muted space-y-1.5 rounded-md px-3 py-2.5"
         >
           <Skeleton variant="text" width="55%" height={13} />
           <Skeleton variant="text" width="80%" height={11} />
@@ -48,7 +48,7 @@ export function SidebarBusinessCard() {
       <Frame>
         <Link
           to={ROUTES.ONBOARDING}
-          className="bg-surface-muted hover:bg-primary-soft border-border-subtle hover:border-primary/30 block rounded-lg border border-dashed px-3 py-2.5 transition-colors"
+          className="bg-surface-muted hover:bg-primary-soft border-border-subtle hover:border-primary/30 block rounded-md border border-dashed px-3 py-2.5 transition-colors"
         >
           <span className="text-body2 text-text block font-semibold">업체 등록하기</span>
           <span className="text-caption text-text-muted block">맞춤 추천을 받으려면 필요해요</span>
@@ -61,7 +61,7 @@ export function SidebarBusinessCard() {
 
   return (
     <Frame>
-      <div className="bg-surface-muted rounded-lg px-3 py-2.5">
+      <div className="bg-surface-muted rounded-md px-3 py-2.5">
         {/* title 을 다는 이유: 224px 안에서 잘리면 전체 문구를 볼 방법이 없다 */}
         <p className="text-body2 text-text truncate font-semibold" title={name}>
           {name}

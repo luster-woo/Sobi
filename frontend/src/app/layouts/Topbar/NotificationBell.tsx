@@ -43,9 +43,9 @@ export function NotificationBell() {
         aria-label={hasUnread ? `알림 ${unreadCount}건` : '알림'}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="text-text-secondary hover:bg-surface-muted hover:text-text aria-expanded:bg-surface-muted relative flex size-9 items-center justify-center rounded-md transition-colors"
+        className="text-text-secondary hover:bg-surface-muted hover:text-text aria-expanded:bg-surface-muted relative flex size-[30px] items-center justify-center rounded-sm transition-colors"
       >
-        <BellIcon className="size-5" />
+        <BellIcon className="size-[17px]" />
 
         {hasUnread && (
           // ring 이 없으면 점이 벨 획에 붙어 모양이 안 보인다

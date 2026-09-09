@@ -18,7 +18,7 @@ export default function ClosingCta({ onStart }: ClosingCtaProps) {
       <button
         type="button"
         onClick={onStart}
-        className="font-heading text-primary text-body1 inline-flex h-11 items-center justify-center rounded-md bg-white px-6 font-semibold transition-opacity hover:opacity-90"
+        className="font-heading text-primary text-body1 inline-flex h-[42px] items-center justify-center rounded-sm bg-white px-4 font-medium transition-opacity hover:opacity-90"
       >
         무료로 시작하기
       </button>

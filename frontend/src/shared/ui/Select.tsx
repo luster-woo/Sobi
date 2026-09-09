@@ -56,7 +56,7 @@ export default function Select({
           aria-invalid={hasError || undefined}
           aria-describedby={message ? messageId : undefined}
           className={cn(
-            'text-body1 text-text h-11 w-full appearance-none rounded-sm border px-3.5 pr-10 transition-colors',
+            'text-body1 text-text h-[42px] w-full appearance-none rounded-sm border px-3 pr-10 transition-colors',
             'disabled:bg-surface-muted disabled:text-text-disabled disabled:cursor-not-allowed',
             hasError
               ? 'border-danger focus:border-danger'

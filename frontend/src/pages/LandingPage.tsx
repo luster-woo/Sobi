@@ -25,7 +25,7 @@ export function LandingPage() {
           </Link>
           <Link
             to={ROUTES.SIGN_UP}
-            className="border-border-strong bg-surface text-text font-heading text-body2 inline-flex h-9 items-center rounded-md border px-3 font-semibold"
+            className="border-border-strong bg-surface text-text font-heading text-body2 inline-flex h-[34px] items-center rounded-sm border px-3 font-medium"
           >
             회원가입
           </Link>

@@ -45,7 +45,7 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
     <div
       role="menu"
       aria-label="알림"
-      className="bg-surface border-border shadow-dropdown absolute top-full right-0 z-40 mt-2 w-[360px] overflow-hidden rounded-lg border"
+      className="bg-surface border-border shadow-dropdown absolute top-full right-0 z-40 mt-2 w-[360px] overflow-hidden rounded-md border"
     >
       <div className="border-border-subtle flex items-center justify-between border-b px-4 py-3.5">
         <p className="text-h4">알림</p>

@@ -72,6 +72,12 @@ export const router = createBrowserRouter([
                   Component: (await import('@/pages/BusinessVerifyPage')).BusinessVerifyPage,
                 }),
               },
+              {
+                path: ROUTES.MYDATA_CONSENT,
+                lazy: async () => ({
+                  Component: (await import('@/pages/MyDataConsentPage')).MyDataConsentPage,
+                }),
+              },
             ],
           },
           {

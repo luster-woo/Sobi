@@ -99,14 +99,12 @@ export function SupportProgramListPage() {
                 <span className="text-text font-semibold">{totalElements}</span>건
               </p>
               <p className="text-caption text-text-muted mt-1">
-                자연어로 찾은 결과예요 · 판정은 내 자격 기준 · 검색 중에는 필터가 적용되지
-                않습니다
+                자연어로 찾은 결과예요 · 판정은 내 자격 기준 · 검색 중에는 필터가 적용되지 않습니다
               </p>
             </>
           ) : (
             <p className="text-body2 text-text-secondary">
-              내 자격 기준 · 전체 <span className="text-text font-semibold">{totalElements}</span>
-              건
+              내 자격 기준 · 전체 <span className="text-text font-semibold">{totalElements}</span>건
             </p>
           )}
         </div>

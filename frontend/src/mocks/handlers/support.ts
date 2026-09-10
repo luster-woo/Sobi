@@ -129,7 +129,7 @@ export const supportHandlers = [
 
     return HttpResponse.json(body)
   }),
-  
+
   // POST /api/v1/support/search
   http.post('/api/v1/support/search', async ({ request }) => {
     const url = new URL(request.url)

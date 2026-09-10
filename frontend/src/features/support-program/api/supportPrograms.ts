@@ -1,7 +1,7 @@
 import type {
   SupportProgramListData,
   SupportProgramListParams,
-  SupportProgramSearchParams
+  SupportProgramSearchParams,
 } from '@/features/support-program/model/types'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'

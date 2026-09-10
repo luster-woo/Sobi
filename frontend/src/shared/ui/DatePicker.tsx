@@ -119,7 +119,10 @@ export default function DatePicker({
   const today = useMemo(() => new Date(), [])
   const maxParts = useMemo(
     () =>
-      parseIso(max ?? toIso({ year: today.getFullYear(), month: today.getMonth() + 1, day: today.getDate() })),
+      parseIso(
+        max ??
+          toIso({ year: today.getFullYear(), month: today.getMonth() + 1, day: today.getDate() }),
+      ),
     [max, today],
   )
 
@@ -167,12 +170,17 @@ export default function DatePicker({
   const isYearDisabled = (year: number) => (maxParts ? year > maxParts.year : false)
 
   const isMonthDisabled = (month: number) =>
-    maxParts ? cursor.year > maxParts.year || (cursor.year === maxParts.year && month > maxParts.month) : false
+    maxParts
+      ? cursor.year > maxParts.year || (cursor.year === maxParts.year && month > maxParts.month)
+      : false
 
   const isDayDisabled = (day: number) => {
     if (!maxParts) return false
     if (cursor.year !== maxParts.year || cursor.month !== maxParts.month) {
-      return cursor.year > maxParts.year || (cursor.year === maxParts.year && cursor.month > maxParts.month)
+      return (
+        cursor.year > maxParts.year ||
+        (cursor.year === maxParts.year && cursor.month > maxParts.month)
+      )
     }
     return day > maxParts.day
   }

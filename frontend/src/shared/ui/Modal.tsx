@@ -21,8 +21,11 @@ interface ModalProps {
   children?: ReactNode
   /** 하단 버튼 영역. 넘기면 위에 구분선이 생깁니다. 보통 <Button> 두 개 */
   footer?: ReactNode
-  /** md 440 · lg 720 (px). 상권 분석 조건 입력처럼 넓은 폼은 lg */
-  size?: 'md' | 'lg'
+  /**
+   * md 440 · lg 640 · xl 1000 (px).
+   * 확인 창은 md, 넓은 폼은 lg, 본인확인처럼 단계가 있는 큰 창은 xl.
+   */
+  size?: 'md' | 'lg' | 'xl'
   /**
    * 오버레이를 눌러 닫을 수 있게 할지. 기본 true.
    * 탈퇴·삭제 확인처럼 실수로 닫히면 안 되는 경우 false 로 끕니다.
@@ -33,7 +36,8 @@ interface ModalProps {
 
 const sizeClass = {
   md: 'max-w-[440px]',
-  lg: 'max-w-[720px]',
+  lg: 'max-w-[640px]',
+  xl: 'max-w-[1000px]',
 } as const
 
 /**

@@ -124,7 +124,7 @@ export function PasswordResetPage() {
               className="min-w-0 flex-1"
               type="email"
               autoComplete="username"
-              placeholder="sajang@example.com"
+              placeholder="가입한 이메일 주소"
               disabled={verified}
               value={email}
               onChange={(event) => {

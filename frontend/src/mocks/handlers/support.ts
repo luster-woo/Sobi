@@ -129,4 +129,47 @@ export const supportHandlers = [
 
     return HttpResponse.json(body)
   }),
+  
+  // POST /api/v1/support/search
+  http.post('/api/v1/support/search', async ({ request }) => {
+    const url = new URL(request.url)
+    const page = Number(url.searchParams.get('page') ?? 0)
+    const size = Number(url.searchParams.get('size') ?? 20)
+    const { query } = (await request.json()) as { query?: string }
+
+    /*
+     * 실제로는 RAG 기반 유사도 검색이다. 목에서는 흉내낼 수 없어 공고명·기관명 부분
+     * 일치로 대신한다. 화면 확인용이고, 서버가 붙으면 결과 순서와 개수가 달라진다.
+     */
+    const keyword = (query ?? '').trim()
+    const filtered = keyword
+      ? mockPrograms.filter(
+          (program) => program.pblancNm.includes(keyword) || program.jrsdInsttNm.includes(keyword),
+        )
+      : mockPrograms
+
+    const totalElements = filtered.length
+    const totalPages = Math.ceil(totalElements / size)
+
+    const body: ApiResponse<SupportProgramListData> = {
+      statusCode: 200,
+      timestamp: new Date().toISOString(),
+      path: '/api/v1/support/search',
+      message: '지원사업 자연어 검색 성공',
+      data: {
+        programs: filtered.slice(page * size, page * size + size),
+        page: {
+          number: page,
+          size,
+          totalElements,
+          totalPages,
+          first: page === 0,
+          last: page >= totalPages - 1,
+        },
+      },
+      error: null,
+    }
+
+    return HttpResponse.json(body)
+  }),
 ]

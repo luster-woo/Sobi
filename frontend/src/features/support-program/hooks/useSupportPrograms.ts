@@ -13,11 +13,17 @@ const STALE_TIME_MS = 60 * 1000
  * placeholderData 로 이전 페이지 데이터를 유지한다. 없으면 페이지를 넘길 때마다 표가
  * 비었다가 채워져서 스켈레톤이 매번 튀어나온다.
  */
-export function useSupportPrograms(params: SupportProgramListParams) {
+export function useSupportPrograms(
+  params: SupportProgramListParams,
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: queryKeys.supportProgram.list(params),
     queryFn: () => getSupportPrograms(params),
+    // 검색 모드에서는 목록 조회를 끈다. 안 끄면 화면 하나에 요청이 두 번 나간다
+    enabled: options.enabled ?? true,
     staleTime: STALE_TIME_MS,
     placeholderData: (previous) => previous,
   })
 }
+

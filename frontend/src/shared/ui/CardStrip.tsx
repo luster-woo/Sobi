@@ -83,7 +83,7 @@ export default function CardStrip({
   count,
   children,
   footer,
-  itemWidth = 208,
+  itemWidth = 236,
   className,
 }: CardStripProps) {
   const listRef = useRef<HTMLUListElement | null>(null)
@@ -144,10 +144,10 @@ export default function CardStrip({
       </div>
 
       <div className="relative">
-        {/* 오른쪽 끝을 흰색으로 흐리게 덮어 더 있다는 것을 알린다. 스크롤바(6px)는 덮지 않는다 */}
+        {/* 오른쪽 끝을 흰색으로 흐리게 덮어 카드가 더 있다는 것을 알린다 */}
         <div
           aria-hidden="true"
-          className="to-surface pointer-events-none absolute top-0 right-0 bottom-[11px] z-10 w-10 bg-gradient-to-r from-transparent to-[72%]"
+          className="to-surface pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-r from-transparent to-[72%]"
         />
 
         <ul
@@ -156,7 +156,9 @@ export default function CardStrip({
           aria-label={title}
           // 스크롤 영역은 키보드로도 닿아야 한다. 포커스 후 좌우 방향키로 넘어간다
           tabIndex={0}
-          className="focus-visible:outline-primary flex snap-x snap-mandatory [scrollbar-width:thin] items-stretch gap-[10px] overflow-x-auto px-[15px] py-[11px] focus-visible:outline focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#d8dcda]"
+          // 스크롤바를 숨긴다. 헤더에 화살표가 있어 역할이 겹치고, 윈도우 크롬은
+          // 가로 스크롤바에 양쪽 화살표 버튼까지 그려서 카드보다 더 눈에 띈다
+          className="focus-visible:outline-primary flex snap-x snap-mandatory [scrollbar-width:none] items-stretch gap-[10px] overflow-x-auto px-[15px] py-[11px] focus-visible:outline focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
         >
           {Children.map(children, (child) => (
             // 폭은 카드가 아니라 여기서 정한다 (ProductCard 주석 참고)

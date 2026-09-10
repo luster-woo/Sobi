@@ -12,7 +12,6 @@ export const ROUTES = {
   SIGN_UP: '/signup',
   /** 비로그인 재설정(`/auth/password/reset`). 로그인 상태 변경은 마이페이지의 `/user/password` 다 */
   PASSWORD_RESET: '/password',
-  ONBOARDING: '/onboarding',
 
   /**
    * 온보딩 — 사업자 인증, 마이데이터 연동. 가입 직후 순서대로 지난다.

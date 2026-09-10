@@ -1,3 +1,4 @@
+import OwnerDashboard from '@/features/dashboard/components/OwnerDashboard'
 import PreOwnerDashboard from '@/features/dashboard/components/PreOwnerDashboard'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { USER_ROLE } from '@/shared/types'
@@ -18,6 +19,5 @@ export function DashboardPage() {
 
   if (user.role === USER_ROLE.PREENTREPRENEUR) return <PreOwnerDashboard />
 
-  // TODO: 사업자 대시보드는 176 하위 티켓에서 OwnerDashboard 컴포넌트로 교체
-  return <div className="text-body1">사업자 대시보드 (준비 중)</div>
+  return <OwnerDashboard />
 }

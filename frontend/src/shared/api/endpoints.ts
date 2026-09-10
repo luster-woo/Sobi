@@ -27,6 +27,17 @@ export const endpoints = {
     meSummary: '/businesses/me/summary',
   },
 
+  /**
+   * 여러 도메인이 공용으로 쓰는 조회. 업종·지역 코드처럼 화면 하나에 속하지 않는 것들이다.
+   * 상권 분석이 여기 있는 건 예비창업자·사업자 양쪽에서 부르기 때문이다.
+   */
+  common: {
+    /** 상권 분석. dongCode·businessCode 는 필수, compareLimit·mixLimit 은 선택 */
+    market: '/common/market',
+    /** 업종 대/중/소 목록. group·parent 로 단계를 지정한다 */
+    businessCode: '/common/businessCode',
+  },
+
   loan: {
     /** 대출 상품 목록. 필터·정렬·페이징은 쿼리 파라미터로 붙인다 */
     list: '/loan',

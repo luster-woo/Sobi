@@ -106,7 +106,7 @@ export function SignUpPage() {
           label="이름"
           required
           autoComplete="name"
-          placeholder="김사장"
+          placeholder="실명을 입력해 주세요"
           value={name}
           onChange={(event) => {
             setName(event.target.value)
@@ -131,7 +131,7 @@ export function SignUpPage() {
               className="min-w-0 flex-1"
               type="email"
               autoComplete="username"
-              placeholder="sajang@example.com"
+              placeholder="이메일 주소"
               disabled={verified}
               value={email}
               onChange={(event) => {

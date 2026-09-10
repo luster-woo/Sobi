@@ -36,8 +36,7 @@ export default function PreOwnerBranchCard({
       <div className={className}>
         <OrDivider />
         <Button variant="outline" onClick={onStart} className="w-full">
-          사업자 인증 없이 시작하기
-          <span className="text-text-muted font-normal">예비 창업자</span>
+          예비 창업자로 시작하기
         </Button>
       </div>
     )

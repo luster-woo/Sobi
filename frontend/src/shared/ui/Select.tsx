@@ -9,6 +9,7 @@ interface Option {
 }
 
 const sizeClass = {
+  lg: 'text-h4 h-14 px-4 pr-11',
   md: 'text-body1 h-[42px] px-3 pr-10',
   sm: 'text-body2 h-[30px] px-3 pr-8',
 } as const
@@ -16,8 +17,8 @@ const sizeClass = {
 interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children' | 'size'> {
   label?: string
   options: Option[]
-  /** md 44 · sm 30 (px). sm 은 필터 바의 칩 크기 */
-  size?: 'md' | 'sm'
+  /** lg 56 · md 42 · sm 30 (px). sm 은 필터 바의 칩, lg 는 큰 창의 폼 */
+  size?: 'lg' | 'md' | 'sm'
   placeholder?: string
   helperText?: string
   error?: string

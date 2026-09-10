@@ -3,7 +3,14 @@ import { useId } from 'react'
 
 import { cn } from '@/shared/utils/cn'
 
+const sizeClass = {
+  lg: 'text-h4 h-14 px-4',
+  md: 'text-body1 h-[42px] px-3',
+} as const
+
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
+  /** lg 56 · md 42 (px). lg 는 본인확인처럼 큰 창의 폼 */
+  size?: 'lg' | 'md'
   label?: string
   /** 입력칸 아래 안내 문구. error 가 있으면 가려집니다 */
   helperText?: string
@@ -21,6 +28,7 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'>
  *   error={passwordError ?? undefined}
  */
 export default function Input({
+  size = 'md',
   label,
   helperText,
   error,
@@ -56,7 +64,8 @@ export default function Input({
           aria-invalid={hasError || undefined}
           aria-describedby={message ? messageId : undefined}
           className={cn(
-            'text-body1 text-text h-[42px] w-full rounded-sm border px-3 transition-colors',
+            'text-text w-full rounded-sm border transition-colors',
+            sizeClass[size],
             'placeholder:text-text-disabled',
             'disabled:bg-surface-muted disabled:text-text-disabled disabled:cursor-not-allowed',
             hasError

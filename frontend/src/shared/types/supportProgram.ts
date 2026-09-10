@@ -1,6 +1,20 @@
 import type { ID, ISODate, ISODateTime } from '@/shared/types/common'
 
 /**
+ * 지원사업 유형. 서버가 이 값으로 응답의 금액 필드 유무를 갈라 보낸다.
+ *   SUPPORT  최소·최대 금액이 온다
+ *   LOAN     최소·최대 금액 + 금리가 온다
+ *   ETC      금액 정보가 없다
+ */
+export const SUPPORT_PROGRAM_TYPE = {
+  SUPPORT: 'SUPPORT', // 지원금
+  LOAN: 'LOAN', // 대출
+  ETC: 'ETC', // 기타
+} as const
+
+export type SupportProgramType = (typeof SUPPORT_PROGRAM_TYPE)[keyof typeof SUPPORT_PROGRAM_TYPE]
+
+/**
  * 지원 사업. 기업마당(bizinfo) 공공 API 를 수집한 테이블이라 컬럼명이 그쪽
  * 필드명 그대로다. 읽기 어렵지만 서버 응답 키와 어긋나면 매핑 비용이 커져 유지한다.
  *
@@ -15,11 +29,8 @@ export interface SupportProgram {
   jrsdInsttNm: string
   /** 수행기관명 */
   excInsttNm: string
-  /**
-   * 보조금 / 융자 구분 (VARCHAR(10)). 융자성 사업만 interestRate 가 의미 있다.
-   * ⚠️ 값의 목록이 스키마에 CHECK 로 걸려 있지 않다 — 백엔드 확인 필요
-   */
-  type: string
+  /** 지원금 / 대출 / 기타 구분. 이 값에 따라 오는 금액 필드가 달라진다 */
+  type: SupportProgramType
   startDate: ISODate | null
   /** startDate·endDate 가 둘 다 null 이면 '예산 소진 시까지' 를 뜻한다 */
   endDate: ISODate | null

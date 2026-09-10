@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router'
 import { loanColumns } from '@/features/loan/components/loanColumns'
 import LoanFilterBar from '@/features/loan/components/LoanFilterBar'
 import { useLoans } from '@/features/loan/hooks/useLoans'
+import type { ProductStatus } from '@/shared/constants/productStatus'
 import { routeTo } from '@/shared/constants/routes'
 import { useListParams } from '@/shared/hooks/useListParams'
 import EmptyState from '@/shared/ui/EmptyState'
@@ -12,7 +13,7 @@ import SearchBar from '@/shared/ui/SearchBar'
 import Table from '@/shared/ui/Table'
 import { toServerPage } from '@/shared/utils/pagination'
 
-const FILTER_KEYS = ['keyword', 'bankName', 'isPossible', 'isBookmark', 'sort'] as const
+const FILTER_KEYS = ['keyword', 'bankName', 'judgement', 'isBookmark', 'sort'] as const
 const PAGE_SIZE = 20
 
 /**
@@ -35,7 +36,7 @@ export function LoanListPage() {
     size: PAGE_SIZE,
     keyword: values.keyword || undefined,
     bankName: values.bankName || undefined,
-    isPossible: values.isPossible === 'true' ? true : undefined,
+    judgement: (values.judgement as ProductStatus) || undefined,
     isBookmark: values.isBookmark === 'true' ? true : undefined,
     sort: values.sort || undefined,
   })
@@ -67,7 +68,7 @@ export function LoanListPage() {
 
         <LoanFilterBar
           bankName={values.bankName}
-          isPossible={values.isPossible === 'true'}
+          judgement={values.judgement}
           isBookmark={values.isBookmark === 'true'}
           sort={values.sort}
           onChange={setValues}

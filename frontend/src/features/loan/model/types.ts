@@ -33,7 +33,14 @@ export interface LoanListParams {
   size: number
   /** 상품명·기관명 부분 일치 검색 */
   keyword?: string
-  isPossible?: boolean
+  /**
+   * 판정 결과. status 6종 중 하나를 보낸다.
+   *
+   * ⚠️ 명세에는 isPossible(boolean) 로 되어 있다. 6상태 중 선택하는 형태로 바꾸기로
+   *    확인받았고, 지원사업의 judgement 와 같은 개념이라 이름도 통일해서 가정했다.
+   *    파라미터 이름이 확정되면 여기와 LoanFilterBar·목만 고치면 된다.
+   */
+  judgement?: ProductStatus
   bankName?: string
   isBookmark?: boolean
   sort?: string

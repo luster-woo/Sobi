@@ -56,7 +56,6 @@ export interface PageMeta {
   last: boolean
 }
 
-
 /**
  * 커서 페이징. 알림 목록처럼 무한 스크롤이 필요한 곳에서 쓸 예정이다.
  * ⚠️ 알림 API 가 보류 상태라 실제 응답으로 확인되지 않았다.

@@ -12,6 +12,7 @@ import com.sobi.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -41,6 +42,7 @@ public class BusinessServiceImpl implements BusinessService {
     }
 
     @Override
+    @Transactional
     public void business(BusinessRequest request, Long userId) {
 
         // 국세청 테이블에서 정보를 가져오고

@@ -72,3 +72,17 @@ export interface SupportProgramListParams {
   isBookmark?: boolean
   sort?: string
 }
+
+/**
+ * 자연어 검색 파라미터.
+ *
+ * page·size 는 쿼리스트링, query 는 본문으로 간다. 목록 조회와 달리 필터를 받지 않는다 —
+ * 자연어 질의 자체가 조건을 포함한다고 보기 때문이다.
+ */
+export interface SupportProgramSearchParams {
+  /** 0-base */
+  page: number
+  size: number
+  /** 자연어 질의. '키오스크 사려는데 관련된 지원금 좀 찾아줘' */
+  query: string
+}

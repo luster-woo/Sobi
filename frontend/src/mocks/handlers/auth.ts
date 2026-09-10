@@ -13,17 +13,19 @@ interface LoginRequest {
  * 실제로는 refreshToken 이 httpOnly 쿠키라 새로고침해도 남는다. 그 지속성이 없으면
  * 세션 복구를 테스트할 수 없어서 sessionStorage 로 흉내낸다.
  *
- * 기본값은 비로그인이다. 첫 진입이 랜딩(`/`)이라 로그인 상태로 시작하면 랜딩과
- * 약관·회원가입 화면이 PublicOnlyRoute 에 막혀 아예 안 보인다.
- * 로그인 이후 화면을 보려면 목 로그인을 한 번 하거나, 브라우저 콘솔에서:
- *   sessionStorage.setItem('msw:logged-in', 'true')
+ * 기본값은 로그인이다. 온보딩 뒷부분(`/verify`, `/mydata/*`)과 대시보드가 전부
+ * ProtectedRoute 라, 비로그인으로 시작하면 작업 중인 화면 대부분이 안 보인다.
+ *
+ * 비로그인 화면(랜딩·로그인·약관·회원가입·비밀번호)을 보려면 상단바의 **로그아웃**을
+ * 누르면 된다 — `POST /auth/logout` 이 이 플래그를 false 로 내린다. 콘솔에서 직접:
+ *   sessionStorage.setItem('msw:logged-in', 'false')
  *
  * 133(인증/온보딩)에서 실제 쿠키 흐름으로 교체한다.
  */
 const SESSION_KEY = 'msw:logged-in'
 
 function hasSession() {
-  return sessionStorage.getItem(SESSION_KEY) === 'true'
+  return sessionStorage.getItem(SESSION_KEY) !== 'false'
 }
 
 const mockUser: User = {

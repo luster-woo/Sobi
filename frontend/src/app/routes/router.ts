@@ -62,6 +62,19 @@ export const router = createBrowserRouter([
         Component: ProtectedRoute,
         children: [
           {
+            // 온보딩은 로그인이 필요하지만(POST /business 가 Authorization 필수)
+            // 사이드바를 붙이지 않는다 — 아직 대시보드를 본 적 없는 사용자다
+            Component: AuthLayout,
+            children: [
+              {
+                path: ROUTES.BUSINESS_VERIFY,
+                lazy: async () => ({
+                  Component: (await import('@/pages/BusinessVerifyPage')).BusinessVerifyPage,
+                }),
+              },
+            ],
+          },
+          {
             // 사이드바·상단바가 붙는 자리. 로그인 화면은 위 PublicOnlyRoute 쪽이라 안 붙는다
             Component: AppLayout,
             children: [

@@ -1,6 +1,7 @@
 package com.sobi.auth.service;
 
 import com.sobi.auth.dto.EmailCheckResponse;
+import com.sobi.auth.dto.EmailVerifyResponse;
 import com.sobi.auth.repository.EmailCodeRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
@@ -42,5 +43,27 @@ public class AuthServiceImpl implements AuthService {
         emailCodeRepository.save(email, code);
         mailService.sendVerificationMail(email, code);
         emailCodeRepository.startCoolDown(email);
+    }
+
+    @Override
+    public EmailVerifyResponse verifyEmail(String email, String verificationCode) {
+
+        String savedCode = emailCodeRepository.find(email);
+
+        if (savedCode == null) {
+            throw new BusinessException(ErrorCode.EMAIL_CODE_EXPIRED);
+        }
+
+        if (!savedCode.equals(verificationCode)) {
+            throw new BusinessException(ErrorCode.EMAIL_CODE_MISMATCH);
+        }
+
+
+        // 인증 코드 삭제, 재사용 방지
+        emailCodeRepository.delete(email);
+        // 회원가입 시 확인하고 진행
+        emailCodeRepository.saveVerifed(email);
+
+        return new EmailVerifyResponse(true);
     }
 }

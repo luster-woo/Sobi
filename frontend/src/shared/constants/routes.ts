@@ -23,6 +23,8 @@ export const ROUTES = {
   BUSINESS_VERIFY: '/verify',
   MYDATA_CONSENT: '/mydata/consent',
   MYDATA_COLLECT: '/mydata/collect',
+  /** 온보딩 마지막. 대출 목록이 아니라 마이데이터 job 의 판정 구간이다 */
+  MYDATA_JUDGING: '/mydata/judging',
 
   DASHBOARD: '/dashboard',
   MARKET_ANALYSIS: '/market-analysis',

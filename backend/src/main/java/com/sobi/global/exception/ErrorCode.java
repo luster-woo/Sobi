@@ -16,6 +16,7 @@ public enum ErrorCode {
 
     // auth 관련
     MAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AUTH_001", "메일 발송에 실패했습니다."),
+    EMAIL_SEND_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS, "AUTH_002", "잠시 후 다시 시도해주세요."),
 
     // business 관련
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_001", "사업자 번호가 일치하는 사업자 정보를 찾을 수 없습니다."),

@@ -116,6 +116,21 @@ export const router = createBrowserRouter([
                   Component: (await import('@/pages/SupportProgramListPage'))
                     .SupportProgramListPage,
                 }),
+                children: [
+                  {
+                    /*
+                     * 공고 상세 모달. 목록 위에 뜨고 목록은 뒤에 남는다.
+                     * ROUTES.SUPPORT_PROGRAM_DETAIL 은 전체 경로라 여기서는 상대 경로를
+                     * 쓴다. 링크는 routeTo.supportProgramDetail() 로 만든다.
+                     */
+                    path: ':supportProgramId',
+                    lazy: async () => ({
+                      Component: (
+                        await import('@/features/support-program/components/SupportProgramDetailModal')
+                      ).default,
+                    }),
+                  },
+                ],
               },
             ],
           },

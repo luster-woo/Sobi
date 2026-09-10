@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 
 import type {
+  SupportProgramDetail,
   SupportProgramListData,
   SupportProgramListItem,
 } from '@/features/support-program/model/types'
@@ -129,7 +130,7 @@ export const supportHandlers = [
 
     return HttpResponse.json(body)
   }),
-  
+
   // POST /api/v1/support/search
   http.post('/api/v1/support/search', async ({ request }) => {
     const url = new URL(request.url)
@@ -167,6 +168,60 @@ export const supportHandlers = [
           last: page >= totalPages - 1,
         },
       },
+      error: null,
+    }
+
+    return HttpResponse.json(body)
+  }),
+
+  // GET /api/v1/support/:supportProgramId
+  http.get('/api/v1/support/:supportProgramId', ({ params }) => {
+    const id = Number(params.supportProgramId)
+    const found = mockPrograms.find((program) => program.supportProgramId === id)
+
+    if (!found) {
+      return HttpResponse.json({ message: '공고를 찾을 수 없습니다' }, { status: 404 })
+    }
+
+    // 목록에 없는 필드(개요·신청방법·문의처)는 여기서 만든다
+    const detailBase = {
+      pblancNm: found.pblancNm,
+      bsnsSumryCn:
+        '키오스크·테이블오더 도입 비용의 70%를 지원해요. 상시근로자 5인 미만 소상공인이 대상이에요.',
+      jrsdInsttNm: found.jrsdInsttNm,
+      excInsttNm: found.excInsttNm,
+      startDate: found.startDate,
+      endDate: found.endDate,
+      status: found.status,
+      isBookmark: found.isBookmark,
+      reqstMthPapersCn: '온라인 접수 혹은 팩스를 통해 접수',
+      refrncNm: '스마트상점전문기관 1600-6185',
+    }
+
+    const detail: SupportProgramDetail =
+      found.type === 'ETC'
+        ? { ...detailBase, type: 'ETC' }
+        : found.type === 'LOAN'
+          ? {
+              ...detailBase,
+              type: 'LOAN',
+              minBalance: found.minBalance,
+              maxBalance: found.maxBalance,
+              interestRate: found.interestRate,
+            }
+          : {
+              ...detailBase,
+              type: 'SUPPORT',
+              minBalance: found.minBalance,
+              maxBalance: found.maxBalance,
+            }
+
+    const body: ApiResponse<SupportProgramDetail> = {
+      statusCode: 200,
+      timestamp: new Date().toISOString(),
+      path: `/api/v1/support/${id}`,
+      message: '지원사업 상세 정보 조회 성공',
+      data: detail,
       error: null,
     }
 

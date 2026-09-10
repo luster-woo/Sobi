@@ -86,3 +86,31 @@ export interface SupportProgramSearchParams {
   /** 자연어 질의. '키오스크 사려는데 관련된 지원금 좀 찾아줘' */
   query: string
 }
+
+/**
+ * 지원사업 상세.
+ *
+ * 목록과 겹치는 필드가 있지만 상속하지 않는다. 상세에는 supportProgramId 가 없고
+ * (경로 파라미터로 넘긴 값이라 응답에 다시 오지 않는다) 대신 사업 개요·신청 방법·
+ * 문의처가 붙는다.
+ */
+interface SupportProgramDetailBase {
+  pblancNm: string
+  /** 사업 개요 */
+  bsnsSumryCn: string | null
+  jrsdInsttNm: string
+  excInsttNm: string
+  startDate: ISODate | null
+  endDate: ISODate | null
+  status: ProductStatus
+  isBookmark: boolean
+  /** 신청 방법 */
+  reqstMthPapersCn: string | null
+  /** 문의처 */
+  refrncNm: string | null
+}
+
+export type SupportProgramDetail =
+  | (SupportProgramDetailBase & WithBalance & { type: 'SUPPORT' })
+  | (SupportProgramDetailBase & WithBalance & { type: 'LOAN'; interestRate: number })
+  | (SupportProgramDetailBase & { type: 'ETC' })

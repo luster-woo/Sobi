@@ -53,7 +53,7 @@ export function LoginPage() {
             label="아이디"
             type="email"
             autoComplete="username"
-            placeholder="sajang@example.com"
+            placeholder="이메일 주소"
             value={email}
             onChange={(event) => {
               setEmail(event.target.value)

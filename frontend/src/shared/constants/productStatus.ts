@@ -39,6 +39,3 @@ export const SUPPORT_STATUS_LABEL: Record<ProductStatus, string> = {
   ...SHARED_LABEL,
   APPROVED: '선정',
 }
-
-/** @deprecated SUPPORT_STATUS_LABEL 과 같다. ProductCard 재작성 때 정리한다 */
-export const PRODUCT_STATUS_LABEL = SUPPORT_STATUS_LABEL

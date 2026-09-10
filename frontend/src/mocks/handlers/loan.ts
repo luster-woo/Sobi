@@ -98,7 +98,7 @@ export const loanHandlers = [
     const size = Number(url.searchParams.get('size') ?? 20)
     const keyword = url.searchParams.get('keyword')
     const bankName = url.searchParams.get('bankName')
-    const isPossible = url.searchParams.get('isPossible')
+    const judgement = url.searchParams.get('judgement')
     const isBookmark = url.searchParams.get('isBookmark')
     const sort = url.searchParams.get('sort')
 
@@ -110,7 +110,7 @@ export const loanHandlers = [
       )
     }
     if (bankName) filtered = filtered.filter((loan) => loan.bankName === bankName)
-    if (isPossible === 'true') filtered = filtered.filter((loan) => loan.status === 'POSSIBLE')
+    if (judgement) filtered = filtered.filter((loan) => loan.status === judgement)
     if (isBookmark === 'true') filtered = filtered.filter((loan) => loan.isBookmark)
 
     if (sort) {

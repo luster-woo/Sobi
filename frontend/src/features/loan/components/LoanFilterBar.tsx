@@ -1,3 +1,4 @@
+import { LOAN_STATUS_LABEL, PRODUCT_STATUS } from '@/shared/constants/productStatus'
 import FilterChip from '@/shared/ui/FilterChip'
 import Select from '@/shared/ui/Select'
 
@@ -20,11 +21,20 @@ const SORT_OPTIONS = [
   { value: 'maxLoanBalance,desc', label: '한도 높은 순' },
 ]
 
-type FilterKey = 'bankName' | 'isPossible' | 'isBookmark' | 'sort'
+/** judgement 는 status 6종 중 하나를 보낸다. 라벨은 대출 기준(APPROVED = 보유중) */
+const JUDGEMENT_OPTIONS = [
+  { value: '', label: '판정 전체' },
+  ...Object.values(PRODUCT_STATUS).map((status) => ({
+    value: status,
+    label: LOAN_STATUS_LABEL[status],
+  })),
+]
+
+type FilterKey = 'bankName' | 'judgement' | 'isBookmark' | 'sort'
 
 interface LoanFilterBarProps {
   bankName: string
-  isPossible: boolean
+  judgement: string
   isBookmark: boolean
   sort: string
   /** useListParams 의 setValues 를 그대로 넘긴다. page 리셋까지 그쪽이 처리한다 */
@@ -33,7 +43,7 @@ interface LoanFilterBarProps {
 
 export default function LoanFilterBar({
   bankName,
-  isPossible,
+  judgement,
   isBookmark,
   sort,
   onChange,
@@ -49,24 +59,13 @@ export default function LoanFilterBar({
         aria-label="취급 기관"
       />
 
-      {/*
-       * ⚠️ 이 토글은 임시다. '신청 상태' 아코디언 필터로 교체될 예정이다.
-       *
-       * 지금 API 파라미터가 isPossible(boolean) 하나뿐이라 "신청 가능만" 켜고 끄는 것밖에
-       * 못 한다. 백엔드가 컬럼을 enum 으로 바꾸면 6상태(가능 / 불가 / 작성 중 / 신청 완료 /
-       * 검토 중 / 보유중) 중에서 고르는 아코디언으로 바꾼다.
-       *
-       * 그때 할 일:
-       *   - 라벨은 LOAN_STATUS_LABEL 을 그대로 쓴다 (이미 6개가 정의돼 있다)
-       *   - 파라미터 이름이 정해지면 LoanListParams 의 isPossible 을 그것으로 교체
-       *   - 칩 자리에 아코디언을 넣는다. URL 키도 isPossible → status 로 바뀐다
-       *
-       * 지금 6상태 UI 를 먼저 만들면 골라도 서버에 보낼 파라미터가 없다.
-       */}
-      <FilterChip
-        label="신청 가능만"
-        selected={isPossible}
-        onToggle={() => onChange({ isPossible: isPossible ? null : 'true' })}
+      <Select
+        size="sm"
+        options={JUDGEMENT_OPTIONS}
+        value={judgement}
+        onChange={(event) => onChange({ judgement: event.target.value || null })}
+        className="w-[124px]"
+        aria-label="판정 결과"
       />
       <FilterChip
         label="관심 상품만"

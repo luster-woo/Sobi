@@ -33,6 +33,14 @@ export const endpoints = {
     detail: (loanId: number) => `/loan/${loanId}`,
   },
 
+  supportProgram: {
+    /** 지원사업 목록. 필터·정렬·페이징은 쿼리 파라미터로 붙인다 */
+    list: '/support',
+    detail: (supportProgramId: number) => `/support/${supportProgramId}`,
+    /** 자연어 검색. GET 이 아니라 POST 다 (193) */
+    search: '/support/search',
+  },
+
   notification: {
     /** 상단바 벨의 미확인 표시용. 목록 전체를 받지 않고 개수만 받는다 */
     unreadCount: '/notifications/unread-count',

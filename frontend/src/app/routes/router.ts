@@ -104,6 +104,13 @@ export const router = createBrowserRouter([
                   },
                 ],
               },
+              {
+                path: ROUTES.SUPPORT_PROGRAMS,
+                lazy: async () => ({
+                  Component: (await import('@/pages/SupportProgramListPage'))
+                    .SupportProgramListPage,
+                }),
+              },
             ],
           },
         ],

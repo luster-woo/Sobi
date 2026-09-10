@@ -33,7 +33,7 @@ public class EmailCodeRepository {
         redisTemplate.opsForValue().set(COOLDOWN_PREFIX + email,"1", COOLDOWN_TTL);
     }
 
-    public void saveVerifed(String email, String code) {
+    public void saveVerifed(String email) {
         redisTemplate.opsForValue().set(VERIFIED_PREFIX + email, "1", VERIFIED_TTL);
     }
 

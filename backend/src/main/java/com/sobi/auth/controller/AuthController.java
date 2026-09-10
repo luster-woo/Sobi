@@ -2,6 +2,8 @@ package com.sobi.auth.controller;
 
 import com.sobi.auth.dto.EmailCheckResponse;
 import com.sobi.auth.dto.EmailSendRequest;
+import com.sobi.auth.dto.EmailVerifyRequest;
+import com.sobi.auth.dto.EmailVerifyResponse;
 import com.sobi.auth.service.AuthService;
 import com.sobi.global.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,6 +51,25 @@ public class AuthController {
                 .body(ApiResponse.success(
                         HttpStatus.OK,
                         "인증번호 발송 성공",
+                        request
+                ));
+    }
+
+    @PostMapping("/email/verify")
+    public ResponseEntity<ApiResponse<EmailVerifyResponse>> verifyEmail(
+            @Valid @RequestBody EmailVerifyRequest emailVerifyRequest,
+            HttpServletRequest request ) {
+
+        EmailVerifyResponse response =  authService.verifyEmail(
+                                        emailVerifyRequest.getEmail(),
+                                        emailVerifyRequest.getVerificationCode());
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "이메일 인증 성공",
+                        response,
                         request
                 ));
     }

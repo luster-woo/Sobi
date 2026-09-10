@@ -38,6 +38,20 @@ spring:
     mapper:
       sort-properties-alphabetically: false
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-exp: ${JWT_ACCESS_EXP:1800000}
+  refresh-exp: ${JWT_REFRESH_EXP:1209600000}
+
 server:
   servlet:
     context-path: /api

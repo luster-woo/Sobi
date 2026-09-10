@@ -2,23 +2,18 @@ import Badge from '@/shared/ui/Badge'
 import { cn } from '@/shared/utils/cn'
 
 /**
- * `POST /business/verify` 응답.
- *
- * ⚠️ 백엔드 컨트롤러가 아직 없어 필드가 확정되지 않았다. 명세 예시 기준으로 뒀고,
- *    구현되면 실제 코드를 보고 맞춘다.
+ * `POST /business/verify` 응답. 백엔드 `VerifyResponse` 와 1:1 이다.
  */
 export interface BizVerifyData {
-  /** 사업자 유형. '개인사업자' 등 */
+  /** 사업자 유형. `verify.type` — '개인사업자' 등 */
   type: string
-  /** 업종명. DB `verify.business_code_name` 으로 보인다 */
+  /** 업종명. 백엔드가 `verify.business_code_name` 을 이 이름으로 내려준다 */
   businessType: string
   businessName: string
   address: string
+  /** `LocalDate` 직렬화 결과라 'YYYY-MM-DD' */
   openDate: string
-  /**
-   * 휴·폐업 여부. DB `verify.is_close`(NOT NULL) 를 그대로 내려주는 값이다.
-   * 명세 응답 예시에는 빠져 있었고 백엔드에 추가 요청을 넣어둔 상태다.
-   */
+  /** 휴·폐업 여부. `verify.is_close`(NOT NULL) */
   isClose: boolean
 }
 
@@ -26,7 +21,9 @@ interface BizVerifyResultProps {
   /** idle 조회 전 · success 일치 · error 불일치 */
   status: 'idle' | 'success' | 'error'
   data?: BizVerifyData
-  /** status 가 error 일 때 표시할 사유 */
+  /** status 가 error 일 때 '상태' 칸에 넣을 한 줄 요약 */
+  errorSummary?: string
+  /** status 가 error 일 때 하단에 표시할 사유 */
   errorMessage?: string
   /** 실패 화면의 '확인 시각' */
   checkedAt?: string
@@ -57,6 +54,7 @@ function Row({ term, description }: { term: string; description: string }) {
 export default function BizVerifyResult({
   status,
   data,
+  errorSummary,
   errorMessage,
   checkedAt,
   className,
@@ -120,7 +118,7 @@ export default function BizVerifyResult({
       {status === 'error' && (
         <>
           <dl className="grid grid-cols-2 [&>div:nth-last-child(-n+2)]:border-b-0">
-            <Row term="상태" description="국세청 정보 불일치" />
+            <Row term="상태" description={errorSummary ?? '국세청 정보 불일치'} />
             <Row term="확인 시각" description={checkedAt ?? '-'} />
           </dl>
 

@@ -63,6 +63,8 @@ export default function SupportProgramDetailModal() {
   return (
     <Modal
       open
+      // 공고명이 길다. 기본값 md(440px)에서는 제목이 두 줄로 접힌다 (대출 상세와 같은 폭)
+      size="lg"
       onClose={close}
       title={data?.pblancNm ?? '지원사업'}
       description={data?.bsnsSumryCn ?? undefined}

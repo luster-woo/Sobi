@@ -1,6 +1,6 @@
-import MarketPanel from '@/features/market-analysis/components/MarketPanel'
 import { formatPeopleText, formatWonText } from '@/features/market-analysis/model/format'
 import type { MarketAnalysis, NeighborMarket } from '@/features/market-analysis/model/types'
+import Panel from '@/shared/ui/Panel'
 import type { Column } from '@/shared/ui/Table'
 import Table from '@/shared/ui/Table'
 
@@ -56,7 +56,7 @@ export default function NeighborTable({ location, neighbors }: NeighborTableProp
   ]
 
   return (
-    <MarketPanel title="주변 상권 비교">
+    <Panel title="주변 상권 비교">
       <Table
         caption={`${location.districtName} 행정동별 동종업종 비교`}
         columns={columns}
@@ -67,6 +67,6 @@ export default function NeighborTable({ location, neighbors }: NeighborTableProp
           row.dongCode === location.dongCode ? 'bg-primary-soft font-medium' : undefined
         }
       />
-    </MarketPanel>
+    </Panel>
   )
 }

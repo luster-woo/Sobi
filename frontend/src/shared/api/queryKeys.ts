@@ -38,6 +38,17 @@ export const queryKeys = {
     analysis: (params: object) => ['market', 'analysis', params] as const,
   },
 
+  repayment: {
+    all: ['repayment'] as const,
+    /** 내 대출 상품 목록 */
+    list: ['repayment', 'list'] as const,
+    /**
+     * 상환 내역. 탭을 바꾸면 accountNo 가 바뀌어야 이전 상품 데이터가 남지 않는다.
+     * POST 라도 캐시는 이 키로 갈린다.
+     */
+    detail: (accountNo: string) => ['repayment', 'detail', accountNo] as const,
+  },
+
   loan: {
     all: ['loan'] as const,
     list: (params: object) => ['loan', 'list', params] as const,

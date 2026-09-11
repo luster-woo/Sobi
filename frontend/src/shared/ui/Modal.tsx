@@ -147,13 +147,20 @@ export default function Modal({
           className,
         )}
       >
-        <div className="flex items-start justify-between gap-4 px-7 pt-7">
-          <div className="space-y-1">
-            <h2 id={titleId} className="text-h3">
+        <div className="flex items-start gap-4 px-7 pt-7">
+          {/*
+            flex-1 이 없으면 남는 공간이 제목-배지, 배지-닫기 두 틈에 똑같이 나뉘어
+            배지와 북마크가 가운데로 밀린다. 제목이 남는 공간을 다 먹어야 오른쪽에 붙는다.
+            min-w-0 은 긴 제목이 배지를 밀어내지 않게 한다.
+          */}
+          <div className="min-w-0 flex-1 space-y-1">
+            {/* break-keep(word-break: keep-all) 이 없으면 한국어가 글자 단위로 끊겨
+                '소상공인 지 / 원사업' 처럼 어절 중간에서 줄이 바뀐다 */}
+            <h2 id={titleId} className="text-h3 break-keep">
               {title}
             </h2>
             {description && (
-              <p id={descriptionId} className="text-body2 text-text-secondary">
+              <p id={descriptionId} className="text-body2 text-text-secondary break-keep">
                 {description}
               </p>
             )}

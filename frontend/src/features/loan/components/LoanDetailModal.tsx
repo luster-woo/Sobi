@@ -64,6 +64,9 @@ export default function LoanDetailModal() {
   return (
     <Modal
       open
+      // 기본값 md(440px)는 배지·북마크·닫기가 130px 을 먹어 제목이 두 줄로 접힌다.
+      // 지원사업 상세와 폭을 맞춰 두 화면이 따로 놀지 않게 한다
+      size="lg"
       onClose={close}
       // 로딩 중에도 모달 골격이 보여야 해서 제목에 임시 문구를 둔다
       title={data?.accountName ?? '대출 상품'}

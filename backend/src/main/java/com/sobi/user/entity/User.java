@@ -82,6 +82,12 @@ public class User {
         this.password = null;
     }
 
+    // 알림 수신 여부 토글
+    public boolean toggleNotification() {
+        this.notification = !this.notification;
+        return this.notification;
+    }
+
     // INSERT 직전 JPA가 자동 호출 -> 가입일 자동 기록
     @PrePersist
     private void prePersist() {

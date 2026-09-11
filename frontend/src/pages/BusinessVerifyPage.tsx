@@ -165,18 +165,16 @@ export function BusinessVerifyPage() {
 
   return (
     <>
-      <div className="mb-6 text-center">
-        <h1 className="font-heading text-text text-[23px] font-bold tracking-[-0.02em]">
-          사업자 인증 정보를 입력해 주세요
-        </h1>
-        <p className="text-body2 text-text-secondary mt-2.5 leading-[1.7]">
-          국세청 사업자등록 상태조회로 진위를 확인해요.
-          <br />
-          사업자등록번호·대표자명·개업연월일 세 가지가 모두 일치해야 인증돼요.
-        </p>
-      </div>
+      {/*
+       * 제목과 설명을 한 줄로 합쳤다. 설명이 하던 말('세 가지가 일치해야 한다')은
+       * 바로 아래 필수 표시 세 개가 이미 하고 있어서, 따로 두면 45px 을 쓰고
+       * 같은 말을 반복한다.
+       */}
+      <h1 className="font-heading text-text mb-4 text-[20px] font-bold tracking-[-0.02em]">
+        사업자 인증 정보를 입력해 주세요
+      </h1>
 
-      <div className="border-border bg-surface w-full max-w-[560px] rounded-md border px-7 pt-6.5 pb-7">
+      <div className="border-border bg-surface w-full max-w-[560px] rounded-md border px-7 py-5">
         <Input
           label="사업자등록번호"
           required
@@ -194,7 +192,7 @@ export function BusinessVerifyPage() {
           error={errors.brn}
         />
 
-        <div className="mt-5 grid grid-cols-2 gap-3.5">
+        <div className="mt-3.5 grid grid-cols-2 gap-3.5">
           <Input
             label="대표자명"
             required
@@ -219,18 +217,21 @@ export function BusinessVerifyPage() {
           />
         </div>
 
-        {status !== 'error' && (
-          <Button
-            variant={status === 'success' ? 'outline' : 'primary'}
-            onClick={handleVerify}
-            className="mt-5 w-full"
-          >
-            {status === 'success' ? '다시 조회' : '사업자 인증'}
-          </Button>
-        )}
+        {/*
+         * 상태가 바뀌어도 이 아래 요소들이 제자리에 있어야 한다. 조회 버튼을 숨겼다
+         * 보였다 하면 결과 상자와 시작 버튼이 42px 씩 위아래로 튄다.
+         * 항상 그리고 문구만 바꾼다.
+         */}
+        <Button
+          variant={status === 'idle' ? 'primary' : 'outline'}
+          onClick={handleVerify}
+          className="mt-3.5 w-full"
+        >
+          {status === 'idle' ? '사업자 인증' : '다시 조회'}
+        </Button>
 
         <BizVerifyResult
-          className="mt-4.5"
+          className="mt-3.5"
           status={status}
           data={data}
           checkedAt={checkedAt}
@@ -238,47 +239,12 @@ export function BusinessVerifyPage() {
           errorMessage={VERIFY_ERROR[errorKind].message}
         />
 
-        {status === 'error' ? (
-          // 실패했을 때 할 수 있는 건 다시 조회뿐이다. 비활성 버튼을 같이 두면
-          // 누를 수 없는 것을 계속 보여주는 셈이라 지웠다
-          <Button variant="outline" onClick={handleVerify} className="mt-5.5 w-full">
-            다시 조회
-          </Button>
-        ) : (
-          <>
-            <Button
-              disabled={!canStartAsOwner}
-              onClick={handleStartAsOwner}
-              className="mt-5.5 w-full"
-            >
-              사업자로 시작하기
-            </Button>
+        <Button disabled={!canStartAsOwner} onClick={handleStartAsOwner} className="mt-3.5 w-full">
+          사업자로 시작하기
+        </Button>
 
-            {/* 휴·폐업이면 사업자로 못 가니 예비 창업자 경로만 남는다 */}
-            {!(status === 'success' && data?.isClose) && (
-              <PreOwnerBranchCard variant="inline" onStart={handleStartAsPreOwner} />
-            )}
-          </>
-        )}
+        <PreOwnerBranchCard variant="inline" onStart={handleStartAsPreOwner} />
       </div>
-
-      {status === 'error' && (
-        <PreOwnerBranchCard
-          variant="panel"
-          onStart={handleStartAsPreOwner}
-          className="mt-3.5 w-full max-w-[560px]"
-        />
-      )}
-
-      {status === 'success' && data?.isClose && (
-        <PreOwnerBranchCard
-          variant="panel"
-          onStart={handleStartAsPreOwner}
-          title="휴업·폐업 상태예요"
-          description="정책자금은 영업 중인 사업자만 신청할 수 있어요. 예비 창업자로 시작할 수 있습니다."
-          className="mt-3.5 w-full max-w-[560px]"
-        />
-      )}
 
       {/* 조건부 렌더라 닫으면 언마운트된다 — 다시 열면 1단계부터 시작한다 */}
       {identityOpen && (

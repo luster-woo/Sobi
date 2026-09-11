@@ -9,6 +9,12 @@ import { cn } from '@/shared/utils/cn'
 
 interface InsuranceMiniPanelProps {
   insurances: DashboardInsurance[]
+  /**
+   * checklist — 사업자. 항목마다 가입 여부를 판정해 보여주고 사용자가 고칠 수 있다.
+   * reference — 예비창업자. 개업 전이라 가입 여부를 판정할 근거가 없다. 상태를 빼고
+   *             "이 업종을 하려면 이런 보험이 필요하다" 는 목록으로만 쓴다.
+   */
+  variant?: 'checklist' | 'reference'
 }
 
 const markClass: Record<InsuranceStatus, string> = {
@@ -74,7 +80,10 @@ function summaryBadge(insurances: DashboardInsurance[]) {
  * 줄 전체가 버튼이다. 좁은 열 안에서 '가입 안내' 같은 작은 링크를 따로 두면 눌러야 할
  * 곳을 찾게 되고, 어차피 줄에서 할 일이 안내 창을 여는 것 하나뿐이다.
  */
-export default function InsuranceMiniPanel({ insurances }: InsuranceMiniPanelProps) {
+export default function InsuranceMiniPanel({
+  insurances,
+  variant = 'checklist',
+}: InsuranceMiniPanelProps) {
   /**
    * ⚠️ 상태 변경을 화면 안에서만 기억한다. `PATCH /insurance/{id}/status` 가 붙으면
    *    이 state 를 지우고 useMutation + invalidateQueries 로 바꾼다.
@@ -95,9 +104,16 @@ export default function InsuranceMiniPanel({ insurances }: InsuranceMiniPanelPro
     )
   }
 
+  const isReference = variant === 'reference'
+
   return (
     <>
-      <MiniPanel label="업종별 필수 가입 항목" title="의무보험" aside={summaryBadge(items)}>
+      <MiniPanel
+        label="업종별 필수 가입 항목"
+        title={isReference ? '의무보험 체크리스트' : '의무보험'}
+        aside={isReference ? <Badge variant="outline">참고</Badge> : summaryBadge(items)}
+        note={isReference ? '개업하고 나면 가입 여부를 확인해 드려요' : null}
+      >
         <ul className="-mx-1.5 flex flex-col">
           {items.map((insurance) => (
             <li key={insurance.insuranceChecklistId}>
@@ -106,15 +122,18 @@ export default function InsuranceMiniPanel({ insurances }: InsuranceMiniPanelPro
                 onClick={() => setSelectedId(insurance.insuranceChecklistId)}
                 className="hover:bg-surface-muted focus-visible:outline-primary flex w-full items-center gap-2 rounded-sm px-1.5 py-1.5 text-left transition-colors focus-visible:outline focus-visible:-outline-offset-2"
               >
-                <Mark status={insurance.status} />
+                {/* 참고 모드에는 상태가 없다. 판정하지 않은 값을 색으로 말하면 안 된다 */}
+                {!isReference && <Mark status={insurance.status} />}
 
                 <span className="min-w-0 flex-1">
                   <b className="text-text text-caption block font-medium">
                     {insurance.insuranceName}
                   </b>
-                  <span className="text-text-muted block text-[10.5px]">
-                    {INSURANCE_STATUS_LABEL[insurance.status]}
-                  </span>
+                  {!isReference && (
+                    <span className="text-text-muted block text-[10.5px]">
+                      {INSURANCE_STATUS_LABEL[insurance.status]}
+                    </span>
+                  )}
                 </span>
 
                 <svg
@@ -138,6 +157,7 @@ export default function InsuranceMiniPanel({ insurances }: InsuranceMiniPanelPro
       <InsuranceDetailModal
         insurance={selected}
         onChangeStatus={changeStatus}
+        readOnly={isReference}
         onClose={() => setSelectedId(null)}
       />
     </>

@@ -1,4 +1,3 @@
-import OrDivider from '@/features/auth/components/OrDivider'
 import Button from '@/shared/ui/Button'
 import { cn } from '@/shared/utils/cn'
 
@@ -32,12 +31,22 @@ export default function PreOwnerBranchCard({
   className,
 }: PreOwnerBranchCardProps) {
   if (variant === 'inline') {
+    /*
+     * 구분선 + 전체 폭 버튼이면 74px 을 쓴다. 조회 결과가 뜬 화면에서 그만큼이 빠져야
+     * 1366×768 노트북에 들어간다(실측 49px 초과).
+     *
+     * 주된 길은 '사업자로 시작하기' 라 이쪽은 버튼 두 개가 경쟁할 이유도 없다.
+     * 텍스트 링크로 낮추면 24px 이고 무엇이 기본 동작인지도 분명해진다.
+     */
     return (
-      <div className={className}>
-        <OrDivider />
-        <Button variant="outline" onClick={onStart} className="w-full">
-          예비 창업자로 시작하기
-        </Button>
+      <div className={cn('mt-3 text-center', className)}>
+        <button
+          type="button"
+          onClick={onStart}
+          className="text-body2 text-text-secondary hover:text-text focus-visible:outline-primary rounded-sm px-2 py-0.5 underline underline-offset-2 transition-colors focus-visible:outline"
+        >
+          사업자 인증 없이 예비 창업자로 시작하기
+        </button>
       </div>
     )
   }

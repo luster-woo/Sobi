@@ -16,7 +16,11 @@ export function AuthLayout() {
         </Link>
       </header>
 
-      <main className="flex flex-1 flex-col items-center px-6 pt-11 pb-14">
+      {/*
+       * 위아래 여백이 44·56 이었는데 노트북 높이에서 그것만으로 100px 을 먹어 회원가입·
+       * 사업자 인증이 스크롤됐다. 화면 안에 다 들어오는 쪽이 여백보다 중요하다.
+       */}
+      <main className="flex flex-1 flex-col items-center px-6 pt-5 pb-6">
         <Outlet />
       </main>
     </div>

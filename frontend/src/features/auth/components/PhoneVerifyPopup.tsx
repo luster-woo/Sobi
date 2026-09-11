@@ -123,7 +123,12 @@ function CarrierTile({
   return (
     <label
       className={cn(
-        'text-h2 flex h-25 cursor-pointer items-center justify-center rounded-lg border text-center transition-colors',
+        /*
+         * 낮은 창에서는 타일을 줄인다. 100px 짜리 두 줄이 팝업 본문의 절반을 먹는다.
+         * 가로(xl:)가 아니라 세로 기준이어야 한다 — 1366×660 처럼 넓고 낮은 창이 문제다.
+         */
+        'text-h3 flex h-16 cursor-pointer items-center justify-center rounded-lg border text-center transition-colors',
+        '[@media(min-height:820px)]:text-h2 [@media(min-height:820px)]:h-25',
         active
           ? 'border-primary bg-primary-soft text-primary'
           : 'border-border-strong bg-surface text-text hover:bg-surface-muted',
@@ -144,12 +149,14 @@ function CarrierTile({
 
 function StepIndicator({ current }: { current: number }) {
   return (
-    <ol className="mb-9 flex items-center gap-3">
+    <ol className="mb-5 flex items-center justify-center gap-3 [@media(min-height:820px)]:mb-9">
       {STEPS.map((label, index) => {
         const reached = index <= current
 
         return (
-          <li key={label} className="flex flex-1 items-center gap-3">
+          // flex-1 을 주면 단계들이 창 폭만큼 벌어진다. 내용 폭만 차지하게 두고
+          // 부모의 justify-center 가 묶음째 가운데로 보낸다
+          <li key={label} className="flex items-center gap-3">
             <span
               className={cn(
                 'text-body1 flex size-8.5 shrink-0 items-center justify-center rounded-full font-medium',
@@ -167,7 +174,12 @@ function StepIndicator({ current }: { current: number }) {
               {label}
             </span>
             {index < STEPS.length - 1 && (
-              <span className={cn('h-px flex-1', index < current ? 'bg-primary' : 'bg-border')} />
+              <span
+                className={cn(
+                  'h-px w-10 [@media(min-height:820px)]:w-20',
+                  index < current ? 'bg-primary' : 'bg-border',
+                )}
+              />
             )}
           </li>
         )
@@ -301,21 +313,35 @@ export default function PhoneVerifyPopup({ onClose, onVerified }: PhoneVerifyPop
       closeOnOverlayClick={false}
       footer={footer}
     >
-      {/* 단계마다 내용 길이가 달라 높이가 널뛰면 팝업이 덜컹거린다. 바닥을 잡아둔다 */}
-      <div className="flex min-h-[660px] flex-col">
+      {/*
+       * 단계마다 내용 길이가 달라 높이가 널뛰면 팝업이 덜컹거리므로 높이를 잡아둔다.
+       *
+       * min-h 가 아니라 h 다. min-h 면 내용이 짧은 단계는 그만큼 줄어들어 1·2·3 단계
+       * 높이가 제각각이 된다(596/565/581 실측).
+       *
+       * 고정 660px 을 쓰지 않는 이유: 창이 그보다 낮으면 팝업 안에 스크롤이 생긴다.
+       * 화면에 남는 높이를 넘지 않는 선에서만 잡는다. 빼는 값은 실측이다 —
+       * 오버레이 여백 32 + 머리글 78 + 푸터 83 + 본문 상하 패딩 48 = 241,
+       * 여기에 Modal 자체의 max-h(100vh-4rem) 여유 32 를 더해 273px.
+       *
+       * 약관 전문을 펼치면 그 안(max-h)에서 스크롤되므로 이 높이는 그대로다.
+       */}
+      <div className="flex h-[min(660px,100vh-273px)] flex-col">
         <StepIndicator current={step} />
 
         {step === 0 && (
           <div className="flex flex-1 flex-col">
-            <fieldset>
-              <legend className="font-heading text-h2 text-text">
+            {/* mb-4 가 최소 간격이다. 아래 안내 상자의 mt-auto 가 남는 자리를 더 벌린다 */}
+            <fieldset className="mb-4">
+              <legend className="font-heading text-h3 text-text [@media(min-height:820px)]:text-h2">
                 가입하신 통신사를 선택해 주세요
               </legend>
-              <p className="text-body1 text-text-secondary mt-2">
+              {/* 낮은 창에서는 접는다. 아래 안내 상자가 같은 내용을 더 자세히 말한다 */}
+              <p className="text-body1 text-text-secondary mt-2 hidden [@media(min-height:820px)]:block">
                 본인 명의의 휴대폰만 인증할 수 있어요.
               </p>
 
-              <div className="mt-7 grid grid-cols-3 gap-4">
+              <div className="mt-4 grid grid-cols-3 gap-3 [@media(min-height:820px)]:mt-7 [@media(min-height:820px)]:gap-4">
                 {MAIN_CARRIERS.map((option) => (
                   <CarrierTile
                     key={option.value}
@@ -326,9 +352,11 @@ export default function PhoneVerifyPopup({ onClose, onVerified }: PhoneVerifyPop
                 ))}
               </div>
 
-              <p className="text-body1 text-text-secondary mt-8 mb-4 font-medium">알뜰폰</p>
+              <p className="text-body1 text-text-secondary mt-4 mb-2.5 font-medium [@media(min-height:820px)]:mt-8 [@media(min-height:820px)]:mb-4">
+                알뜰폰
+              </p>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3 [@media(min-height:820px)]:gap-4">
                 {MVNO_CARRIERS.map((option) => (
                   <CarrierTile
                     key={option.value}
@@ -342,7 +370,7 @@ export default function PhoneVerifyPopup({ onClose, onVerified }: PhoneVerifyPop
 
             {/* mt-auto 로 푸터 구분선 바로 위까지 내린다.
               fieldset 에 flex 를 걸면 legend 처리가 브라우저마다 달라 바깥 div 로 감쌌다 */}
-            <div className="bg-surface-muted border-border-subtle mt-auto mb-1 flex gap-3.5 rounded-lg border px-5 py-4">
+            <div className="bg-surface-muted border-border-subtle mt-auto mb-1 flex gap-3 rounded-lg border px-4 py-3 [@media(min-height:820px)]:gap-3.5 [@media(min-height:820px)]:px-5 [@media(min-height:820px)]:py-4">
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"
@@ -357,7 +385,7 @@ export default function PhoneVerifyPopup({ onClose, onVerified }: PhoneVerifyPop
                 <path d="M12 11v5M12 7.5h.01" />
               </svg>
 
-              <ul className="text-body2 text-text-secondary space-y-1.5">
+              <ul className="text-body2 text-text-secondary space-y-1 [@media(min-height:820px)]:space-y-1.5">
                 <li>알뜰폰은 실제 사용 중인 통신망을 골라 주세요.</li>
                 <li>법인 명의 휴대폰과 선불폰은 본인확인이 되지 않을 수 있어요.</li>
                 <li>입력한 정보는 본인확인 용도로만 쓰이고 따로 저장하지 않아요.</li>
@@ -416,7 +444,7 @@ export default function PhoneVerifyPopup({ onClose, onVerified }: PhoneVerifyPop
 
                     {/* 본문이 길어 스크롤로 가둔다. 안 그러면 팝업이 화면을 넘어간다 */}
                     {open && (
-                      <div className="border-border-subtle bg-surface-muted max-h-[260px] overflow-y-auto border-t px-5 py-4">
+                      <div className="border-border-subtle bg-surface-muted max-h-[150px] overflow-y-auto border-t px-5 py-4 [@media(min-height:820px)]:max-h-[260px]">
                         <p className="text-body2 text-text-secondary leading-[1.8] whitespace-pre-line">
                           {consent.body}
                         </p>
@@ -429,8 +457,12 @@ export default function PhoneVerifyPopup({ onClose, onVerified }: PhoneVerifyPop
           </div>
         )}
 
+        {/*
+         * 입력칸이 size="lg"(56px)라 낮은 창에서 3단계가 넘친다. size 는 prop 이라
+         * 미디어쿼리로 못 바꾸므로 여기서 높이만 눌러준다 — 820px 이상에서는 원래대로.
+         */}
         {step === 2 && (
-          <>
+          <div className="contents [@media(max-height:819px)]:[&_input]:h-[46px]">
             <Input
               size="lg"
               label="이름"
@@ -567,7 +599,7 @@ export default function PhoneVerifyPopup({ onClose, onVerified }: PhoneVerifyPop
                 />
               </>
             )}
-          </>
+          </div>
         )}
       </div>
     </Modal>

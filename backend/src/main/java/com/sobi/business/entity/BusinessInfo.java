@@ -1,6 +1,7 @@
 package com.sobi.business.entity;
 
 import com.sobi.common.entity.MinorCode;
+import com.sobi.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -29,14 +30,14 @@ public class BusinessInfo {
 
 
     // 나중에 User, MinorCode 구현되면 연결
-//    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-//    @JoinColumn(name = "user_id", nullable = false)
-//    private User user;
-//
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    // 임시 userid
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+
+//    // 임시 userid
+//    @Column(name = "user_id", nullable = false)
+//    private Long userId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "business_code_id", nullable = false)
@@ -64,7 +65,7 @@ public class BusinessInfo {
     // user id, businessCodeId 나중에 객체형으로 바꿔야함
     @Builder
     private BusinessInfo(
-            Long userId,
+            User user,
             MinorCode businessCode,
             String brn,
             String businessName,
@@ -73,7 +74,7 @@ public class BusinessInfo {
             int employeeCount,
             LocalDate openDate
     ) {
-        this.userId = userId;
+        this.user = user;
         this.businessCode = businessCode;
         this.brn = brn;
         this.businessName = businessName;

@@ -55,7 +55,7 @@ public class SsafyRepaymentClient {
                         .build();
 
         return financeClient.post(
-                "/실제-SSAFY-상환내역-조회-URL",
+                "/edu/loan/inquireRepaymentRecords",
                 request,
                 SsafyInquireRepaymentRecordsResponse.class
         );

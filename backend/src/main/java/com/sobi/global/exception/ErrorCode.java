@@ -24,7 +24,13 @@ public enum ErrorCode {
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_001", "사업자 번호가 일치하는 사업자 정보를 찾을 수 없습니다."),
     BUSINESS_INFO_MISMATCH(HttpStatus.BAD_REQUEST, "BUSINESS_002", "입력한 사업자 정보와 실제 등록된 사업자 정보가 일치하지 않습니다."),
     BUSINESS_CODE_NOT_FOUND(HttpStatus.NOT_FOUND,"BUSINESS_003", "업종 코드가 존재하지 않습니다."),
-    BUSINESS_INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_O04", "등록된 사업자 정보가 없습니다.");
+    BUSINESS_INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_O04", "등록된 사업자 정보가 없습니다."),
+
+    // 상권 분석 관련
+    // 파라미터 누락/형식 오류는 도메인 코드를 따로 두지 않고 COMMON_001 을 쓴다.
+    DONG_NOT_FOUND(HttpStatus.NOT_FOUND, "MARKET_001", "존재하지 않는 행정동입니다."),
+    MARKET_BUSINESS_NOT_FOUND(HttpStatus.NOT_FOUND, "MARKET_002", "존재하지 않는 업종입니다."),
+    MARKET_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "MARKET_003", "해당 상권에 집계된 업종 데이터가 없습니다.");
 
 
 

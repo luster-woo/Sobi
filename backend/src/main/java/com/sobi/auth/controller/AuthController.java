@@ -1,6 +1,7 @@
 package com.sobi.auth.controller;
 
 import com.sobi.auth.dto.*;
+import com.sobi.auth.jwt.JwtProperties;
 import com.sobi.auth.service.AuthService;
 import com.sobi.global.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,9 +9,13 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/v1/auth")
@@ -18,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtProperties jwtProperties;
 
     @GetMapping("/email/check")
     public ResponseEntity<ApiResponse<EmailCheckResponse>> checkEmail(
@@ -83,6 +89,32 @@ public class AuthController {
                 .body(ApiResponse.success(
                         HttpStatus.OK,
                         "회원가입 성공",
+                        request
+                ));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
+            @Valid @RequestBody LoginRequest loginRequest,
+            HttpServletRequest request) {
+
+        LoginResponse response = authService.login(loginRequest);
+
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", response.getRefreshToken())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/api/v1/auth")
+                .maxAge(Duration.ofMillis(jwtProperties.getRefreshExp()))
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "로그인 성공",
+                        response,
                         request
                 ));
     }

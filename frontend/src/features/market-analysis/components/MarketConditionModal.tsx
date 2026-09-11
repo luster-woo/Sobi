@@ -2,21 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import {
-  useBusinessTree,
-  useRegionTree,
-} from '@/features/market-analysis/hooks/useConditionOptions'
-import {
   EMPTY_CONDITION,
   isSubmittable,
   toSearchParams,
 } from '@/features/market-analysis/model/condition'
-import type {
-  BusinessTree,
-  CodeItem,
-  MarketCondition,
-  RegionTree,
-} from '@/features/market-analysis/model/conditionTypes'
+import type { MarketCondition } from '@/features/market-analysis/model/conditionTypes'
 import { ROUTES } from '@/shared/constants/routes'
+import { useBusinessTree, useRegionTree } from '@/shared/hooks/useCommonCodes'
+import type { BusinessTree, CodeItem, RegionTree } from '@/shared/types/commonCode'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import Select from '@/shared/ui/Select'

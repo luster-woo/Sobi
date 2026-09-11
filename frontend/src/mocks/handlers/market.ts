@@ -1,8 +1,8 @@
 import { http, HttpResponse } from 'msw'
 
-import type { BusinessTree, RegionTree } from '@/features/market-analysis/model/conditionTypes'
 import type { MarketAnalysis } from '@/features/market-analysis/model/types'
 import type { ApiResponse } from '@/shared/types'
+import type { BusinessTree, RegionTree } from '@/shared/types/commonCode'
 
 /**
  * 상권 분석 목.

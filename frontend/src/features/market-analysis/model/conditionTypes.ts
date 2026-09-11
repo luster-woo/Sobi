@@ -1,45 +1,9 @@
 /**
- * 상권 분석 조건 입력에 쓰는 목록 타입.
+ * 상권 분석 조건 입력 모달이 들고 있는 값.
  *
- * 업종·지역 모두 트리 하나로 통째로 온다. 단계마다 서버를 부르지 않고 받아둔 트리에서
- * 하위를 꺼내 쓴다 — 셀렉트를 바꿀 때마다 로딩이 뜨지 않고, 정적 데이터라 캐시가
- * 사실상 영구다.
- *
- * 코드 체계는 서울시 공공데이터 업종 분류를 따른다. market 에 보내는 값은 소분류의
- * code(CS100001)와 행정동의 code(11440375) 둘뿐이고, 상위 코드는 화면에서 하위를
- * 좁히는 데만 쓴다.
+ * 업종·지역 목록 타입은 shared/types/commonCode.ts 에 있다. 대시보드의 창업 조건
+ * 패널도 같은 목록을 쓰기 때문이다. 이 파일에는 모달 전용 상태만 남긴다.
  */
-
-export interface CodeItem {
-  code: string
-  name: string
-}
-
-// ---------- 업종 ----------
-
-export interface BusinessSub extends CodeItem {
-  minors: CodeItem[]
-}
-
-export interface BusinessMajor extends CodeItem {
-  subs: BusinessSub[]
-}
-
-export interface BusinessTree {
-  majors: BusinessMajor[]
-}
-
-// ---------- 지역 ----------
-
-export interface RegionDistrict extends CodeItem {
-  dongs: CodeItem[]
-}
-
-export interface RegionTree {
-  /** '서울특별시'. 지금은 서울 데이터만 있어 시·도 선택지가 하나다 */
-  cityName: string
-  districts: RegionDistrict[]
-}
 
 /**
  * 조건 입력 모달이 들고 있는 값.

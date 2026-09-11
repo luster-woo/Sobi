@@ -1,7 +1,7 @@
-import type { BusinessTree, RegionTree } from '@/features/market-analysis/model/conditionTypes'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
 import type { ApiResponse } from '@/shared/types'
+import type { BusinessTree, RegionTree } from '@/shared/types/commonCode'
 
 /** 업종 대/중/소 전체 트리 */
 export async function getBusinessTree() {

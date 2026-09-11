@@ -116,7 +116,7 @@ export const router = createBrowserRouter([
                      */
                     path: ':loanId',
                     lazy: async () => ({
-                      Component: (await import('@/features/loan/components/LoanDetailModal'))
+                      Component: (await import('@/features/loan/components/LoanDetailRoute'))
                         .default,
                     }),
                   },
@@ -138,7 +138,7 @@ export const router = createBrowserRouter([
                     path: ':supportProgramId',
                     lazy: async () => ({
                       Component: (
-                        await import('@/features/support-program/components/SupportProgramDetailModal')
+                        await import('@/features/support-program/components/SupportProgramDetailRoute')
                       ).default,
                     }),
                   },

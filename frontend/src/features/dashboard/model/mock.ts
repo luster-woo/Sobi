@@ -205,16 +205,20 @@ export const MOCK_OWNER_DASHBOARD: OwnerDashboardData = {
 
   insurances: [
     {
-      insuranceId: 1,
-      name: '화재배상책임보험',
-      law: '다중이용업소법',
+      insuranceChecklistId: 21,
+      insuranceName: '화재배상책임보험',
       status: INSURANCE_STATUS.COMPLETED,
     },
     {
-      insuranceId: 2,
-      name: '가스사고배상책임보험',
-      law: '액화석유가스법',
+      insuranceChecklistId: 22,
+      insuranceName: '가스사고배상책임보험',
       status: INSURANCE_STATUS.REQUIRED,
+    },
+    {
+      // 마이데이터로 가입 여부를 판단하지 못한 항목. 사용자가 직접 골라야 한다
+      insuranceChecklistId: 23,
+      insuranceName: '승강기 사고배상책임보험',
+      status: INSURANCE_STATUS.NEEDS_VERIFICATION,
     },
   ],
 

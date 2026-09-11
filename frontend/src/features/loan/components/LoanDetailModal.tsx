@@ -1,10 +1,8 @@
 import type { ReactNode } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router'
 
 import { useLoanDetail } from '@/features/loan/hooks/useLoanDetail'
 import type { ProductStatus } from '@/shared/constants/productStatus'
 import { LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
-import { ROUTES } from '@/shared/constants/routes'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
@@ -44,27 +42,25 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
+interface LoanDetailModalProps {
+  loanId: number
+  onClose: () => void
+}
+
 /**
  * 대출 상품 상세 모달 (S15P21D101-214)
  *
- * /loans/:loanId 자식 라우트로 렌더된다. 목록은 뒤에 그대로 남고 모달만 위에 뜬다.
- * 주소가 바뀌므로 링크 공유가 되고, 뒤로가기로 모달만 닫힌다.
- *
- * 닫을 때 목록의 검색어·필터를 잃지 않으려고 location.search 를 그대로 들고 돌아간다.
+ * 주소를 모른다. 목록 화면에서는 `/loans/:loanId` 자식 라우트로 떠야 링크 공유와
+ * 뒤로가기가 되지만, 대시보드 카드에서는 주소를 바꾸지 않고 그 자리에 떠야 한다.
+ * 여는 방법이 둘이라 라우팅을 LoanDetailRoute 로 분리하고 여기는 id 와 닫기만 받는다.
  */
-export default function LoanDetailModal() {
-  const { loanId } = useParams()
-  const navigate = useNavigate()
-  const location = useLocation()
-
-  const { data, isLoading, isError } = useLoanDetail(Number(loanId))
-
-  const close = () => navigate({ pathname: ROUTES.LOANS, search: location.search })
+export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProps) {
+  const { data, isLoading, isError } = useLoanDetail(loanId)
 
   return (
     <Modal
       open
-      onClose={close}
+      onClose={onClose}
       // 로딩 중에도 모달 골격이 보여야 해서 제목에 임시 문구를 둔다
       title={data?.accountName ?? '대출 상품'}
       description={data?.description ?? undefined}
@@ -116,9 +112,7 @@ export default function LoanDetailModal() {
 
       {data && (
         <dl>
-          <Row label="금리">
-            <span className="text-h3">연 {data.interestRate}%</span>
-          </Row>
+          <Row label="금리">연 {data.interestRate}%</Row>
           <Row label="한도">
             최소 {formatMoneyShort(data.minLoanBalance)} ~ 최대{' '}
             {formatMoneyShort(data.maxLoanBalance)}

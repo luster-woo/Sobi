@@ -44,6 +44,19 @@ export const endpoints = {
     detail: (loanId: number) => `/loan/${loanId}`,
   },
 
+  /**
+   * 상환 관리. 셋 다 POST 다 — 조회도 POST 인 건 SSAFY 금융망 규격을 그대로 따라서다.
+   * list 는 본문이 비어 있고, 나머지는 { accountNo } 를 보낸다.
+   */
+  repayment: {
+    /** 내 대출 상품 가입 목록 */
+    list: '/repayment/finan/list',
+    /** 상환 내역 + 완납 비교. 본문에 accountNo */
+    records: '/repayment/finan/records',
+    /** 일시납(완납). 본문에 accountNo. 되돌릴 수 없다 */
+    loanBalanceInFull: '/repayment/finan/loanBalanceInFull',
+  },
+
   supportProgram: {
     /** 지원사업 목록. 필터·정렬·페이징은 쿼리 파라미터로 붙인다 */
     list: '/support',

@@ -1,7 +1,7 @@
-import MarketPanel from '@/features/market-analysis/components/MarketPanel'
 import StackedBar from '@/features/market-analysis/components/StackedBar'
 import { formatEokText } from '@/features/market-analysis/model/format'
 import type { MarketAnalysis } from '@/features/market-analysis/model/types'
+import Panel from '@/shared/ui/Panel'
 
 interface RevenueStructurePanelProps {
   summary: MarketAnalysis['summary']
@@ -42,7 +42,7 @@ export default function RevenueStructurePanel({
   const genderGap = getGenderGap(byGender.maleRatio, summary.footTrafficGender.maleRatio)
 
   return (
-    <MarketPanel
+    <Panel
       title="매출 구조 — 요일과 성별"
       headerRight={
         <span className="text-text-muted text-[11.5px] tabular-nums">
@@ -109,6 +109,6 @@ export default function RevenueStructurePanel({
           성별이 확인된 매출은 전체의 {Math.round(byGender.coverageRatio)}% 입니다.
         </p>
       </div>
-    </MarketPanel>
+    </Panel>
   )
 }

@@ -152,14 +152,16 @@ export default function Modal({
             {/* 배지는 제목 바로 옆에 붙인다. 셋을 justify-between 으로 늘어놓으면
                 배지가 제목과 닫기 버튼 사이 빈 곳에 떠서 무엇에 붙은 값인지 흐려진다 */}
             <div className="flex flex-wrap items-center gap-2.5">
-              <h2 id={titleId} className="text-h3">
+              {/* word-break: keep-all 이 없으면 한국어가 글자 단위로 끊겨
+                  '소상공인 지 / 원사업' 처럼 어절 중간에서 줄이 바뀐다 */}
+              <h2 id={titleId} className="text-h3 break-keep">
                 {title}
               </h2>
               {headerRight}
             </div>
 
             {description && (
-              <p id={descriptionId} className="text-body2 text-text-secondary mt-1">
+              <p id={descriptionId} className="text-body2 text-text-secondary mt-1 break-keep">
                 {description}
               </p>
             )}

@@ -3,7 +3,9 @@ import { businessHandlers } from './business'
 import { loanHandlers } from './loan'
 import { marketHandlers } from './market'
 import { notificationHandlers } from './notification'
+import { repaymentHandlers } from './repayment'
 import { supportHandlers } from './support'
+
 
 /**
  * 도메인별 핸들러를 여기에 모읍니다.
@@ -15,5 +17,6 @@ export const handlers = [
   ...loanHandlers,
   ...marketHandlers,
   ...notificationHandlers,
+  ...repaymentHandlers,
   ...supportHandlers,
 ]

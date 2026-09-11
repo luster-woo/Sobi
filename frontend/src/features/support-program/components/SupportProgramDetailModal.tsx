@@ -63,6 +63,8 @@ export default function SupportProgramDetailModal({
   return (
     <Modal
       open
+      // 공고명이 길다. 기본값 md(440px)에서는 제목이 두 줄로 접힌다 (대출 상세와 같은 폭)
+      size="lg"
       onClose={onClose}
       title={data?.pblancNm ?? '지원사업'}
       description={data?.bsnsSumryCn ?? undefined}
@@ -120,8 +122,7 @@ export default function SupportProgramDetailModal({
 
           {data.type !== 'ETC' && (
             <Row label="금액">
-              최소 {formatMoneyShort(data.minBalance)} ~ 최대{' '}
-              {formatMoneyShort(data.maxBalance)}
+              최소 {formatMoneyShort(data.minBalance)} ~ 최대 {formatMoneyShort(data.maxBalance)}
               {data.type === 'LOAN' && (
                 <span className="text-text-muted ml-2">연 {data.interestRate}%</span>
               )}

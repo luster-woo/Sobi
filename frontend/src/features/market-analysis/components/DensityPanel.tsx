@@ -1,5 +1,4 @@
 import ComparisonBar from '@/features/market-analysis/components/ComparisonBar'
-import MarketPanel from '@/features/market-analysis/components/MarketPanel'
 import {
   DENSITY_LABEL,
   DENSITY_MESSAGE,
@@ -9,6 +8,7 @@ import {
 } from '@/features/market-analysis/model/density'
 import type { MarketAnalysis } from '@/features/market-analysis/model/types'
 import Badge from '@/shared/ui/Badge'
+import Panel from '@/shared/ui/Panel'
 
 interface DensityPanelProps {
   location: MarketAnalysis['location']
@@ -42,7 +42,7 @@ export default function DensityPanel({ location, density, neighbors }: DensityPa
   ]
 
   return (
-    <MarketPanel
+    <Panel
       title="동종업종 밀집도 — 지역 평균 대비"
       headerRight={<Badge variant={DENSITY_VARIANT[level]}>{DENSITY_LABEL[level]}</Badge>}
     >
@@ -70,6 +70,6 @@ export default function DensityPanel({ location, density, neighbors }: DensityPa
           )}
         </p>
       </div>
-    </MarketPanel>
+    </Panel>
   )
 }

@@ -129,6 +129,12 @@ export const router = createBrowserRouter([
                 ],
               },
               {
+                path: ROUTES.LOAN_REPAYMENTS,
+                lazy: async () => ({
+                  Component: (await import('@/pages/LoanRepaymentPage')).LoanRepaymentPage,
+                }),
+              },
+              {
                 path: ROUTES.SUPPORT_PROGRAMS,
                 lazy: async () => ({
                   Component: (await import('@/pages/SupportProgramListPage'))

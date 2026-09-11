@@ -60,6 +60,8 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
   return (
     <Modal
       open
+      // 기본값 md(440px)에서는 제목이 두 줄로 접힌다. 지원사업 상세와 폭을 맞춘다
+      size="lg"
       onClose={onClose}
       // 로딩 중에도 모달 골격이 보여야 해서 제목에 임시 문구를 둔다
       title={data?.accountName ?? '대출 상품'}

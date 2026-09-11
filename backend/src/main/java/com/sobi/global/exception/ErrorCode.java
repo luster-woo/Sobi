@@ -26,6 +26,8 @@ public enum ErrorCode {
     LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "AUTH_009", "이메일 또는 비밀번호가 올바르지 않습니다."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "AUTH_010", "인증이 필요합니다."),
     INVALID_RESET_TOKEN(HttpStatus.BAD_REQUEST, "AUTH_011", "유효하지 않거나 만료된 요청입니다. 이메일 인증을 다시 진행해주세요."),
+    OAUTH_PROVIDER_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "AUTH_012", "지원하지 않는 소셜 로그인입니다."),
+    OAUTH_CODE_INVALID(HttpStatus.BAD_REQUEST, "AUTH_013", "소셜 로그인 인증에 실패했습니다."),
 
     // business 관련
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_001", "사업자 번호가 일치하는 사업자 정보를 찾을 수 없습니다."),

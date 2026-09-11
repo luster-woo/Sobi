@@ -1,9 +1,10 @@
 package com.sobi.auth.service;
 
-import com.sobi.auth.dto.EmailCheckResponse;
-import com.sobi.auth.dto.EmailVerifyResponse;
-import com.sobi.auth.dto.SignupRequest;
+import com.sobi.auth.dto.*;
+import com.sobi.auth.jwt.JwtProperties;
+import com.sobi.auth.jwt.JwtProvider;
 import com.sobi.auth.repository.EmailCodeRepository;
+import com.sobi.auth.repository.RefreshTokenRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
 import com.sobi.global.external.ssafy.client.member.SsafyMemberClient;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +29,9 @@ public class AuthServiceImpl implements AuthService {
     private final MailService mailService;
     private final PasswordEncoder passwordEncoder;
     private final SsafyMemberClient ssafyMemberClient;
+    private final JwtProvider jwtProvider;
+    private final JwtProperties jwtProperties;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -99,5 +104,30 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         emailCodeRepository.deleteVerified(request.getEmail());
+    }
+
+    @Override
+    public LoginResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
+
+        // 소셜 전용 계정(password null)·탈퇴 계정도 동일 에러로 처리 → 계정 존재 여부 노출 방지
+        if (user.getPassword() == null
+                || user.getDeletedAt() != null
+                || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
+        }
+
+        String accessToken = jwtProvider.createAccessToken(user);
+        String refreshToken = jwtProvider.createRefreshToken(user);
+        refreshTokenRepository.save(user.getId(), refreshToken, Duration.ofMillis(jwtProperties.getRefreshExp()));
+
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .tokenType("Bearer")
+                .expiresIn(jwtProvider.getAccessExpSeconds())
+                .user(LoginResponse.UserInfo.from(user))
+                .refreshToken(refreshToken)
+                .build();
     }
 }

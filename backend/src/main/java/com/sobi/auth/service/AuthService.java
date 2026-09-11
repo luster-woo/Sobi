@@ -1,8 +1,6 @@
 package com.sobi.auth.service;
 
-import com.sobi.auth.dto.EmailCheckResponse;
-import com.sobi.auth.dto.EmailVerifyResponse;
-import com.sobi.auth.dto.SignupRequest;
+import com.sobi.auth.dto.*;
 
 public interface AuthService {
 
@@ -13,4 +11,6 @@ public interface AuthService {
     EmailVerifyResponse verifyEmail(String email, String verificationCode);
 
     void signup(SignupRequest request);
+
+    LoginResponse login(LoginRequest request);
 }

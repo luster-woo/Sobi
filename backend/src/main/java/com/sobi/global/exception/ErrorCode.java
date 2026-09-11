@@ -21,6 +21,9 @@ public enum ErrorCode {
     EMAIL_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "AUTH_004", "인증번호가 일치하지 않습니다"),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "AUTH_005", "이미 사용 중인 이메일입니다."),
     EMAIL_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "AUTH_006", "이메일 인증이 완료되지 않았습니다."),
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_007", "유효하지 않은 토큰입니다."),
+    EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_008", "만료된 토큰입니다."),
+    LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "AUTH_009", "이메일 또는 비밀번호가 올바르지 않습니다."),
 
     // business 관련
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_001", "사업자 번호가 일치하는 사업자 정보를 찾을 수 없습니다."),

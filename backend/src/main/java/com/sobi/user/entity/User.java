@@ -71,6 +71,10 @@ public class User {
         this.notification = true;
     }
 
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
     // INSERT 직전 JPA가 자동 호출 -> 가입일 자동 기록
     @PrePersist
     private void prePersist() {

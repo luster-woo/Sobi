@@ -187,4 +187,24 @@ public class AuthServiceImpl implements AuthService {
 
         return new ResetVerifyResponse(true, resetToken);
     }
+
+    @Override
+    @Transactional
+    public void resetPassword(PasswordResetRequest request) {
+
+        String email = resetTokenRepository.findEmail(request.getResetToken());
+
+        if (email == null) {
+            throw new BusinessException(ErrorCode.INVALID_RESET_TOKEN);
+        }
+
+        User user = userRepository.findByEmail(email)
+                .filter(u -> u.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NO_USER));
+
+        user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
+
+        resetTokenRepository.delete(request.getResetToken());   // 1회용
+        refreshTokenRepository.delete(user.getId());            // 기존 세션 무효화
+    }
 }

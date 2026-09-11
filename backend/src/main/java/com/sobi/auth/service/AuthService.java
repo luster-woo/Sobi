@@ -19,4 +19,6 @@ public interface AuthService {
     void logout(Long userId);
 
     ResetVerifyResponse verifyEmailForReset(String email, String verificationCode);
+
+    void resetPassword(PasswordResetRequest request);
 }

@@ -1,8 +1,8 @@
-import { toWonParts } from '@/features/loan-repayment/model/format'
 import type { RepaymentProgress } from '@/features/loan-repayment/model/progress'
 import type { LoanProduct, RepaymentDetail } from '@/features/loan-repayment/model/types'
 import type { StatTile } from '@/shared/ui/StatTiles'
 import StatTiles from '@/shared/ui/StatTiles'
+import { splitMoneyShort } from '@/shared/utils/formatters'
 
 interface RepaymentSummaryTilesProps {
   product: LoanProduct
@@ -23,8 +23,8 @@ export default function RepaymentSummaryTiles({
   detail,
   progress,
 }: RepaymentSummaryTilesProps) {
-  const remaining = toWonParts(detail.remainingLoanBalance)
-  const daily = toWonParts(product.dailyDueAmount)
+  const remaining = splitMoneyShort(detail.remainingLoanBalance)
+  const daily = splitMoneyShort(product.dailyDueAmount)
 
   const tiles: StatTile[] = [
     { label: '대출 잔액', ...remaining },

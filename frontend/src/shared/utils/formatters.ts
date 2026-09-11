@@ -85,3 +85,37 @@ export function formatDeadlineDate(endDate: string | null): string {
 
   return `~ ${month}. ${day}`
 }
+
+export interface MoneyParts {
+  /** '5,000' · '1억 2,000' */
+  value: string
+  /** '만 원' · '억 원' */
+  unit: string
+}
+
+/**
+ * 금액을 숫자와 단위로 쪼갠다. 큰 숫자 + 작은 회색 단위로 그리는 자리에 쓴다.
+ *
+ * formatMoneyShort 는 '5,000만 원' 한 문자열을 주는데, 요약 타일·카드처럼 단위만
+ * 작게 깔아야 하는 화면에서는 쪼개진 값이 필요하다.
+ *
+ * 만 원 단위에서 반올림한다. 대출 한도(formatMoneyShort)는 실제보다 크게 보이면
+ * 안 되어 버리지만, 이쪽은 추정·집계 금액이라 반올림이 원값에 가깝다.
+ *
+ * null 을 받는다. 상권 분석의 매출은 원본에서 비어 있는 행이 53% 라 기본 경로에
+ * 가깝다. 그 경우 '-' 를 주고 단위를 비운다 — '- 만 원' 이 되면 값이 있는 것처럼 보인다.
+ */
+export function splitMoneyShort(won: number | null): MoneyParts {
+  if (won === null || !Number.isFinite(won) || won < 0) return { value: '-', unit: '' }
+
+  const man = Math.round(won / TEN_THOUSAND)
+  if (man < TEN_THOUSAND) return { value: man.toLocaleString('ko-KR'), unit: '만 원' }
+
+  const eok = Math.floor(man / TEN_THOUSAND)
+  const rest = man % TEN_THOUSAND
+  if (rest === 0) return { value: eok.toLocaleString('ko-KR'), unit: '억 원' }
+  return {
+    value: `${eok.toLocaleString('ko-KR')}억 ${rest.toLocaleString('ko-KR')}`,
+    unit: '만 원',
+  }
+}

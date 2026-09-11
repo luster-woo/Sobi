@@ -1,7 +1,8 @@
-import { toPeopleParts, toWonParts } from '@/features/market-analysis/model/format'
+import { toPeopleParts } from '@/features/market-analysis/model/format'
 import type { MarketAnalysis } from '@/features/market-analysis/model/types'
 import type { StatTile } from '@/shared/ui/StatTiles'
 import StatTiles from '@/shared/ui/StatTiles'
+import { splitMoneyShort } from '@/shared/utils/formatters'
 
 interface MarketSummaryTilesProps {
   location: MarketAnalysis['location']
@@ -16,7 +17,7 @@ interface MarketSummaryTilesProps {
  * 연 폐업률을 넣었다 — 예비창업자가 제일 알아야 할 숫자이고, storeChurn 에
  * seoulAvgCloseRate 가 같이 와서 아래 패널에서 비교까지 된다.
  *
- * 매출은 null 일 수 있어 toWonParts 가 '-' 를 만든다. 칸을 빼지 않는 이유는, 칸 수가
+ * 매출은 null 일 수 있어 splitMoneyShort 가 '-' 를 만든다. 칸을 빼지 않는 이유는, 칸 수가
  * 응답에 따라 3개·4개로 달라지면 grid 가 늘어나 다른 상권과 나란히 비교할 수 없다.
  */
 export default function MarketSummaryTiles({
@@ -25,7 +26,7 @@ export default function MarketSummaryTiles({
   storeChurn,
 }: MarketSummaryTilesProps) {
   const footTraffic = toPeopleParts(summary.dailyFootTraffic)
-  const revenue = toWonParts(summary.revenuePerStoreMonthly)
+  const revenue = splitMoneyShort(summary.revenuePerStoreMonthly)
 
   const tiles: StatTile[] = [
     {

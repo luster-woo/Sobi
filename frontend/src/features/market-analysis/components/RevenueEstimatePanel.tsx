@@ -1,6 +1,7 @@
 import MiniPanel from '@/features/market-analysis/components/MiniPanel'
-import { formatWonText, toWonParts } from '@/features/market-analysis/model/format'
+import { formatWonText } from '@/features/market-analysis/model/format'
 import type { MarketAnalysis } from '@/features/market-analysis/model/types'
+import { splitMoneyShort } from '@/shared/utils/formatters'
 
 interface RevenueEstimatePanelProps {
   summary: MarketAnalysis['summary']
@@ -22,7 +23,7 @@ interface RevenueEstimatePanelProps {
  *    상위 25%' 인지 확인 대기 중이다. 지금 문구는 동종업종 기준으로 썼다.
  */
 export default function RevenueEstimatePanel({ summary, seoulRank }: RevenueEstimatePanelProps) {
-  const revenue = toWonParts(summary.revenuePerStoreMonthly)
+  const revenue = splitMoneyShort(summary.revenuePerStoreMonthly)
   const benchmark = summary.revenuePerStoreBenchmark
 
   if (summary.revenuePerStoreMonthly === null) {

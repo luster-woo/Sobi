@@ -5,7 +5,7 @@ import type { ISODate } from '@/shared/types'
  *
  * 서버 응답 타입(Raw*)과 화면이 쓰는 타입을 나눈다. SSAFY 금융망 규격이 그대로 올라와서
  * 금액·금리·회차·날짜가 전부 문자열이고, 날짜는 'YYYYMMDD' 시각은 'HHmmss' 다.
- * 게다가 dailyDueAmount·TotalPayoffAmount·interestSaved 만 숫자라 규칙이 섞여 있다.
+ * 게다가 dailyDueAmount·totalPayoffAmount·interestSaved 만 숫자라 규칙이 섞여 있다.
  *
  * 화면이 이걸 직접 받으면 Number(...) 와 날짜 파싱이 컴포넌트마다 흩어진다. model/normalize.ts
  * 한 곳에서 변환하고, 화면은 정규화된 타입만 본다. 나중에 서버가 숫자·ISO 로 바꿔주면
@@ -64,6 +64,7 @@ export interface RawRepaymentDetail {
   remainingLoanBalance: string
   withdrawalAccountNo: string
   repaymentRecords: RawRepaymentRecord[]
+  /** 지금 한 번에 갚을 때 내는 총액 */
   totalPayoffAmount: number
   interestSaved: number
 }

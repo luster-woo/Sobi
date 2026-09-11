@@ -1,5 +1,6 @@
 import { authHandlers } from './auth'
 import { businessHandlers } from './business'
+import { fundingHandlers } from './funding'
 import { loanHandlers } from './loan'
 import { marketHandlers } from './market'
 import { notificationHandlers } from './notification'
@@ -14,6 +15,7 @@ import { supportHandlers } from './support'
 export const handlers = [
   ...authHandlers,
   ...businessHandlers,
+  ...fundingHandlers,
   ...loanHandlers,
   ...marketHandlers,
   ...notificationHandlers,

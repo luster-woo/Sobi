@@ -47,6 +47,17 @@ export const endpoints = {
   },
 
   /**
+   * 자금 조합. 목표 금액을 채우는 상품 조합을 서버가 추천한다.
+   * 조회인데 POST 인 건 요청 body 로 조건을 받기 때문이다.
+   */
+  funding: {
+    /** 조합 추천. body 에 targetAmount */
+    recommend: '/funding/recommend',
+    /** 고른 조합으로 신청 목록 생성 */
+    batch: '/funding/batch',
+  },
+
+  /**
    * 상환 관리. 셋 다 POST 다 — 조회도 POST 인 건 SSAFY 금융망 규격을 그대로 따라서다.
    * list 는 본문이 비어 있고, 나머지는 { accountNo } 를 보낸다.
    */
@@ -86,8 +97,7 @@ export const endpoints = {
     list: '/insurance',
     /** ⚠️ 경로 변수는 insurance.id 가 아니라 insurance_checklist.id 다 */
     detail: (insuranceChecklistId: number) => `/insurance/${insuranceChecklistId}`,
-    changeStatus: (insuranceChecklistId: number) =>
-      `/insurance/${insuranceChecklistId}/status`,
+    changeStatus: (insuranceChecklistId: number) => `/insurance/${insuranceChecklistId}/status`,
   },
 
   /** role 로 사업자·예비창업자를 갈라 서로 다른 모양을 준다 */

@@ -3,6 +3,8 @@ package com.sobi.auth.service;
 import com.sobi.auth.dto.*;
 import com.sobi.auth.jwt.JwtProperties;
 import com.sobi.auth.jwt.JwtProvider;
+import com.sobi.auth.oauth.GoogleOAuthClient;
+import com.sobi.auth.oauth.GoogleUserInfo;
 import com.sobi.auth.repository.EmailCodeRepository;
 import com.sobi.auth.repository.RefreshTokenRepository;
 import com.sobi.auth.repository.ResetTokenRepository;
@@ -38,6 +40,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtProperties jwtProperties;
 
     private final SsafyMemberClient ssafyMemberClient;
+    private final GoogleOAuthClient googleOAuthClient;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -124,6 +127,43 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
+        return issueTokens(user, null);
+    }
+
+    @Override
+    @Transactional
+    public LoginResponse oauthLogin(String provider, OAuthLoginRequest request) {
+        if (!"google".equalsIgnoreCase(provider)) {
+            throw new BusinessException(ErrorCode.OAUTH_PROVIDER_NOT_SUPPORTED);
+        }
+
+        GoogleUserInfo googleUser = googleOAuthClient.getUserInfo(request.getCode(), request.getRedirectUri());
+
+        User user = userRepository.findByEmail(googleUser.getEmail()).orElse(null);
+
+        if (user == null) {
+            User newUser = User.builder()
+                    .email(googleUser.getEmail())
+                    .name(googleUser.getName())
+                    .provider(Provider.GOOGLE)
+                    .providerId(googleUser.getProviderId())
+                    .userKey(ssafyMemberClient.getOrCreateUserKey(googleUser.getEmail()))
+                    .build();
+            return issueTokens(userRepository.save(newUser), true);
+        }
+
+        // 이메일로 먼저 가입한 계정 → 소셜 계정 연결 API로 유도
+        if (user.getProvider() != Provider.GOOGLE) {
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_REGISTERED);
+        }
+        if (user.getDeletedAt() != null) {
+            throw new BusinessException(ErrorCode.NO_USER);
+        }
+
+        return issueTokens(user, null);
+    }
+
+    private LoginResponse issueTokens(User user, Boolean isNewUser) {
         String accessToken = jwtProvider.createAccessToken(user);
         String refreshToken = jwtProvider.createRefreshToken(user);
         refreshTokenRepository.save(user.getId(), refreshToken, Duration.ofMillis(jwtProperties.getRefreshExp()));
@@ -134,6 +174,7 @@ public class AuthServiceImpl implements AuthService {
                 .expiresIn(jwtProvider.getAccessExpSeconds())
                 .user(LoginResponse.UserInfo.from(user))
                 .refreshToken(refreshToken)
+                .isNewUser(isNewUser)
                 .build();
     }
 
@@ -207,4 +248,5 @@ public class AuthServiceImpl implements AuthService {
         resetTokenRepository.delete(request.getResetToken());   // 1회용
         refreshTokenRepository.delete(user.getId());            // 기존 세션 무효화
     }
+
 }

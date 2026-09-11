@@ -1,13 +1,14 @@
 import { useState } from 'react'
 
 import { useRepayInFull } from '@/features/loan-repayment/hooks/useRepayment'
-import { formatWonText, maskAccountNo, toWonParts } from '@/features/loan-repayment/model/format'
+import { formatWonText, maskAccountNo } from '@/features/loan-repayment/model/format'
 import type { RepaymentProgress } from '@/features/loan-repayment/model/progress'
 import type { LoanProduct, RepaymentDetail } from '@/features/loan-repayment/model/types'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import Panel from '@/shared/ui/Panel'
+import { splitMoneyShort } from '@/shared/utils/formatters'
 
 interface FullRepaymentCardProps {
   product: LoanProduct
@@ -64,17 +65,17 @@ export default function FullRepaymentCard({ product, detail, progress }: FullRep
   const showToast = useUiStore((state) => state.showToast)
   const { mutate: repay, isPending } = useRepayInFull()
 
-  const payoff = toWonParts(detail.totalPayoffAmount)
-  const saved = toWonParts(detail.interestSaved)
+  const payoff = splitMoneyShort(detail.totalPayoffAmount)
+  const saved = splitMoneyShort(detail.interestSaved)
   const account = `${product.bankName} ${maskAccountNo(product.withdrawalAccountNo)}`
 
-  // 완납액에서 남은 원금을 빼면 오늘까지 붙은 이자다. 서버 값이 어긋나면(완납액이
-  // 잔액보다 작으면) 음수가 나오므로 그때는 분해해 보여주지 않는다
-  const interestToday = detail.totalPayoffAmount - detail.remainingLoanBalance
-  const payoffNote =
-    interestToday > 0
-      ? `원금 ${formatWonText(detail.remainingLoanBalance)} + 오늘까지 이자 약 ${formatWonText(interestToday)}`
-      : `남은 원금 ${formatWonText(detail.remainingLoanBalance)}`
+  /*
+   * 시안에는 '원금 2,520만 + 오늘까지 이자 약 5만 원' 이라는 줄이 있었는데 뺐다.
+   * 서버가 완납액을 총액 하나로만 주고 원금·이자를 나눠주지 않는다. 남은 원금
+   * (remainingLoanBalance)으로 역산하려 해도 두 값의 관계가 보장되지 않아, 이자가
+   * 음수로 나오는 경우가 생긴다. 확실히 아는 값(남은 회차)만 쓴다.
+   */
+  const payoffNote = `남은 ${progress.remainingCount}회를 한 번에 갚는 금액`
 
   const handleConfirm = () => {
     repay(product.accountNo, {

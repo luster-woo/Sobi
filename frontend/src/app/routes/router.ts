@@ -135,6 +135,12 @@ export const router = createBrowserRouter([
                 }),
               },
               {
+                path: ROUTES.FUNDING_PLAN,
+                lazy: async () => ({
+                  Component: (await import('@/pages/FundingPlanPage')).FundingPlanPage,
+                }),
+              },
+              {
                 path: ROUTES.MYPAGE,
                 lazy: async () => ({ Component: (await import('@/pages/MyPage')).MyPage }),
               },

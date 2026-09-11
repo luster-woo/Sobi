@@ -22,7 +22,14 @@ import Modal from '@/shared/ui/Modal'
 import Select from '@/shared/ui/Select'
 
 interface MarketConditionModalProps {
+  /**
+   * 사용자가 그냥 닫았을 때(X · 바깥 클릭 · ESC).
+   * 제출과 갈라둔 이유: 빈 화면에서 취소하면 이전 화면으로 돌려보내야 하는데,
+   * 제출까지 같은 콜백을 쓰면 분석을 시작하자마자 그 화면을 떠나버린다.
+   */
   onClose: () => void
+  /** 분석을 시작했을 때. 주소 이동은 이 컴포넌트가 이미 했고, 닫기만 하면 된다 */
+  onSubmitted: () => void
   /** 조건 재설정으로 열 때 이전 값. 처음이면 EMPTY_CONDITION */
   initial: MarketCondition
 }
@@ -80,7 +87,11 @@ function fillParents(
  * 열려 있을 때만 마운트된다(페이지가 `{open && <Modal/>}` 로 그린다). 그래서 열 때마다
  * useState 가 그 시점의 URL 값으로 초기화되고, 바깥 값과 맞추는 동기화 코드가 필요 없다.
  */
-export default function MarketConditionModal({ onClose, initial }: MarketConditionModalProps) {
+export default function MarketConditionModal({
+  onClose,
+  onSubmitted,
+  initial,
+}: MarketConditionModalProps) {
   const navigate = useNavigate()
   const { data: businessTree } = useBusinessTree()
   const { data: regionTree } = useRegionTree()
@@ -100,7 +111,7 @@ export default function MarketConditionModal({ onClose, initial }: MarketConditi
   const handleSubmit = () => {
     if (!isSubmittable(filled)) return
     navigate({ pathname: ROUTES.MARKET_ANALYSIS, search: toSearchParams(filled).toString() })
-    onClose()
+    onSubmitted()
   }
 
   return (

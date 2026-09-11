@@ -78,7 +78,6 @@ export function normalizeRepaymentDetail(raw: RawRepaymentDetail): RepaymentDeta
     records: raw.repaymentRecords
       .map(normalizeRepaymentRecord)
       .sort((a, b) => b.installmentNumber - a.installmentNumber),
-    // 파스칼케이스를 여기서 흡수한다
     totalPayoffAmount: toNumber(raw.totalPayoffAmount),
     interestSaved: toNumber(raw.interestSaved),
   }

@@ -31,7 +31,7 @@ public class SsafyRepaymentClient {
                         .build();
 
         return financeClient.post(
-                "/실제-SSAFY-대출상품-가입목록-조회-URL",
+                "/edu/loan/inquireLoanAccountList",
                 request,
                 SsafyInquireLoanAccountListResponse.class
         );

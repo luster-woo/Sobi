@@ -102,19 +102,44 @@ export const INDUSTRY_TREE: readonly IndustryMajor[] = [
 ]
 
 /**
- * 지역 선택지.
+ * 지역 선택지 — 시·도 → 시·군·구 → 읍·면·동 3단.
  *
- * ⚠️ 시안과 기존 목이 대구 기준이라 대구 구·군으로 뒀다. 그런데 상권 데이터 테이블이
- *    `seoul_commercial_data` 라 분석이 서울만 된다면 이 목록을 서울 자치구로 갈아야
- *    한다 — 백엔드 확인 필요.
+ * `V7__drop_region.sql` 이 `seoul_commercial_data` 에 district_code·district_name·
+ * dong_code·dong_name 을 더한 것과 같은 층위다. 상권 분석이 동 단위로 돌아간다.
+ *
+ * ⚠️ 하드코딩이고 일부만 담았다. 실제로는 코드 목록 API 로 받아야 한다.
+ *
+ * ⚠️ 상권 데이터 테이블 이름이 `seoul_commercial_data` 라 서울만 분석될 수 있다.
+ *    대구를 같이 둔 것은 나머지 목이 대구 기준이라서다 — 어느 지역이 실제로
+ *    지원되는지 백엔드 확인 필요.
  */
-export const REGIONS: readonly string[] = [
-  '대구광역시 중구',
-  '대구광역시 동구',
-  '대구광역시 서구',
-  '대구광역시 남구',
-  '대구광역시 북구',
-  '대구광역시 수성구',
-  '대구광역시 달서구',
-  '대구광역시 달성군',
+
+export interface RegionDistrict {
+  name: string
+  dongs: readonly string[]
+}
+
+export interface RegionProvince {
+  name: string
+  districts: readonly RegionDistrict[]
+}
+
+export const REGION_TREE: readonly RegionProvince[] = [
+  {
+    name: '서울특별시',
+    districts: [
+      { name: '강남구', dongs: ['역삼동', '삼성동', '논현동', '청담동'] },
+      { name: '마포구', dongs: ['서교동', '연남동', '합정동', '망원동'] },
+      { name: '성동구', dongs: ['성수동1가', '성수동2가', '행당동'] },
+    ],
+  },
+  {
+    name: '대구광역시',
+    districts: [
+      { name: '북구', dongs: ['산격동', '복현동', '침산동', '태전동'] },
+      { name: '중구', dongs: ['동인동', '삼덕동', '남산동'] },
+      { name: '수성구', dongs: ['범어동', '만촌동', '지산동'] },
+      { name: '달서구', dongs: ['월성동', '상인동', '이곡동'] },
+    ],
+  },
 ]

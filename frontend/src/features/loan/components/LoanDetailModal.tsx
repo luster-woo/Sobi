@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useLoanDetail } from '@/features/loan/hooks/useLoanDetail'
 import type { ProductStatus } from '@/shared/constants/productStatus'
 import { LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
+import BookmarkButton from '@/shared/ui/BookmarkButton'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
@@ -57,6 +59,19 @@ interface LoanDetailModalProps {
 export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProps) {
   const { data, isLoading, isError } = useLoanDetail(loanId)
 
+  /*
+   * ⚠️ 즐겨찾기를 화면 안에서만 기억한다. `POST`/`DELETE /bookmark/{programId}` 가
+   *    붙으면 이 state 를 지우고 useMutation + invalidateQueries 로 바꾼다.
+   *
+   * 서버 값(data.isBookmark)을 그대로 읽지 않는 이유: 토글 API 가 없어 눌러도 응답이
+   * 바뀌지 않는다. 눌리는 느낌이 없으면 버튼이 고장난 것으로 보인다.
+   */
+  const [bookmarked, setBookmarked] = useState(false)
+
+  useEffect(() => {
+    if (data) setBookmarked(data.isBookmark)
+  }, [data])
+
   return (
     <Modal
       open
@@ -66,28 +81,14 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
       // 로딩 중에도 모달 골격이 보여야 해서 제목에 임시 문구를 둔다
       title={data?.accountName ?? '대출 상품'}
       description={data?.description ?? undefined}
-      headerRight={
+      headerRight={data && <ProductStatusBadge status={data.status} labels={LOAN_STATUS_LABEL} />}
+      headerAction={
         data && (
-          <>
-            <ProductStatusBadge status={data.status} labels={LOAN_STATUS_LABEL} />
-            <span
-              aria-label={data.isBookmark ? '저장됨' : '저장하지 않음'}
-              className={data.isBookmark ? 'text-primary' : 'text-text-disabled'}
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="size-5"
-                fill={data.isBookmark ? 'currentColor' : 'none'}
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M6 3h12v18l-6-4-6 4z" />
-              </svg>
-            </span>
-          </>
+          <BookmarkButton
+            bookmarked={bookmarked}
+            onToggle={() => setBookmarked((previous) => !previous)}
+            label={data.accountName}
+          />
         )
       }
       footer={

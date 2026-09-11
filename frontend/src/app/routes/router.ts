@@ -135,6 +135,22 @@ export const router = createBrowserRouter([
                 }),
               },
               {
+                path: ROUTES.MYPAGE,
+                lazy: async () => ({ Component: (await import('@/pages/MyPage')).MyPage }),
+              },
+              {
+                path: ROUTES.MYPAGE_FAVORITES,
+                lazy: async () => ({
+                  Component: (await import('@/pages/FavoritesPage')).FavoritesPage,
+                }),
+              },
+              {
+                path: ROUTES.MYPAGE_ACCOUNTS,
+                lazy: async () => ({
+                  Component: (await import('@/pages/AccountsPage')).AccountsPage,
+                }),
+              },
+              {
                 path: ROUTES.SUPPORT_PROGRAMS,
                 lazy: async () => ({
                   Component: (await import('@/pages/SupportProgramListPage'))

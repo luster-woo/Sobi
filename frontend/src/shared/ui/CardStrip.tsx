@@ -54,7 +54,7 @@ function Arrow({
         'bg-surface grid size-[25px] shrink-0 place-items-center rounded-sm border transition-colors',
         disabled
           ? 'border-border-subtle text-text-disabled cursor-default'
-          : 'border-border-strong text-text-secondary hover:text-text',
+          : 'border-border-strong text-text hover:bg-surface-muted',
       )}
     >
       <svg
@@ -123,15 +123,17 @@ export default function CardStrip({
     [measure],
   )
 
-  const scrollByPage = (direction: -1 | 1) => {
+  /**
+   * 한 장씩 넘긴다.
+   *
+   * 보이는 만큼(한 화면씩) 넘기면 한 번에 네다섯 장이 지나가 방금 본 것과 다음 것을
+   * 이어서 볼 수가 없다. 카드 하나씩 밀면 눈이 따라간다.
+   */
+  const scrollByCard = (direction: -1 | 1) => {
     const node = listRef.current
     if (!node) return
 
-    // 보이는 만큼 넘기되 카드 단위로 딱 떨어지게 자른다. 반 장씩 걸치면 다음 장을
-    // 눌렀을 때 방금 본 카드가 다시 반쯤 보인다
-    const step = itemWidth + GAP
-    const perPage = Math.max(1, Math.floor(node.clientWidth / step))
-    node.scrollBy({ left: direction * perPage * step, behavior: 'smooth' })
+    node.scrollBy({ left: direction * (itemWidth + GAP), behavior: 'smooth' })
   }
 
   return (
@@ -145,18 +147,19 @@ export default function CardStrip({
         </span>
 
         <span className="flex shrink-0 gap-[5px]">
-          <Arrow side="left" disabled={edge.start} onClick={() => scrollByPage(-1)} />
-          <Arrow side="right" disabled={edge.end} onClick={() => scrollByPage(1)} />
+          <Arrow side="left" disabled={edge.start} onClick={() => scrollByCard(-1)} />
+          <Arrow side="right" disabled={edge.end} onClick={() => scrollByCard(1)} />
         </span>
       </div>
 
-      <div className="relative">
-        {/* 오른쪽 끝을 흰색으로 흐리게 덮어 카드가 더 있다는 것을 알린다 */}
-        <div
-          aria-hidden="true"
-          className="to-surface pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-r from-transparent to-[72%]"
-        />
-
+      {/*
+       * 오른쪽 끝에 흰색 그라디언트를 덮지 않는다.
+       *
+       * 카드가 더 있다는 신호로 넣었는데, 헤더의 화살표가 이미 같은 말을 하고 있어
+       * 얻는 것 없이 마지막 카드의 테두리와 금액만 바래 보였다. 잘린 카드 자체가
+       * 이미 "옆에 더 있다" 는 신호다.
+       */}
+      <div>
         <ul
           ref={attach}
           onScroll={(event) => measure(event.currentTarget)}

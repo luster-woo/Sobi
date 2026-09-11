@@ -178,7 +178,16 @@ export interface BusinessSnapshot {
 export interface StoreCondition {
   /** minor_code.id. 아직 안 고른 상태가 있어 null 을 허용한다 */
   industryMinorId: ID | null
-  region: string
+  /**
+   * 지역 3단. 상권 분석이 동 단위로 돌아가서(`seoul_commercial_data` 의
+   * district_code·dong_code) 시·군·구까지만으로는 분석할 수가 없다.
+   *
+   * ⚠️ `business_info.region` 은 VARCHAR 한 칸이다. 저장할 때 셋을 합칠지
+   *    컬럼을 쪼갤지 백엔드와 정해야 한다.
+   */
+  province: string
+  district: string
+  dong: string
 }
 
 export interface OwnerDashboardData {

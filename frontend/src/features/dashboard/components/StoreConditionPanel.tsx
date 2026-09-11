@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import MiniPanel from '@/features/dashboard/components/MiniPanel'
-import { INDUSTRY_TREE, REGIONS } from '@/features/dashboard/model/storeCondition'
+import { INDUSTRY_TREE, REGION_TREE } from '@/features/dashboard/model/storeCondition'
 import type { StoreCondition } from '@/features/dashboard/model/types'
 import { ROUTES } from '@/shared/constants/routes'
 import Button from '@/shared/ui/Button'
@@ -26,6 +26,10 @@ function findPath(minorId: number | null) {
 const toOptions = (nodes: readonly { id: number; name: string }[]) =>
   nodes.map((node) => ({ value: String(node.id), label: node.name }))
 
+/** 지역은 코드가 없어 이름을 값으로 쓴다. 코드 API 가 붙으면 id 로 바꾼다 */
+const toNameOptions = (names: readonly string[]) =>
+  names.map((name) => ({ value: name, label: name }))
+
 /**
  * 창업 조건 입력 (시안 10-1 의 첫 패널을 오른쪽 열로 옮긴 것).
  *
@@ -46,22 +50,33 @@ export default function StoreConditionPanel({ condition }: StoreConditionPanelPr
   const [majorId, setMajorId] = useState<number | null>(initial.majorId)
   const [subId, setSubId] = useState<number | null>(initial.subId)
   const [minorId, setMinorId] = useState<number | null>(initial.minorId)
-  const [region, setRegion] = useState(condition.region)
+
+  const [province, setProvince] = useState(condition.province)
+  const [district, setDistrict] = useState(condition.district)
+  const [dong, setDong] = useState(condition.dong)
 
   const major = INDUSTRY_TREE.find((item) => item.id === majorId) ?? null
   const sub = major?.subs.find((item) => item.id === subId) ?? null
 
-  // 소분류까지 골라야 판정이 된다. 나머지는 상권 분석 정확도를 올리는 값이라 선택이다
-  const canAnalyze = minorId !== null && region !== ''
+  const provinceNode = REGION_TREE.find((item) => item.name === province) ?? null
+  const districtNode = provinceNode?.districts.find((item) => item.name === district) ?? null
+
+  // 상권 분석이 동 단위라 읍·면·동까지 골라야 한다
+  const canAnalyze = minorId !== null && dong !== ''
 
   return (
-    <MiniPanel label="업종과 지역만 있으면 돼요" title="어떤 가게를 준비 중이세요?">
+    <MiniPanel title="어떤 가게를 준비 중이세요?">
       {/*
        * 라벨을 밖으로 빼지 않고 placeholder 가 겸한다. 320px 열에 네 칸을 쌓으면
        * 라벨만으로 100px 을 더 먹어 오른쪽 열이 왼쪽보다 길어진다.
        * 대신 aria-label 을 붙여 낭독기에는 이름이 남는다.
        */}
-      <div className="flex flex-col gap-2">
+      {/*
+       * 여섯 칸을 한 줄씩 쌓으면 오른쪽 열이 왼쪽보다 길어져 화면이 넘친다(실측 774px).
+       * 업종 3단·지역 3단을 각각 2열로 눕혀 세 줄로 줄인다. 소분류와 읍·면·동은
+       * 이름이 길어 한 칸을 다 쓴다.
+       */}
+      <div className="grid grid-cols-2 gap-2">
         <Select
           size="sm"
           aria-label="업종 대분류"
@@ -91,6 +106,7 @@ export default function StoreConditionPanel({ condition }: StoreConditionPanelPr
 
         <Select
           size="sm"
+          className="col-span-2"
           aria-label="업종 소분류"
           placeholder={sub ? '업종 소분류' : '중분류를 먼저 고르세요'}
           disabled={!sub}
@@ -101,11 +117,39 @@ export default function StoreConditionPanel({ condition }: StoreConditionPanelPr
 
         <Select
           size="sm"
-          aria-label="지역"
-          placeholder="지역"
-          value={region}
-          onChange={(event) => setRegion(event.target.value)}
-          options={REGIONS.map((name) => ({ value: name, label: name }))}
+          aria-label="시 · 도"
+          placeholder="시 · 도"
+          value={province}
+          onChange={(event) => {
+            setProvince(event.target.value)
+            setDistrict('')
+            setDong('')
+          }}
+          options={toNameOptions(REGION_TREE.map((item) => item.name))}
+        />
+
+        <Select
+          size="sm"
+          aria-label="시 · 군 · 구"
+          placeholder={provinceNode ? '시 · 군 · 구' : '시·도를 먼저 고르세요'}
+          disabled={!provinceNode}
+          value={district}
+          onChange={(event) => {
+            setDistrict(event.target.value)
+            setDong('')
+          }}
+          options={toNameOptions(provinceNode?.districts.map((item) => item.name) ?? [])}
+        />
+
+        <Select
+          size="sm"
+          className="col-span-2"
+          aria-label="읍 · 면 · 동"
+          placeholder={districtNode ? '읍 · 면 · 동' : '시·군·구를 먼저 고르세요'}
+          disabled={!districtNode}
+          value={dong}
+          onChange={(event) => setDong(event.target.value)}
+          options={toNameOptions(districtNode?.dongs ?? [])}
         />
 
         {/* 규모·예산은 받지 않는다. business_info 에 담을 컬럼이 없고, 상권 분석도
@@ -114,7 +158,7 @@ export default function StoreConditionPanel({ condition }: StoreConditionPanelPr
           size="sm"
           disabled={!canAnalyze}
           onClick={() => navigate(ROUTES.MARKET_ANALYSIS)}
-          className="mt-0.5 w-full"
+          className="col-span-2 mt-0.5 w-full"
         >
           상권 분석하기
         </Button>

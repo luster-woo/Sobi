@@ -123,6 +123,15 @@ export function MypageIcon(props: IconProps) {
   )
 }
 
+/** 관심 목록 — 북마크 리본. 카드의 즐겨찾기 버튼과 같은 모양이라야 같은 것으로 읽힌다 */
+export function BookmarkIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z" />
+    </svg>
+  )
+}
+
 /** 알림 — 상단바 벨. 빨간 점은 감싸는 쪽에서 겹쳐 그린다 */
 export function BellIcon(props: IconProps) {
   return (

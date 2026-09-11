@@ -37,7 +37,12 @@ export const ROUTES = {
 
   FUNDING_PLAN: '/funding-plan',
   APPLICATIONS: '/applications',
+
   MYPAGE: '/mypage',
+  /** 즐겨찾기한 대출·지원사업. 마이페이지 바로가기와 사이드바 어디서든 들어온다 */
+  MYPAGE_FAVORITES: '/mypage/favorites',
+  /** 마이데이터로 불러온 입출금·대출 계좌 */
+  MYPAGE_ACCOUNTS: '/mypage/accounts',
 } as const
 
 /**

@@ -250,7 +250,9 @@ export const MOCK_PRE_OWNER_DASHBOARD: PreOwnerDashboardData = {
   condition: {
     // 111 = 백반·한정식 (storeCondition.ts)
     industryMinorId: 111,
-    region: '대구광역시 북구',
+    province: '대구광역시',
+    district: '북구',
+    dong: '산격동',
   },
 
   judgement: {

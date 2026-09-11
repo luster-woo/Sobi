@@ -9,10 +9,7 @@ import com.sobi.repayment.client.SsafyRepaymentClient;
 import com.sobi.repayment.clientDto.SsafyInquireLoanAccountDetail;
 import com.sobi.repayment.clientDto.SsafyInquireLoanAccountListResponse;
 import com.sobi.repayment.clientDto.SsafyInquireRepaymentRecordsResponse;
-import com.sobi.repayment.dto.LoanListResponse;
-import com.sobi.repayment.dto.LoanProductList;
-import com.sobi.repayment.dto.RecordRequest;
-import com.sobi.repayment.dto.RecordResponse;
+import com.sobi.repayment.dto.*;
 import com.sobi.user.entity.User;
 import com.sobi.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -142,6 +139,19 @@ public class RepaymentServiceImpl implements RepaymentService {
 
 
         return response;
+    }
+
+    @Override
+    public void loanBalanceInFull(LoanBalanceInFullRequest request, Long userId) {
+        // 걍 순수 호출만 하면 끝 아닌가
+
+        // userid 기반으로 userkey를 가져와서 클라이언트 호출
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new BusinessException(ErrorCode.NO_USER)
+        );
+
+        ssafyRepaymentClient.updateRepaymentLoanBalanceInFull(user.getUserKey(), request.getAccountNo());
+
     }
 
     // dailyDueAmount 계산

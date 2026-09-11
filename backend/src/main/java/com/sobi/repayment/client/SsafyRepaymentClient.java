@@ -80,7 +80,7 @@ public class SsafyRepaymentClient {
                         .build();
 
         return financeClient.post(
-                "/실제-SSAFY-일시납-상환-URL",
+                "/edu/loan/updateRepaymentLoanBalanceInFull",
                 request,
                 SsafyUpdateRepaymentLoanBalanceInFullResponse.class
         );

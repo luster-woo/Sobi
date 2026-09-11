@@ -36,7 +36,8 @@ export default function JudgementSummaryPanel({ summary }: JudgementSummaryPanel
   return (
     <Panel className="flex flex-col gap-3 px-4.5 py-4">
       <p className="text-text-muted text-[11.5px]">
-        자격 판정 · 마이데이터 {toDotDate(updatedAt)} 갱신
+        {/* 예비창업자는 마이데이터가 없어 갱신일도 없다 */}
+        자격 판정{updatedAt && ` · 마이데이터 ${toDotDate(updatedAt)} 갱신`}
       </p>
 
       <div className="flex flex-wrap items-end justify-between gap-4.5">
@@ -48,8 +49,12 @@ export default function JudgementSummaryPanel({ summary }: JudgementSummaryPanel
         </p>
 
         <dl className="flex gap-4.5">
-          {/* 마감 임박은 신청 가능 18건 안에 든 수다. 전체 = 가능 + 불가 */}
-          <Stat label="마감 임박" value={urgent} />
+          {/*
+           * '마감 임박' 은 얼마나 급한지를 안 알려준다. 판정 기준이 7일이므로
+           * (isDeadlineNear 기본값) 그 숫자를 그대로 문구에 적는다.
+           * 신청 가능 18건 안에 든 수다 — 전체 = 가능 + 불가.
+           */}
+          <Stat label="일주일 내 마감" value={urgent} />
           <Stat label="신청 불가" value={impossible} />
           <Stat label="전체" value={total} />
         </dl>

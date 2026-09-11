@@ -32,8 +32,13 @@ export const INSURANCE_STATUS_LABEL: Record<InsuranceStatus, string> = {
  * possible + impossible = total 이고 urgent 는 그 합에 들어가지 않는다.
  */
 export interface JudgementSummary {
-  /** 마이데이터 갱신일. 판정은 이 시점 데이터로 낸 결과다 */
-  updatedAt: ISODate
+  /**
+   * 마이데이터 갱신일. 판정은 이 시점 데이터로 낸 결과다.
+   *
+   * 예비창업자는 null 이다 — 연동할 마이데이터가 없고 업종·지역만으로 판정하므로
+   * 갱신일이라는 개념 자체가 없다. 그때는 갱신 문구를 빼고 '자격 판정' 만 적는다.
+   */
+  updatedAt: ISODate | null
   possible: number
   urgent: number
   impossible: number
@@ -156,6 +161,26 @@ export interface BusinessSnapshot {
   summary: string | null
 }
 
+/**
+ * 예비창업자가 입력한 창업 조건.
+ *
+ * 예비창업자도 `business_info` 를 쓴다. 별도 테이블이 없고, 추천·보험이 전부
+ * `business_id` 를 FK 로 잡고 있어서(suggest_loan · suggest_support_program ·
+ * insurance_checklist) 행이 없으면 아무것도 붙일 수가 없다.
+ *
+ * 그래서 여기 두 값은 `business_info` 의 부분집합이다 —
+ * `business_code_id`(minor_code) 와 `region`.
+ *
+ * ⚠️ 같은 테이블의 `brn`·`business_name`·`address`·`open_date` 가 전부 NOT NULL 이고
+ *    brn 은 UNIQUE 다. 예비창업자 행을 무엇으로 채울지 백엔드와 정해야 한다 —
+ *    빈 문자열로 채우면 두 번째 예비창업자의 INSERT 가 UNIQUE 제약에 걸린다.
+ */
+export interface StoreCondition {
+  /** minor_code.id. 아직 안 고른 상태가 있어 null 을 허용한다 */
+  industryMinorId: ID | null
+  region: string
+}
+
 export interface OwnerDashboardData {
   judgement: JudgementSummary
   loans: StripSummary<DashboardLoan>
@@ -165,4 +190,21 @@ export interface OwnerDashboardData {
   /** 업종에 걸린 의무보험이 없으면 빈 배열 */
   insurances: DashboardInsurance[]
   snapshot: BusinessSnapshot
+}
+
+/**
+ * 예비창업자 대시보드 (S15P21D101-178).
+ *
+ * 사업자와 겹치는 것은 스트립 둘과 의무보험뿐이다. 판정 요약·상환·매출이 없는 이유는
+ * 전부 마이데이터에서 오는 값이라, 사업자등록이 없으면 판정할 근거 자체가 없어서다.
+ * 대신 조건 입력이 맨 위에 온다 — 그것이 이 사용자가 제일 먼저 할 일이다.
+ */
+export interface PreOwnerDashboardData {
+  condition: StoreCondition
+  /** updatedAt 은 null 이다. 마이데이터 없이 업종·지역만으로 낸 판정이다 */
+  judgement: JudgementSummary
+  loans: StripSummary<DashboardLoan>
+  supportPrograms: StripSummary<DashboardSupportProgram>
+  /** 고른 업종에 걸리는 의무보험. 개업 전이라 가입 여부가 아니라 목록이 정보다 */
+  insurances: DashboardInsurance[]
 }

@@ -11,6 +11,11 @@ interface InsuranceDetailModalProps {
   insurance: DashboardInsurance | null
   /** 확인 필요 → 가입 필요 · 가입 제외 */
   onChangeStatus: (insuranceChecklistId: number, status: InsuranceStatus) => void
+  /**
+   * 예비창업자용. 개업 전이라 가입 여부가 판정된 적이 없어 상태 배지와 선택 버튼을
+   * 숨기고 안내만 읽게 한다.
+   */
+  readOnly?: boolean
   onClose: () => void
 }
 
@@ -31,13 +36,14 @@ interface InsuranceDetailModalProps {
 export default function InsuranceDetailModal({
   insurance,
   onChangeStatus,
+  readOnly = false,
   onClose,
 }: InsuranceDetailModalProps) {
   // open 을 boolean 으로 따로 받지 않는다. 두 값이 어긋나면 빈 모달이 뜬다
   if (!insurance) return null
 
   const detail = INSURANCE_DETAIL[insurance.insuranceChecklistId] ?? null
-  const needsChoice = insurance.status === INSURANCE_STATUS.NEEDS_VERIFICATION
+  const needsChoice = !readOnly && insurance.status === INSURANCE_STATUS.NEEDS_VERIFICATION
 
   const choose = (status: InsuranceStatus) => {
     onChangeStatus(insurance.insuranceChecklistId, status)
@@ -50,9 +56,11 @@ export default function InsuranceDetailModal({
       onClose={onClose}
       title={insurance.insuranceName}
       headerRight={
-        <Badge variant={INSURANCE_STATUS_VARIANT[insurance.status]}>
-          {INSURANCE_STATUS_LABEL[insurance.status]}
-        </Badge>
+        readOnly ? undefined : (
+          <Badge variant={INSURANCE_STATUS_VARIANT[insurance.status]}>
+            {INSURANCE_STATUS_LABEL[insurance.status]}
+          </Badge>
+        )
       }
       size="lg"
       footer={

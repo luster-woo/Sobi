@@ -136,7 +136,7 @@ export default function CardStrip({
 
   return (
     <Panel className={className}>
-      <div className="flex items-center justify-between gap-3 px-[15px] pt-3">
+      <div className="flex items-center justify-between gap-3 px-[15px] pt-2.5">
         <span className="flex min-w-0 items-baseline gap-2">
           <h3 className="text-text truncate text-[13.5px] font-bold">{title}</h3>
           {count !== undefined && (
@@ -169,7 +169,7 @@ export default function CardStrip({
           // scroll-px 는 px 와 같은 값이어야 한다. 스냅 기준선이 패딩 안쪽으로 오지
           // 않으면 브라우저가 첫 카드를 맞추려고 scrollLeft 를 패딩만큼 밀어버리고,
           // 맨 왼쪽인데도 scrollLeft 가 15 라서 왼쪽 화살표가 꺼지지 않는다
-          className="focus-visible:outline-primary flex snap-x snap-mandatory scroll-px-[15px] [scrollbar-width:none] items-stretch gap-[10px] overflow-x-auto px-[15px] py-[11px] focus-visible:outline focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
+          className="focus-visible:outline-primary flex snap-x snap-mandatory scroll-px-[15px] [scrollbar-width:none] items-stretch gap-[10px] overflow-x-auto px-[15px] py-2.5 focus-visible:outline focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
         >
           {Children.map(children, (child) => (
             // 폭은 카드가 아니라 여기서 정한다 (ProductCard 주석 참고)

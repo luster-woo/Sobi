@@ -4,7 +4,7 @@ import com.sobi.repayment.dto.LoanListResponse;
 
 public interface RepaymentService {
 
-    LoanListResponse getList();
+    LoanListResponse getList(Long userId);
 
 
 }

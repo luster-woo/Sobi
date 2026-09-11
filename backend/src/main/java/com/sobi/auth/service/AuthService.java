@@ -13,4 +13,6 @@ public interface AuthService {
     void signup(SignupRequest request);
 
     LoginResponse login(LoginRequest request);
+
+    RefreshResponse refresh(String refreshToken);
 }

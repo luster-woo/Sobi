@@ -6,6 +6,16 @@ COPY package*.json ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 COPY . .
+
+# 목 데이터(MSW)를 켠 채로 빌드한다.
+#
+# .dockerignore 가 `.env.*` 를 막아 frontend/.env.production 이 이 컨테이너 안에는
+# 없다. 그래서 파일이 아니라 빌드 인자로 넘긴다.
+#
+# ⚠️ 백엔드 auth 가 붙으면 false 로 바꿀 것. 목이 켜져 있으면 실제 API 를 가로챈다.
+ARG VITE_USE_MOCK=true
+ENV VITE_USE_MOCK=$VITE_USE_MOCK
+
 RUN npm run build
 
 # Vite(dist) / CRA(build) 어느 쪽이든 /out 으로 모음

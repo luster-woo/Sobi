@@ -55,3 +55,10 @@ jwt:
 server:
   servlet:
     context-path: /api
+
+ssafy:
+  finance:
+    base-url: ${SSAFY_FINANCE_BASE_URL}
+    api-key: ${SSAFY_FINANCE_API_KEY}
+    institution-code: "00100"
+    fintech-app-no: "001"

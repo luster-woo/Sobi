@@ -65,6 +65,7 @@ public class SecurityConfig {
 //                )
 
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/v1/auth/logout").authenticated()
                         .requestMatchers(PUBLIC_URLS).permitAll()
                         .anyRequest().authenticated()
                 )

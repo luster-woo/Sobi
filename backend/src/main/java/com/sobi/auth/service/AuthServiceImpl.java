@@ -152,4 +152,9 @@ public class AuthServiceImpl implements AuthService {
 
         return new RefreshResponse(jwtProvider.createAccessToken(user));
     }
+
+    @Override
+    public void logout(Long userId) {
+        refreshTokenRepository.delete(userId);
+    }
 }

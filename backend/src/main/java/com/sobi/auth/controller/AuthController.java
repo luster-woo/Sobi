@@ -1,9 +1,6 @@
 package com.sobi.auth.controller;
 
-import com.sobi.auth.dto.EmailCheckResponse;
-import com.sobi.auth.dto.EmailSendRequest;
-import com.sobi.auth.dto.EmailVerifyRequest;
-import com.sobi.auth.dto.EmailVerifyResponse;
+import com.sobi.auth.dto.*;
 import com.sobi.auth.service.AuthService;
 import com.sobi.global.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -70,6 +67,22 @@ public class AuthController {
                         HttpStatus.OK,
                         "이메일 인증 성공",
                         response,
+                        request
+                ));
+    }
+
+    @PostMapping("/signup")
+    public ResponseEntity<ApiResponse<Void>> signup(
+            @Valid @RequestBody SignupRequest signupRequest,
+            HttpServletRequest request ) {
+
+        authService.signup(signupRequest);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "회원가입 성공",
                         request
                 ));
     }

@@ -2,11 +2,16 @@ package com.sobi.auth.service;
 
 import com.sobi.auth.dto.EmailCheckResponse;
 import com.sobi.auth.dto.EmailVerifyResponse;
+import com.sobi.auth.dto.SignupRequest;
 import com.sobi.auth.repository.EmailCodeRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.global.external.ssafy.client.member.SsafyMemberClient;
+import com.sobi.user.entity.Provider;
+import com.sobi.user.entity.User;
 import com.sobi.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +25,8 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final EmailCodeRepository emailCodeRepository;
     private final MailService mailService;
+    private final PasswordEncoder passwordEncoder;
+    private final SsafyMemberClient ssafyMemberClient;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -65,5 +72,32 @@ public class AuthServiceImpl implements AuthService {
         emailCodeRepository.saveVerifed(email);
 
         return new EmailVerifyResponse(true);
+    }
+
+    @Override
+    @Transactional
+    public void signup(SignupRequest request) {
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+        }
+
+        if (!emailCodeRepository.isVerified(request.getEmail())) {
+            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+
+        String userKey = ssafyMemberClient.getOrCreateUserKey(request.getEmail());
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .name(request.getName())
+                .provider(Provider.LOCAL)
+                .userKey(userKey)
+                .build();
+
+        userRepository.save(user);
+
+        emailCodeRepository.deleteVerified(request.getEmail());
     }
 }

@@ -51,7 +51,7 @@ export default function Select({
   const message = error ?? helperText
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn('flex flex-col gap-1.5', className)}>
       {label && (
         <label htmlFor={selectId} className="font-heading text-body2 text-text font-semibold">
           {label}

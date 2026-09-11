@@ -27,6 +27,14 @@ interface CardStripProps {
 /** 아래 gap-[10px] 과 같은 값. 한 번에 몇 칸 넘길지 계산할 때 쓴다 */
 const GAP = 10
 
+/**
+ * 양 끝 판정에 두는 여유(px).
+ *
+ * 브라우저가 스크롤 위치를 소수점으로 들고 있어서 끝까지 밀어도 1px 이 남는 경우가 있다.
+ * 여유 없이 `=== 0` 으로 보면 화살표가 영영 꺼지지 않는다.
+ */
+const EDGE_TOLERANCE = 2
+
 function Arrow({
   side,
   disabled,
@@ -92,9 +100,8 @@ export default function CardStrip({
   const measure = useCallback((node: HTMLUListElement) => {
     const { scrollLeft, scrollWidth, clientWidth } = node
     setEdge({
-      start: scrollLeft <= 1,
-      // 브라우저가 소수점을 반올림해 끝에서 1px 이 남는 경우가 있다
-      end: scrollLeft + clientWidth >= scrollWidth - 1,
+      start: scrollLeft <= EDGE_TOLERANCE,
+      end: scrollLeft + clientWidth >= scrollWidth - EDGE_TOLERANCE,
     })
   }, [])
 
@@ -129,7 +136,7 @@ export default function CardStrip({
 
   return (
     <Panel className={className}>
-      <div className="flex items-center justify-between gap-3 px-[15px] pt-3">
+      <div className="flex items-center justify-between gap-3 px-[15px] pt-2.5">
         <span className="flex min-w-0 items-baseline gap-2">
           <h3 className="text-text truncate text-[13.5px] font-bold">{title}</h3>
           {count !== undefined && (
@@ -158,7 +165,11 @@ export default function CardStrip({
           tabIndex={0}
           // 스크롤바를 숨긴다. 헤더에 화살표가 있어 역할이 겹치고, 윈도우 크롬은
           // 가로 스크롤바에 양쪽 화살표 버튼까지 그려서 카드보다 더 눈에 띈다
-          className="focus-visible:outline-primary flex snap-x snap-mandatory [scrollbar-width:none] items-stretch gap-[10px] overflow-x-auto px-[15px] py-[11px] focus-visible:outline focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
+          //
+          // scroll-px 는 px 와 같은 값이어야 한다. 스냅 기준선이 패딩 안쪽으로 오지
+          // 않으면 브라우저가 첫 카드를 맞추려고 scrollLeft 를 패딩만큼 밀어버리고,
+          // 맨 왼쪽인데도 scrollLeft 가 15 라서 왼쪽 화살표가 꺼지지 않는다
+          className="focus-visible:outline-primary flex snap-x snap-mandatory scroll-px-[15px] [scrollbar-width:none] items-stretch gap-[10px] overflow-x-auto px-[15px] py-2.5 focus-visible:outline focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
         >
           {Children.map(children, (child) => (
             // 폭은 카드가 아니라 여기서 정한다 (ProductCard 주석 참고)

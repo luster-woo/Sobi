@@ -59,7 +59,7 @@ export default function ProductCard({
     <article
       onClick={onClick}
       className={cn(
-        'border-border bg-surface flex h-full flex-col gap-2.5 rounded-md border px-3.5 py-3 transition-colors',
+        'border-border bg-surface flex h-full flex-col gap-2 rounded-md border px-3.5 py-2.5 transition-colors',
         onClick ? 'hover:border-border-strong cursor-pointer' : '',
         className,
       )}

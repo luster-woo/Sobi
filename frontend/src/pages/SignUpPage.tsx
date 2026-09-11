@@ -98,8 +98,8 @@ export function SignUpPage() {
   }
 
   return (
-    <div className="border-border bg-surface w-full max-w-[424px] rounded-md border px-7 pt-6.5 pb-7">
-      <h1 className="font-heading text-text mb-6 text-[20px] font-bold">회원가입</h1>
+    <div className="border-border bg-surface w-full max-w-[424px] rounded-md border px-7 pt-6 pb-6">
+      <h1 className="font-heading text-text mb-5 text-[20px] font-bold">회원가입</h1>
 
       <form onSubmit={handleSubmit} noValidate>
         <Input
@@ -116,10 +116,10 @@ export function SignUpPage() {
         />
 
         {/* 라벨을 Input 에 넘기면 오른쪽 버튼이 라벨 높이까지 포함해 어긋난다 */}
-        <div className="mt-5">
+        <div className="mt-4">
           <label
             htmlFor={emailFieldId}
-            className="font-heading text-body2 text-text mb-2 block font-semibold"
+            className="font-heading text-body2 text-text mb-1.5 block font-semibold"
           >
             아이디 (이메일)
             <span className="text-danger ml-0.5">*</span>
@@ -159,7 +159,7 @@ export function SignUpPage() {
 
         {codeSent && (
           <AuthCodeField
-            className="mt-5"
+            className="mt-4"
             label="인증 코드 확인"
             value={code}
             onChange={(next) => {
@@ -176,7 +176,7 @@ export function SignUpPage() {
         )}
 
         <Input
-          className="mt-5"
+          className="mt-4"
           label="비밀번호"
           required
           type="password"
@@ -191,7 +191,7 @@ export function SignUpPage() {
         />
 
         <Input
-          className="mt-5"
+          className="mt-4"
           label="비밀번호 확인"
           required
           type="password"
@@ -209,7 +209,7 @@ export function SignUpPage() {
           }
         />
 
-        <Button type="submit" className="mt-6 w-full">
+        <Button type="submit" className="mt-5 w-full">
           가입하기
         </Button>
       </form>

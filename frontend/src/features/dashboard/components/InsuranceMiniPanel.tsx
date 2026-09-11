@@ -9,6 +9,12 @@ import { cn } from '@/shared/utils/cn'
 
 interface InsuranceMiniPanelProps {
   insurances: DashboardInsurance[]
+  /**
+   * checklist — 사업자. 항목마다 가입 여부를 판정해 보여주고 사용자가 고칠 수 있다.
+   * reference — 예비창업자. 개업 전이라 가입 여부를 판정할 근거가 없다. 상태를 빼고
+   *             "이 업종을 하려면 이런 보험이 필요하다" 는 목록으로만 쓴다.
+   */
+  variant?: 'checklist' | 'reference'
 }
 
 const markClass: Record<InsuranceStatus, string> = {
@@ -71,32 +77,63 @@ function summaryBadge(insurances: DashboardInsurance[]) {
  * 업체가 고른 것이 아니라 업종 때문에 걸린 항목이고, 미가입은 과태료 대상이라
  * 신청 가능한 자금보다 급한 정보다.
  *
- * 줄 전체가 버튼이다. 292px 안에서 '가입 안내' 같은 작은 링크를 따로 두면 눌러야 할
- * 곳을 찾게 되고, 어차피 줄에서 할 수 있는 동작이 안내 보기 하나뿐이다.
+ * 줄 전체가 버튼이다. 좁은 열 안에서 '가입 안내' 같은 작은 링크를 따로 두면 눌러야 할
+ * 곳을 찾게 되고, 어차피 줄에서 할 일이 안내 창을 여는 것 하나뿐이다.
  */
-export default function InsuranceMiniPanel({ insurances }: InsuranceMiniPanelProps) {
-  const [selected, setSelected] = useState<DashboardInsurance | null>(null)
+export default function InsuranceMiniPanel({
+  insurances,
+  variant = 'checklist',
+}: InsuranceMiniPanelProps) {
+  /**
+   * ⚠️ 상태 변경을 화면 안에서만 기억한다. `PATCH /insurance/{id}/status` 가 붙으면
+   *    이 state 를 지우고 useMutation + invalidateQueries 로 바꾼다.
+   */
+  const [items, setItems] = useState(insurances)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
 
-  if (insurances.length === 0) return null
+  if (items.length === 0) return null
+
+  // 객체가 아니라 id 를 들고 있는다. 상태를 바꾼 뒤에도 열린 모달이 최신 값을 본다
+  const selected = items.find((item) => item.insuranceChecklistId === selectedId) ?? null
+
+  const changeStatus = (insuranceChecklistId: number, status: InsuranceStatus) => {
+    setItems((previous) =>
+      previous.map((item) =>
+        item.insuranceChecklistId === insuranceChecklistId ? { ...item, status } : item,
+      ),
+    )
+  }
+
+  const isReference = variant === 'reference'
 
   return (
     <>
-      <MiniPanel label="업종별 필수 가입 항목" title="의무보험" aside={summaryBadge(insurances)}>
+      <MiniPanel
+        label="업종별 필수 가입 항목"
+        title={isReference ? '의무보험 체크리스트' : '의무보험'}
+        aside={isReference ? <Badge variant="outline">참고</Badge> : summaryBadge(items)}
+        note={isReference ? '개업하고 나면 가입 여부를 확인해 드려요' : null}
+      >
         <ul className="-mx-1.5 flex flex-col">
-          {insurances.map((insurance) => (
-            <li key={insurance.insuranceId}>
+          {items.map((insurance) => (
+            <li key={insurance.insuranceChecklistId}>
               <button
                 type="button"
-                onClick={() => setSelected(insurance)}
+                onClick={() => setSelectedId(insurance.insuranceChecklistId)}
                 className="hover:bg-surface-muted focus-visible:outline-primary flex w-full items-center gap-2 rounded-sm px-1.5 py-1.5 text-left transition-colors focus-visible:outline focus-visible:-outline-offset-2"
               >
-                <Mark status={insurance.status} />
+                {/* 참고 모드에는 상태가 없다. 판정하지 않은 값을 색으로 말하면 안 된다 */}
+                {!isReference && <Mark status={insurance.status} />}
 
                 <span className="min-w-0 flex-1">
-                  <b className="text-text text-caption block font-medium">{insurance.name}</b>
-                  <span className="text-text-muted block text-[10.5px]">
-                    {insurance.law} · {INSURANCE_STATUS_LABEL[insurance.status]}
-                  </span>
+                  <b className="text-text text-caption block font-medium">
+                    {insurance.insuranceName}
+                  </b>
+                  {!isReference && (
+                    <span className="text-text-muted block text-[10.5px]">
+                      {INSURANCE_STATUS_LABEL[insurance.status]}
+                    </span>
+                  )}
                 </span>
 
                 <svg
@@ -117,7 +154,12 @@ export default function InsuranceMiniPanel({ insurances }: InsuranceMiniPanelPro
         </ul>
       </MiniPanel>
 
-      <InsuranceDetailModal insurance={selected} onClose={() => setSelected(null)} />
+      <InsuranceDetailModal
+        insurance={selected}
+        onChangeStatus={changeStatus}
+        readOnly={isReference}
+        onClose={() => setSelectedId(null)}
+      />
     </>
   )
 }

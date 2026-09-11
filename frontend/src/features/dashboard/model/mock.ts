@@ -1,4 +1,8 @@
-import type { OwnerDashboardData, SalesPoint } from '@/features/dashboard/model/types'
+import type {
+  OwnerDashboardData,
+  PreOwnerDashboardData,
+  SalesPoint,
+} from '@/features/dashboard/model/types'
 import { INSURANCE_STATUS, type ISODate, type YearMonth } from '@/shared/types'
 
 /**
@@ -200,21 +204,27 @@ export const MOCK_OWNER_DASHBOARD: OwnerDashboardData = {
     nextDate: daysFromNow(13),
     monthlyAmount: 890_000,
     totalBalance: 55_200_000,
-    advice: '매출이 5개월 연속 올랐어요 · 금리 인하 요구 가능',
+    // 금리 인하 요구 같은 조언은 상환 관리 화면에서 다룬다. 요약 카드까지 같은 말을
+    // 두 번 하면 카드만 길어진다
+    advice: null,
   },
 
   insurances: [
     {
-      insuranceId: 1,
-      name: '화재배상책임보험',
-      law: '다중이용업소법',
+      insuranceChecklistId: 21,
+      insuranceName: '화재배상책임보험',
       status: INSURANCE_STATUS.COMPLETED,
     },
     {
-      insuranceId: 2,
-      name: '가스사고배상책임보험',
-      law: '액화석유가스법',
+      insuranceChecklistId: 22,
+      insuranceName: '가스사고배상책임보험',
       status: INSURANCE_STATUS.REQUIRED,
+    },
+    {
+      // 마이데이터로 가입 여부를 판단하지 못한 항목. 사용자가 직접 골라야 한다
+      insuranceChecklistId: 23,
+      insuranceName: '승강기 사고배상책임보험',
+      status: INSURANCE_STATUS.NEEDS_VERIFICATION,
     },
   ],
 
@@ -228,4 +238,132 @@ export const MOCK_OWNER_DASHBOARD: OwnerDashboardData = {
     isLinking: true,
     summary: '현금 흐름 +12% · 3개월 연속 개선 · 대출 2건',
   },
+}
+
+/**
+ * 예비창업자 대시보드 목 (S15P21D101-178) — 시안 10-1.
+ *
+ * 조건을 이미 입력한 사용자 기준이다. 처음 들어온 사용자는 condition 이 전부 비어
+ * 있고 스트립도 0건인데, 화면은 그 경우에도 EmptyState 로 버티게 만들어 두었다.
+ */
+export const MOCK_PRE_OWNER_DASHBOARD: PreOwnerDashboardData = {
+  condition: {
+    // 111 = 백반·한정식 (storeCondition.ts)
+    industryMinorId: 111,
+    region: '대구광역시 북구',
+  },
+
+  judgement: {
+    // 마이데이터 없이 업종·지역만으로 낸 판정이라 갱신일이 없다
+    updatedAt: null,
+    // 아래 두 스트립의 possible 합(4 + 3)과 total 합(20 + 26)이다
+    possible: 7,
+    urgent: 2,
+    impossible: 39,
+    total: 46,
+  },
+
+  loans: {
+    possible: 4,
+    total: 20,
+    items: [
+      {
+        loanId: 1,
+        accountName: '신사업창업사관학교 연계자금',
+        bankName: '중소벤처기업진흥공단',
+        minLoanBalance: 10_000_000,
+        maxLoanBalance: 100_000_000,
+        period: 36,
+        endDate: daysFromNow(30),
+        isBookmark: false,
+      },
+      {
+        loanId: 2,
+        accountName: '소진공 창업기반자금',
+        bankName: '소상공인시장진흥공단',
+        minLoanBalance: 10_000_000,
+        maxLoanBalance: 70_000_000,
+        period: 36,
+        endDate: null,
+        isBookmark: true,
+      },
+      {
+        loanId: 3,
+        accountName: '창업초기 보증부 대출',
+        bankName: '대구신용보증재단',
+        minLoanBalance: 5_000_000,
+        maxLoanBalance: 50_000_000,
+        period: 36,
+        endDate: null,
+        isBookmark: false,
+      },
+      {
+        loanId: 5,
+        accountName: '청년전용 창업자금',
+        bankName: '중소벤처기업진흥공단',
+        minLoanBalance: 10_000_000,
+        maxLoanBalance: 100_000_000,
+        period: 60,
+        endDate: daysFromNow(18),
+        isBookmark: false,
+      },
+    ],
+  },
+
+  supportPrograms: {
+    possible: 3,
+    total: 26,
+    items: [
+      {
+        supportProgramId: 1,
+        pblancNm: '청년창업사관학교',
+        jrsdInsttNm: '중소벤처기업진흥공단',
+        type: 'SUPPORT',
+        minBalance: 30_000_000,
+        maxBalance: 100_000_000,
+        interestRate: null,
+        endDate: daysFromNow(41),
+        isBookmark: true,
+      },
+      {
+        supportProgramId: 2,
+        pblancNm: '신사업창업사관학교',
+        jrsdInsttNm: '소상공인시장진흥공단',
+        type: 'ETC',
+        minBalance: 5_000_000,
+        maxBalance: 20_000_000,
+        interestRate: null,
+        endDate: daysFromNow(43),
+        isBookmark: false,
+      },
+      {
+        supportProgramId: 3,
+        pblancNm: '대구 예비창업자 점포 임차료 지원',
+        jrsdInsttNm: '대구광역시',
+        type: 'SUPPORT',
+        minBalance: 1_000_000,
+        maxBalance: 5_000_000,
+        interestRate: null,
+        endDate: daysFromNow(9),
+        isBookmark: false,
+      },
+    ],
+  },
+
+  /*
+   * 고른 업종(백반·한정식)에 걸리는 항목이다. 개업 전이라 가입 여부를 판정할 수 없어
+   * 전부 NEEDS_VERIFICATION 이고, 화면에서는 상태 대신 '참고' 로 보여준다.
+   */
+  insurances: [
+    {
+      insuranceChecklistId: 21,
+      insuranceName: '화재배상책임보험',
+      status: INSURANCE_STATUS.NEEDS_VERIFICATION,
+    },
+    {
+      insuranceChecklistId: 22,
+      insuranceName: '가스사고배상책임보험',
+      status: INSURANCE_STATUS.NEEDS_VERIFICATION,
+    },
+  ],
 }

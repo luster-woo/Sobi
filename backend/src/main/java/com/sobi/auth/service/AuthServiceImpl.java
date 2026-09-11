@@ -130,4 +130,26 @@ public class AuthServiceImpl implements AuthService {
                 .refreshToken(refreshToken)
                 .build();
     }
+
+    @Override
+    public RefreshResponse refresh(String refreshToken) {
+
+        if (refreshToken == null) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        Long userId = jwtProvider.getUserId(refreshToken);
+
+        String saved = refreshTokenRepository.find(userId);
+        if (saved == null || !saved.equals(refreshToken)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+
+        User user = userRepository.findById(userId)
+                .filter(u -> u.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NO_USER));
+
+        return new RefreshResponse(jwtProvider.createAccessToken(user));
+    }
 }

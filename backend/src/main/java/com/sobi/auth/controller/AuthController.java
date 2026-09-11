@@ -118,4 +118,21 @@ public class AuthController {
                         request
                 ));
     }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<RefreshResponse>> refresh(
+            @CookieValue(value = "refreshToken", required = false) String refreshToken,
+            HttpServletRequest request ) {
+
+        RefreshResponse response = authService.refresh(refreshToken);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "액세스 토큰 재발급 성공",
+                        response,
+                        request
+                ));
+    }
 }

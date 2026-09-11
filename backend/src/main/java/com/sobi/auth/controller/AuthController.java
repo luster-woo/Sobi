@@ -161,4 +161,40 @@ public class AuthController {
                         request
                 ));
     }
+
+    @PostMapping("/email/verify/reset")
+    public ResponseEntity<ApiResponse<ResetVerifyResponse>> verifyEmailForReset(
+            @Valid @RequestBody EmailVerifyRequest emailVerifyRequest,
+            HttpServletRequest request) {
+
+        ResetVerifyResponse response = authService.verifyEmailForReset(
+                emailVerifyRequest.getEmail(),
+                emailVerifyRequest.getVerificationCode()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "이메일 인증번호 검증 성공",
+                        response,
+                        request
+                ));
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody PasswordResetRequest passwordResetRequest,
+            HttpServletRequest request) {
+
+        authService.resetPassword(passwordResetRequest);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "비밀번호 변경이 완료되었습니다.",
+                        request
+                ));
+    }
 }

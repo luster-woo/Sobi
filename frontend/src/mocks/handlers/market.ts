@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 
+import type { BusinessTree, RegionTree } from '@/features/market-analysis/model/conditionTypes'
 import type { MarketAnalysis } from '@/features/market-analysis/model/types'
 import type { ApiResponse } from '@/shared/types'
 
@@ -161,7 +162,127 @@ const BY_DONG: Record<string, MarketAnalysis> = {
   '11440700': 상암동,
 }
 
+/**
+ * 조건 입력용 목록.
+ *
+ * 실제로는 서울 25개 자치구·400여 행정동, 업종 수백 개가 온다. 목에는 화면 동작을
+ * 확인할 만큼만 둔다.
+ *
+ * 마포구의 행정동 코드는 위 상권 분석 목(BY_DONG)과 맞춰 뒀다. 서교동·상암동을 고르면
+ * 실제로 결과가 나오고 나머지를 고르면 MARKET_001 이 뜬다 — 실제 서비스에도 데이터가
+ * 없는 동이 있을 수 있어서 그 경로를 눌러볼 수 있어야 한다.
+ */
+const REGION_TREE: RegionTree = {
+  cityName: '서울특별시',
+  districts: [
+    {
+      code: '11440',
+      name: '마포구',
+      dongs: [
+        { code: '11440375', name: '서교동' },
+        { code: '11440700', name: '상암동' },
+        { code: '11440640', name: '공덕동' },
+        { code: '11440400', name: '연남동' },
+      ],
+    },
+    {
+      code: '11110',
+      name: '종로구',
+      dongs: [
+        { code: '11110515', name: '청운효자동' },
+        { code: '11110530', name: '사직동' },
+        { code: '11110540', name: '삼청동' },
+      ],
+    },
+    {
+      code: '11740',
+      name: '강동구',
+      dongs: [
+        { code: '11740690', name: '둔촌1동' },
+        { code: '11740700', name: '둔촌2동' },
+      ],
+    },
+  ],
+}
+
+const BUSINESS_TREE: BusinessTree = {
+  majors: [
+    {
+      code: 'CS100',
+      name: '외식업',
+      subs: [
+        {
+          code: 'M01',
+          name: '음식점',
+          minors: [
+            { code: 'CS100001', name: '한식음식점' },
+            { code: 'CS100002', name: '중식음식점' },
+            { code: 'CS100008', name: '호프-간이주점' },
+          ],
+        },
+        {
+          code: 'M02',
+          name: '카페_제과',
+          minors: [
+            { code: 'CS100005', name: '제과점' },
+            { code: 'CS100010', name: '커피-음료' },
+          ],
+        },
+      ],
+    },
+    {
+      code: 'CS200',
+      name: '서비스업',
+      subs: [
+        {
+          code: 'M04',
+          name: '학원_교육',
+          minors: [{ code: 'CS200001', name: '일반교습학원' }],
+        },
+        {
+          code: 'M09',
+          name: '미용',
+          minors: [{ code: 'CS200003', name: '미용실' }],
+        },
+      ],
+    },
+    {
+      code: 'CS300',
+      name: '소매업',
+      subs: [
+        {
+          code: 'M21',
+          name: '기타소매',
+          minors: [{ code: 'CS300043', name: '전자상거래업' }],
+        },
+      ],
+    },
+  ],
+}
+
 export const marketHandlers = [
+  http.get('/api/v1/common/market/regions', () =>
+    HttpResponse.json({
+      statusCode: 200,
+      timestamp: '2026-09-11T10:00:00',
+      path: '/api/v1/common/market/regions',
+      message: '행정동 목록 조회에 성공하였습니다.',
+      data: REGION_TREE,
+      error: null,
+    } satisfies ApiResponse<RegionTree>),
+  ),
+
+  http.get('/api/v1/common/market/businesses', () =>
+    HttpResponse.json({
+      statusCode: 200,
+      timestamp: '2026-09-11T10:00:00',
+      path: '/api/v1/common/market/businesses',
+      message: '업종 목록 조회에 성공하였습니다.',
+      data: BUSINESS_TREE,
+      error: null,
+    } satisfies ApiResponse<BusinessTree>),
+  ),
+
   http.get('/api/v1/common/market', ({ request }) => {
     const params = new URL(request.url).searchParams
     const dongCode = params.get('dongCode') ?? ''

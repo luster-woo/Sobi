@@ -36,6 +36,9 @@ export const queryKeys = {
   market: {
     all: ['market'] as const,
     analysis: (params: object) => ['market', 'analysis', params] as const,
+    /** 업종·지역 목록. 정적 데이터라 파라미터가 없다 */
+    businesses: ['market', 'businesses'] as const,
+    regions: ['market', 'regions'] as const,
   },
 
   repayment: {

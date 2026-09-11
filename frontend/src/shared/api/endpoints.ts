@@ -34,8 +34,10 @@ export const endpoints = {
   common: {
     /** 상권 분석. dongCode·businessCode 는 필수, compareLimit·mixLimit 은 선택 */
     market: '/common/market',
-    /** 업종 대/중/소 목록. group·parent 로 단계를 지정한다 */
-    businessCode: '/common/businessCode',
+    /** 업종 대/중/소 목록. 트리 하나로 통째로 온다 */
+    businesses: '/common/market/businesses',
+    /** 서울 자치구 + 행정동 목록. 트리 하나로 통째로 온다 */
+    regions: '/common/market/regions',
   },
 
   loan: {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 
 import FullRepaymentCard from '@/features/loan-repayment/components/FullRepaymentCard'
 import LoanInfoPanel from '@/features/loan-repayment/components/LoanInfoPanel'
@@ -8,6 +9,10 @@ import RepaymentRecordTable from '@/features/loan-repayment/components/Repayment
 import RepaymentSummaryTiles from '@/features/loan-repayment/components/RepaymentSummaryTiles'
 import { useLoanProducts, useRepaymentDetail } from '@/features/loan-repayment/hooks/useRepayment'
 import { getRepaymentProgress } from '@/features/loan-repayment/model/progress'
+import { ROUTES } from '@/shared/constants/routes'
+import { useAuthStore } from '@/shared/lib/store/useAuthStore'
+import { USER_ROLE } from '@/shared/types'
+import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
 import Skeleton from '@/shared/ui/Skeleton'
 
@@ -24,7 +29,19 @@ import Skeleton from '@/shared/ui/Skeleton'
  * 없으면 첫 번째로 되돌린다 — 아래 selectedAccountNo 계산이 그 처리다.
  */
 export function LoanRepaymentPage() {
-  const { data: products, isLoading, isError } = useLoanProducts()
+  const navigate = useNavigate()
+  const user = useAuthStore((state) => state.user)
+  const isPreOwner = user?.role === USER_ROLE.PREENTREPRENEUR
+
+  /*
+   * 예비창업자는 이 화면을 쓸 수 없다. 상환할 대출은 사업자로 실행한 것이고, 금융망
+   * 계좌 조회 자체가 사업자 기준이라 목록을 부를 수도 없다. 그래서 조회를 막고
+   * (enabled: false 와 같은 효과) 안내만 띄운다.
+   *
+   * 사이드바에는 메뉴가 그대로 보인다. role 마다 메뉴를 감추면 "내 화면에는 왜 없지"
+   * 를 알 수 없어서, 들어와서 이유를 읽는 편이 낫다.
+   */
+  const { data: products, isLoading, isError } = useLoanProducts({ enabled: !isPreOwner })
   const [pickedAccountNo, setPickedAccountNo] = useState<string | null>(null)
 
   /*
@@ -41,6 +58,20 @@ export function LoanRepaymentPage() {
     isLoading: isDetailLoading,
     isError: isDetailError,
   } = useRepaymentDetail(selected?.accountNo)
+
+  if (isPreOwner) {
+    return (
+      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
+        <h1 className="text-h1">상환 관리</h1>
+
+        <EmptyState
+          title="사업자 등록번호를 입력해야 이용할 수 있어요."
+          description="상환 관리는 사업자로 실행한 대출을 다루는 화면이에요. 사업자 인증을 마치면 바로 쓸 수 있어요."
+          action={<Button onClick={() => navigate(ROUTES.BUSINESS_VERIFY)}>사업자 인증하기</Button>}
+        />
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

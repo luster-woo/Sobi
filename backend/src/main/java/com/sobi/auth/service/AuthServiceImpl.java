@@ -5,6 +5,7 @@ import com.sobi.auth.jwt.JwtProperties;
 import com.sobi.auth.jwt.JwtProvider;
 import com.sobi.auth.repository.EmailCodeRepository;
 import com.sobi.auth.repository.RefreshTokenRepository;
+import com.sobi.auth.repository.ResetTokenRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
 import com.sobi.global.external.ssafy.client.member.SsafyMemberClient;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -26,12 +28,16 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final EmailCodeRepository emailCodeRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final ResetTokenRepository resetTokenRepository;
+
     private final MailService mailService;
+
     private final PasswordEncoder passwordEncoder;
-    private final SsafyMemberClient ssafyMemberClient;
     private final JwtProvider jwtProvider;
     private final JwtProperties jwtProperties;
-    private final RefreshTokenRepository refreshTokenRepository;
+
+    private final SsafyMemberClient ssafyMemberClient;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -156,5 +162,29 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void logout(Long userId) {
         refreshTokenRepository.delete(userId);
+    }
+
+    @Override
+    public ResetVerifyResponse verifyEmailForReset(String email, String verificationCode) {
+        // 가입되지 않은 이메일도 인증번호 오류와 동일하게 응답 → 계정 존재 여부 노출 방지
+        if (!userRepository.existsByEmail(email)) {
+            throw new BusinessException(ErrorCode.EMAIL_CODE_EXPIRED);
+        }
+
+        String savedCode = emailCodeRepository.find(email);
+
+        if (savedCode == null) {
+            throw new BusinessException(ErrorCode.EMAIL_CODE_EXPIRED);
+        }
+        if (!savedCode.equals(verificationCode)) {
+            throw new BusinessException(ErrorCode.EMAIL_CODE_MISMATCH);
+        }
+
+        emailCodeRepository.delete(email);
+
+        String resetToken = UUID.randomUUID().toString();
+        resetTokenRepository.save(resetToken, email);
+
+        return new ResetVerifyResponse(true, resetToken);
     }
 }

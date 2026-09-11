@@ -161,4 +161,24 @@ public class AuthController {
                         request
                 ));
     }
+
+    @PostMapping("/email/verify/reset")
+    public ResponseEntity<ApiResponse<ResetVerifyResponse>> verifyEmailForReset(
+            @Valid @RequestBody EmailVerifyRequest emailVerifyRequest,
+            HttpServletRequest request) {
+
+        ResetVerifyResponse response = authService.verifyEmailForReset(
+                emailVerifyRequest.getEmail(),
+                emailVerifyRequest.getVerificationCode()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "이메일 인증번호 검증 성공",
+                        response,
+                        request
+                ));
+    }
 }

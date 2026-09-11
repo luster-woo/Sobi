@@ -17,4 +17,6 @@ public interface AuthService {
     RefreshResponse refresh(String refreshToken);
 
     void logout(Long userId);
+
+    ResetVerifyResponse verifyEmailForReset(String email, String verificationCode);
 }

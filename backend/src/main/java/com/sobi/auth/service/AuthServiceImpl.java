@@ -179,6 +179,33 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
+    public SocialLinkResponse linkSocial(Long userId, String provider, OAuthLoginRequest request) {
+        if (!"google".equalsIgnoreCase(provider)) {
+            throw new BusinessException(ErrorCode.OAUTH_PROVIDER_NOT_SUPPORTED);
+        }
+
+        User user = userRepository.findById(userId)
+                .filter(u -> u.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NO_USER));
+
+        if (user.getProvider() == Provider.GOOGLE) {
+            throw new BusinessException(ErrorCode.ALREADY_SOCIAL_ACCOUNT);
+        }
+
+        GoogleUserInfo googleUser = googleOAuthClient.getUserInfo(request.getCode(), request.getRedirectUri());
+
+        // 다른 사람의 구글 계정을 붙이지 못하도록 이메일 일치 확인
+        if (!user.getEmail().equalsIgnoreCase(googleUser.getEmail())) {
+            throw new BusinessException(ErrorCode.SOCIAL_EMAIL_MISMATCH);
+        }
+
+        user.convertToSocial(Provider.GOOGLE, googleUser.getProviderId());
+
+        return new SocialLinkResponse(user.getId(), user.getEmail(), user.getProvider().name());
+    }
+
+    @Override
     public RefreshResponse refresh(String refreshToken) {
 
         if (refreshToken == null) {

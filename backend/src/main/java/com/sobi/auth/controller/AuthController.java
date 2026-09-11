@@ -142,6 +142,25 @@ public class AuthController {
                 .build();
     }
 
+    @PostMapping("/social/{provider}")
+    public ResponseEntity<ApiResponse<SocialLinkResponse>> linkSocial(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable String provider,
+            @Valid @RequestBody OAuthLoginRequest oAuthLoginRequest,
+            HttpServletRequest request) {
+
+        SocialLinkResponse response = authService.linkSocial(userId, provider, oAuthLoginRequest);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "소셜 계정 연결이 완료되었습니다.",
+                        response,
+                        request
+                ));
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<RefreshResponse>> refresh(
             @CookieValue(value = "refreshToken", required = false) String refreshToken,

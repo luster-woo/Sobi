@@ -23,4 +23,6 @@ public interface AuthService {
     void resetPassword(PasswordResetRequest request);
 
     LoginResponse oauthLogin(String provider, OAuthLoginRequest request);
+
+    SocialLinkResponse linkSocial(Long userId, String provider, OAuthLoginRequest request);
 }

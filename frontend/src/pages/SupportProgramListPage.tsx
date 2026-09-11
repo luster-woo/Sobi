@@ -4,7 +4,7 @@ import { supportColumns } from '@/features/support-program/components/supportCol
 import SupportFilterBar from '@/features/support-program/components/SupportFilterBar'
 import { useSupportPrograms } from '@/features/support-program/hooks/useSupportPrograms'
 import { useSupportProgramSearch } from '@/features/support-program/hooks/useSupportProgramSearch'
-import type { ProductStatus } from '@/shared/constants/productStatus'
+import { PRODUCT_STATUS, type ProductStatus } from '@/shared/constants/productStatus'
 import { routeTo } from '@/shared/constants/routes'
 import { useListParams } from '@/shared/hooks/useListParams'
 import type { SupportProgramType } from '@/shared/types'
@@ -129,6 +129,12 @@ export function SupportProgramListPage() {
           isLoading={isLoading}
           skeletonRows={8}
           bordered={false}
+          // 줄 높이·여백을 관심 목록과 같게 한다
+          dense
+          // 자격이 안 되는 줄은 흐리게. 관심 목록과 같은 처리다
+          rowClassName={(program) =>
+            program.status === PRODUCT_STATUS.IMPOSSIBLE ? 'bg-surface-muted' : undefined
+          }
           empty={
             isError ? (
               <EmptyState

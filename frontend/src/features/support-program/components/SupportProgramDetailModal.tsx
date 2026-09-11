@@ -1,11 +1,9 @@
 import type { ReactNode } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router'
 
 import { useSupportProgramDetail } from '@/features/support-program/hooks/useSupportProgramDetail'
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
 import type { ProductStatus } from '@/shared/constants/productStatus'
 import { SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
-import { ROUTES } from '@/shared/constants/routes'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
@@ -44,26 +42,28 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
+interface SupportProgramDetailModalProps {
+  supportProgramId: number
+  onClose: () => void
+}
+
 /**
  * 지원사업 상세 모달 (S15P21D101-215)
  *
- * /support-programs/:supportProgramId 자식 라우트로 렌더된다. 목록은 뒤에 남고 모달만
- * 위에 뜨며, 뒤로가기로 모달만 닫힌다. 닫을 때 location.search 를 들고 돌아가 검색어·
- * 필터를 잃지 않는다. 214 대출 상세 모달과 같은 구조다.
+ * 주소를 모른다. 목록 화면에서는 `/support-programs/:supportProgramId` 자식 라우트로
+ * 뜨고, 대시보드 카드에서는 주소를 바꾸지 않고 그 자리에 뜬다. 라우팅은
+ * SupportProgramDetailRoute 가 맡는다. 214 대출 상세 모달과 같은 구조다.
  */
-export default function SupportProgramDetailModal() {
-  const { supportProgramId } = useParams()
-  const navigate = useNavigate()
-  const location = useLocation()
-
-  const { data, isLoading, isError } = useSupportProgramDetail(Number(supportProgramId))
-
-  const close = () => navigate({ pathname: ROUTES.SUPPORT_PROGRAMS, search: location.search })
+export default function SupportProgramDetailModal({
+  supportProgramId,
+  onClose,
+}: SupportProgramDetailModalProps) {
+  const { data, isLoading, isError } = useSupportProgramDetail(supportProgramId)
 
   return (
     <Modal
       open
-      onClose={close}
+      onClose={onClose}
       title={data?.pblancNm ?? '지원사업'}
       description={data?.bsnsSumryCn ?? undefined}
       headerRight={
@@ -120,7 +120,8 @@ export default function SupportProgramDetailModal() {
 
           {data.type !== 'ETC' && (
             <Row label="금액">
-              <span className="text-h3">최대 {formatMoneyShort(data.maxBalance)}</span>
+              최소 {formatMoneyShort(data.minBalance)} ~ 최대{' '}
+              {formatMoneyShort(data.maxBalance)}
               {data.type === 'LOAN' && (
                 <span className="text-text-muted ml-2">연 {data.interestRate}%</span>
               )}

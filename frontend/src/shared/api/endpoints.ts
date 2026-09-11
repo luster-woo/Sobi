@@ -52,6 +52,32 @@ export const endpoints = {
     search: '/support/search',
   },
 
+  /**
+   * 관심 목록. 대출·지원사업이 한 경로를 겸하고 `type` 쿼리로 갈린다.
+   *
+   * ⚠️ programId 가 대출 id 와 지원사업 id 를 겸한다. 21번 대출과 21번 지원사업이
+   *    둘 다 있을 수 있어 `type` 을 빠뜨리면 엉뚱한 것이 담긴다 — 호출부에서
+   *    반드시 같이 보낼 것.
+   */
+  bookmark: {
+    add: (programId: number) => `/bookmark/${programId}`,
+    remove: (programId: number) => `/bookmark/${programId}`,
+    /** 내 관심 목록. `sort` `page` `size` */
+    me: '/bookmark/me',
+  },
+
+  insurance: {
+    /** 가입해야 하는 것 + 가입한 것을 한 번에 준다. 업종에 걸린 항목이라 페이징이 없다 */
+    list: '/insurance',
+    /** ⚠️ 경로 변수는 insurance.id 가 아니라 insurance_checklist.id 다 */
+    detail: (insuranceChecklistId: number) => `/insurance/${insuranceChecklistId}`,
+    changeStatus: (insuranceChecklistId: number) =>
+      `/insurance/${insuranceChecklistId}/status`,
+  },
+
+  /** role 로 사업자·예비창업자를 갈라 서로 다른 모양을 준다 */
+  dashboard: '/dashboard',
+
   notification: {
     /** 상단바 벨의 미확인 표시용. 목록 전체를 받지 않고 개수만 받는다 */
     unreadCount: '/notifications/unread-count',

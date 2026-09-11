@@ -1,4 +1,5 @@
 import Badge from '@/shared/ui/Badge'
+import BookmarkButton from '@/shared/ui/BookmarkButton'
 import { cn } from '@/shared/utils/cn'
 
 interface ProductCardProps {
@@ -91,32 +92,13 @@ export default function ProductCard({
           )}
         </span>
 
-        <button
-          type="button"
-          aria-pressed={isBookmarked}
-          aria-label={isBookmarked ? '관심 목록에서 제거' : '관심 목록에 추가'}
-          onClick={(event) => {
-            // 즐겨찾기 클릭이 상세 이동으로 번지지 않게 막는다
-            event.stopPropagation()
-            onToggleBookmark()
-          }}
-          className={cn(
-            'focus-visible:outline-primary -mt-0.5 -mr-1 flex shrink-0 rounded p-1 transition-colors focus-visible:outline focus-visible:outline-offset-1',
-            isBookmarked ? 'text-text' : 'text-text-disabled hover:text-text-secondary',
-          )}
-        >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className="size-[17px]"
-            fill={isBookmarked ? 'currentColor' : 'none'}
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinejoin="round"
-          >
-            <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z" />
-          </svg>
-        </button>
+        {/* 상세 모달과 같은 버튼을 쓴다. 모양이 갈리면 같은 기능인지 알아보기 어렵다 */}
+        <BookmarkButton
+          bookmarked={isBookmarked}
+          onToggle={onToggleBookmark}
+          label={title}
+          className="-mt-0.5 -mr-1"
+        />
       </div>
 
       {chips && chips.length > 0 && (

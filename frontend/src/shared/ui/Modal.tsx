@@ -14,10 +14,16 @@ interface ModalProps {
   /** 제목 바로 아래 한 줄 설명 */
   description?: string
   /**
-   * 제목 바로 옆에 붙는 요소. 상태 배지·북마크처럼 제목이 가리키는 대상의 속성.
-   * 제목이 길면 다음 줄로 내려간다.
+   * 제목 바로 옆에 붙는 요소. 상태 배지처럼 제목이 가리키는 대상의 **속성**.
+   * 제목이 길면 다음 줄로 내려간다. 누르는 것은 headerAction 에 둔다.
    */
   headerRight?: ReactNode
+  /**
+   * 닫기 버튼 왼쪽에 붙는 **동작**. 즐겨찾기처럼 눌러서 무언가를 바꾸는 것.
+   *
+   * 읽는 것(배지)과 누르는 것(버튼)을 갈라 두면 어디를 눌러야 하는지 찾지 않아도 된다.
+   */
+  headerAction?: ReactNode
   children?: ReactNode
   /** 하단 버튼 영역. 넘기면 위에 구분선이 생깁니다. 보통 <Button> 두 개 */
   footer?: ReactNode
@@ -55,6 +61,7 @@ export default function Modal({
   title,
   description,
   headerRight,
+  headerAction,
   children,
   footer,
   size = 'md',
@@ -166,6 +173,9 @@ export default function Modal({
               </p>
             )}
           </div>
+
+          {/* 누를 수 있는 것끼리 오른쪽 위에 모은다. 제목 옆은 읽는 자리다 */}
+          {headerAction}
 
           <button
             type="button"

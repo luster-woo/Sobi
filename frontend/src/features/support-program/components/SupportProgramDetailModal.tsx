@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useSupportProgramDetail } from '@/features/support-program/hooks/useSupportProgramDetail'
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
 import type { ProductStatus } from '@/shared/constants/productStatus'
 import { SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
+import BookmarkButton from '@/shared/ui/BookmarkButton'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
@@ -60,6 +62,13 @@ export default function SupportProgramDetailModal({
 }: SupportProgramDetailModalProps) {
   const { data, isLoading, isError } = useSupportProgramDetail(supportProgramId)
 
+  // ⚠️ 대출 상세와 같다. `/bookmark` 가 붙으면 useMutation 으로 바꾼다
+  const [bookmarked, setBookmarked] = useState(false)
+
+  useEffect(() => {
+    if (data) setBookmarked(data.isBookmark)
+  }, [data])
+
   return (
     <Modal
       open
@@ -68,28 +77,14 @@ export default function SupportProgramDetailModal({
       onClose={onClose}
       title={data?.pblancNm ?? '지원사업'}
       description={data?.bsnsSumryCn ?? undefined}
-      headerRight={
+      headerRight={data && <ProductStatusBadge status={data.status} labels={SUPPORT_STATUS_LABEL} />}
+      headerAction={
         data && (
-          <>
-            <ProductStatusBadge status={data.status} labels={SUPPORT_STATUS_LABEL} />
-            <span
-              aria-label={data.isBookmark ? '저장됨' : '저장하지 않음'}
-              className={data.isBookmark ? 'text-primary' : 'text-text-disabled'}
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="size-5"
-                fill={data.isBookmark ? 'currentColor' : 'none'}
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M6 3h12v18l-6-4-6 4z" />
-              </svg>
-            </span>
-          </>
+          <BookmarkButton
+            bookmarked={bookmarked}
+            onToggle={() => setBookmarked((previous) => !previous)}
+            label={data.pblancNm}
+          />
         )
       }
       footer={

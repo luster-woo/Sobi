@@ -35,10 +35,11 @@ export function Sidebar() {
       {/* 메뉴가 늘어나면 여기만 스크롤된다. 로고와 업체 카드는 자리에 남는다 */}
       <nav className="min-h-0 flex-1 overflow-y-auto px-[11px] py-1.5">
         <ul className="space-y-0.5">
-          {NAV_ITEMS.map(({ label, to, Icon }) => (
+          {NAV_ITEMS.map(({ label, to, Icon, end }) => (
             <li key={to}>
               <NavLink
                 to={to}
+                end={end}
                 className={({ isActive }) =>
                   cn(
                     'text-body2 relative flex items-center gap-2.5 rounded-sm py-2 pr-3 pl-[11px] transition-colors',

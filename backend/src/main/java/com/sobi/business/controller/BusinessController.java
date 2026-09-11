@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -40,12 +41,12 @@ public class BusinessController {
     @PostMapping
     public ResponseEntity<ApiResponse<Void>> business(
             @Valid @RequestBody BusinessRequest businessRequest,
+            @AuthenticationPrincipal Long userId,
             HttpServletRequest request
     ){
 
-        Long userid = 1L;   // 차후에는 토큰에서 가져옴
 
-        businessService.business(businessRequest, userid);
+        businessService.business(businessRequest, userId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -60,10 +61,9 @@ public class BusinessController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<BusinessInfoResponse>>  me(
-
+            @AuthenticationPrincipal Long userId,
             HttpServletRequest request
     ){
-        Long userId = 1L;
 
         BusinessInfoResponse response = businessService.businessInfo(userId);
 

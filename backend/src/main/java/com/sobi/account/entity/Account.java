@@ -1,6 +1,7 @@
 package com.sobi.account.entity;
 
 
+import com.sobi.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -31,16 +32,16 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(
-//            name = "user_id",
-//            nullable = false
-//    )
-//    private User user;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "user_id",
+            nullable = false
+    )
+    private User user;
 
-    // 임시 userid
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+//    // 임시 userid
+//    @Column(name = "user_id", nullable = false)
+//    private Long userId;
 
     @Column(name = "bank_name", nullable = false, length = 20)
     private String bankName;
@@ -56,13 +57,13 @@ public class Account {
 
     @Builder
     private Account(
-            Long userId,
+            User user,
             String bankName,
             String accountNo,
             String type,
             String transferAccount
     ) {
-        this.userId = userId;
+        this.user = user;
         this.bankName = bankName;
         this.accountNo = accountNo;
         this.type = type;

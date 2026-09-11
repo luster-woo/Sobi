@@ -9,6 +9,8 @@ import com.sobi.common.entity.MinorCode;
 import com.sobi.common.repository.MinorCodeRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.user.entity.User;
+import com.sobi.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ public class BusinessServiceImpl implements BusinessService {
     private final VerifyRepository verifyRepository;
     private final BusinessReporitory businessReporitory;
     private final MinorCodeRepository minorCodeRepository;
+    private final UserRepository userRepository;
 
     @Override
     public VerifyResponse verify(VerifyRequest request) {
@@ -58,9 +61,13 @@ public class BusinessServiceImpl implements BusinessService {
                         new BusinessException(ErrorCode.BUSINESS_CODE_NOT_FOUND)
                 );
 
+        // user 객체 조회
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.NO_USER));
+
         // 비즈니스 인포 테이블에 채워넣기
         BusinessInfo businessInfo = BusinessInfo.builder()
-                .userId(userId)
+                .user(user)
                 .businessCode(minorCode)
                 // 임시. 차후에 업종 코드 테이블 만들어지면 entity 내부 객체 변환후 국세청 더미데이터 추가후 변경해야함
 //                .businessCode(1L)

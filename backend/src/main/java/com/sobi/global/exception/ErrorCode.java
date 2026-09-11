@@ -19,6 +19,8 @@ public enum ErrorCode {
     EMAIL_SEND_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS, "AUTH_002", "잠시 후 다시 시도해주세요."),
     EMAIL_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "AUTH_003", "인증번호가 만료되었거나 존재하지 않습니다."),
     EMAIL_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "AUTH_004", "인증번호가 일치하지 않습니다"),
+    DUPLICATE_EMAIL(HttpStatus.CONFLICT, "AUTH_005", "이미 사용 중인 이메일입니다."),
+    EMAIL_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "AUTH_006", "이메일 인증이 완료되지 않았습니다."),
 
     // business 관련
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_001", "사업자 번호가 일치하는 사업자 정보를 찾을 수 없습니다."),

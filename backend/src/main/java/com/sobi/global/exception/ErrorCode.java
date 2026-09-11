@@ -24,8 +24,10 @@ public enum ErrorCode {
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_001", "사업자 번호가 일치하는 사업자 정보를 찾을 수 없습니다."),
     BUSINESS_INFO_MISMATCH(HttpStatus.BAD_REQUEST, "BUSINESS_002", "입력한 사업자 정보와 실제 등록된 사업자 정보가 일치하지 않습니다."),
     BUSINESS_CODE_NOT_FOUND(HttpStatus.NOT_FOUND,"BUSINESS_003", "업종 코드가 존재하지 않습니다."),
-    BUSINESS_INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_O04", "등록된 사업자 정보가 없습니다.");
+    BUSINESS_INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_O04", "등록된 사업자 정보가 없습니다."),
 
+    // 외부 API
+    FINANCE_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_001", "금융망 API 호출에 실패했습니다.");
 
 
     private final HttpStatus status;

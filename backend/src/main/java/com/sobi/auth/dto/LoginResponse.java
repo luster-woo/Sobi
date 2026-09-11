@@ -1,6 +1,7 @@
 package com.sobi.auth.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.sobi.user.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +21,9 @@ public class LoginResponse {
 
     @JsonIgnore                  // 쿠키로만 내려감. body 직렬화 제외
     private String refreshToken;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Boolean isNewUser;   // 소셜 최초 가입 시에만 true
 
     @Getter
     @Builder

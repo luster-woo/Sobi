@@ -101,23 +101,45 @@ public class AuthController {
 
         LoginResponse response = authService.login(loginRequest);
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", response.getRefreshToken())
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("Strict")
-                .path("/api/v1/auth")
-                .maxAge(Duration.ofMillis(jwtProperties.getRefreshExp()))
-                .build();
-
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, createRefreshCookie(response.getRefreshToken()).toString())
                 .body(ApiResponse.success(
                         HttpStatus.OK,
                         "로그인 성공",
                         response,
                         request
                 ));
+    }
+
+    @PostMapping("/oauth/{provider}")
+    public ResponseEntity<ApiResponse<LoginResponse>> oauthLogin(
+            @PathVariable String provider,
+            @Valid @RequestBody OAuthLoginRequest oAuthLoginRequest,
+            HttpServletRequest request) {
+
+        LoginResponse response = authService.oauthLogin(provider, oAuthLoginRequest);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .header(HttpHeaders.SET_COOKIE, createRefreshCookie(response.getRefreshToken()).toString())
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "소셜 로그인 성공",
+                        response,
+                        request
+                ));
+    }
+
+    // login / oauth 공통
+    private ResponseCookie createRefreshCookie(String refreshToken) {
+        return ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/api/v1/auth")
+                .maxAge(Duration.ofMillis(jwtProperties.getRefreshExp()))
+                .build();
     }
 
     @PostMapping("/refresh")
@@ -197,4 +219,6 @@ public class AuthController {
                         request
                 ));
     }
+
+
 }

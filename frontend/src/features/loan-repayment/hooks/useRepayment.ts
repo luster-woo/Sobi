@@ -10,11 +10,18 @@ import { queryKeys } from '@/shared/api/queryKeys'
 /** 상환은 하루 한 번이라 화면을 보는 동안 값이 바뀌지 않는다 */
 const STALE_TIME_MS = 5 * 60 * 1000
 
-export function useLoanProducts() {
+/**
+ * 내 대출 상품 목록.
+ *
+ * enabled 를 받는 이유: 예비창업자는 이 화면을 쓸 수 없어서 조회 자체를 막아야 한다.
+ * 화면에서 일찍 return 하더라도 훅은 이미 불린 뒤라, 끄지 않으면 요청이 나간다.
+ */
+export function useLoanProducts({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: queryKeys.repayment.list,
     queryFn: getLoanProducts,
     staleTime: STALE_TIME_MS,
+    enabled,
   })
 }
 

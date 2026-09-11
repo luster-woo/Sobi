@@ -2,6 +2,7 @@ package com.sobi.repayment.controller;
 
 import com.sobi.global.external.ssafy.header.SsafyRequestHeader;
 import com.sobi.global.response.ApiResponse;
+import com.sobi.repayment.dto.LoanBalanceInFullRequest;
 import com.sobi.repayment.dto.LoanListResponse;
 import com.sobi.repayment.dto.RecordRequest;
 import com.sobi.repayment.dto.RecordResponse;
@@ -27,11 +28,10 @@ public class RepaymentController {
 
     @PostMapping("/list")
     public ResponseEntity<ApiResponse<LoanListResponse>> getLoanList(
-            @AuthenticationPrincipal
+            @AuthenticationPrincipal Long userId,
             HttpServletRequest request
     ) {
 
-        Long userId = 1L;
 
         LoanListResponse response = repaymentService.getList(userId);
 
@@ -48,12 +48,11 @@ public class RepaymentController {
 
     @PostMapping("/records")
     public ResponseEntity<ApiResponse<RecordResponse>> getLoanList(
-//            @AuthenticationPrincipal Long userId,
+            @AuthenticationPrincipal Long userId,
             @Valid @RequestBody RecordRequest recordRequest,
             HttpServletRequest request
-    ){
+    ) {
 
-        Long userId = 1L;
 
         RecordResponse response = repaymentService.getRecord(userId, recordRequest);
 
@@ -66,5 +65,25 @@ public class RepaymentController {
                         request
                 ));
 
+    }
+
+
+    @PostMapping("/loanBalanceInFull")
+    public ResponseEntity<ApiResponse<Void>> loanBalanceInFull(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody LoanBalanceInFullRequest loanBalanceInFullRequest,
+            HttpServletRequest request
+            ){
+
+        repaymentService.loanBalanceInFull(loanBalanceInFullRequest, userId);
+
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "해당 대출 상품 일시납 상환에 성공했습니다.",
+                        request
+                ));
     }
 }

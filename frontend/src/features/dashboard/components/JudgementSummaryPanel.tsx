@@ -50,8 +50,8 @@ export default function JudgementSummaryPanel({ summary }: JudgementSummaryPanel
 
         <dl className="flex gap-4.5">
           {/*
-           * '마감 임박' 은 얼마나 급한지를 안 알려준다. 판정 기준이 7일이므로
-           * (isDeadlineNear 기본값) 그 숫자를 그대로 문구에 적는다.
+           * '마감 임박' 은 얼마나 급한지를 안 알려준다. 서버가 7일 기준으로 세어 주므로
+           * 그 숫자를 그대로 문구에 적는다.
            * 신청 가능 18건 안에 든 수다 — 전체 = 가능 + 불가.
            */}
           <Stat label="일주일 내 마감" value={urgent} />

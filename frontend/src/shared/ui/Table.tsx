@@ -43,6 +43,15 @@ interface TableProps<T> {
    * false 로 둔다 — 표가 테두리를 또 그리면 두 겹이 된다.
    */
   bordered?: boolean
+  /**
+   * 행 높이를 관심 목록(FavoritesPage)과 같게 한다 — 셀 여백이 `px-4 py-3` 대신
+   * `px-[15px] py-2.5` 가 된다.
+   *
+   * 기본값으로 만들지 않은 이유: 상권 비교표·상환 기록표는 지금 밀도가 맞고, 공용
+   * 컴포넌트에서 기본을 바꾸면 손대지 않은 화면의 줄 높이가 같이 움직인다.
+   * 자금 상품 목록(대출·지원사업)만 켠다.
+   */
+  dense?: boolean
   className?: string
 }
 
@@ -72,11 +81,15 @@ export default function Table<T>({
   isLoading = false,
   skeletonRows = 5,
   empty,
+  rowClassName,
   onRowClick,
   bordered = true,
+  dense = false,
   className,
 }: TableProps<T>) {
   const isClickable = Boolean(onRowClick)
+  // 헤더와 본문이 같은 값을 써야 열이 어긋나지 않는다
+  const cellPadding = dense ? 'px-[15px] py-2.5' : 'px-4 py-3'
 
   const handleKeyDown = (row: T) => (event: KeyboardEvent<HTMLTableRowElement>) => {
     if (!onRowClick) return
@@ -105,7 +118,8 @@ export default function Table<T>({
                 scope="col"
                 style={{ width: column.width }}
                 className={cn(
-                  'text-caption text-text-secondary px-4 py-3 font-semibold whitespace-nowrap',
+                  'text-caption text-text-secondary font-semibold whitespace-nowrap',
+                  cellPadding,
                   alignClass[column.align ?? 'left'],
                 )}
               >
@@ -120,7 +134,7 @@ export default function Table<T>({
             Array.from({ length: skeletonRows }, (_, rowIndex) => (
               <tr key={`skeleton-${rowIndex}`} className="border-border-subtle border-b">
                 {columns.map((column) => (
-                  <td key={column.key} className="px-4 py-3">
+                  <td key={column.key} className={cellPadding}>
                     <Skeleton variant="text" width="70%" />
                   </td>
                 ))}
@@ -151,12 +165,17 @@ export default function Table<T>({
                   'border-border-subtle border-b last:border-b-0',
                   isClickable &&
                     'hover:bg-surface-muted focus-visible:outline-primary cursor-pointer focus-visible:outline focus-visible:-outline-offset-2',
+                  rowClassName?.(row),
                 )}
               >
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className={cn('text-body2 px-4 py-3', alignClass[column.align ?? 'left'])}
+                    className={cn(
+                      'text-body2',
+                      cellPadding,
+                      alignClass[column.align ?? 'left'],
+                    )}
                   >
                     {column.render(row)}
                   </td>

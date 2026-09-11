@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, type Location, useLocation, useNavigate } from 'react-router'
 
 import GoogleAuthButton from '@/features/auth/components/GoogleAuthButton'
 import OrDivider from '@/features/auth/components/OrDivider'
+import { useLogin } from '@/features/auth/hooks/useLogin'
 import { ROUTES } from '@/shared/constants/routes'
 import { VALIDATION_MESSAGE } from '@/shared/constants/validation'
 import Button from '@/shared/ui/Button'
@@ -10,21 +11,22 @@ import Checkbox from '@/shared/ui/Checkbox'
 import Input from '@/shared/ui/Input'
 import { validateEmail } from '@/shared/utils/validators'
 
-/**
- * 로그인 성공 후 이동할 곳은 대시보드가 아니다. ProtectedRoute 가 `state.from` 으로
- * 원래 목적지를 넘기므로 API 를 붙일 때 아래를 되살려야 한다.
- *
- *    const location = useLocation()
- *    const from = (location.state as { from?: Location } | null)?.from?.pathname
- *      ?? ROUTES.DASHBOARD
- */
 export function LoginPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  /** ProtectedRoute 가 넘겨준 원래 목적지. 없으면 대시보드 */
+  const from = (location.state as { from?: Location } | null)?.from?.pathname ?? ROUTES.DASHBOARD
+
+  const { mutate: signIn, isPending } = useLogin()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [keepSignedIn, setKeepSignedIn] = useState(true)
 
   const [emailError, setEmailError] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
+  /** 서버는 어느 칸이 틀렸는지 알려주지 않는다. 그래서 폼 아래에 한 줄로 붙인다 */
+  const [signInError, setSignInError] = useState<string | null>(null)
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -35,12 +37,18 @@ export function LoginPage() {
 
     setEmailError(nextEmailError)
     setPasswordError(nextPasswordError)
+    setSignInError(null)
 
     if (nextEmailError || nextPasswordError) return
 
-    // TODO(135): POST /auth/login → setSession 후 navigate(from, { replace: true })
-    //   요청 { email, password } · 응답 data { accessToken, tokenType, expiresIn, user }
-    //   keepSignedIn 은 서버 계약이 없다 — refreshToken 쿠키 Max-Age 로 다룰지 확인 필요
+    // TODO(135): keepSignedIn 은 서버 계약이 없다 — refreshToken 쿠키 Max-Age 로 다룰지 확인 필요
+    signIn(
+      { email, password },
+      {
+        onSuccess: () => navigate(from, { replace: true }),
+        onError: () => setSignInError('이메일 또는 비밀번호가 올바르지 않습니다.'),
+      },
+    )
   }
 
   return (
@@ -53,7 +61,7 @@ export function LoginPage() {
             label="아이디"
             type="email"
             autoComplete="username"
-            placeholder="sajang@example.com"
+            placeholder="이메일 주소"
             value={email}
             onChange={(event) => {
               setEmail(event.target.value)
@@ -90,7 +98,9 @@ export function LoginPage() {
             </Link>
           </div>
 
-          <Button type="submit" className="mt-5 w-full">
+          {signInError && <p className="text-body2 text-danger mt-4">{signInError}</p>}
+
+          <Button type="submit" loading={isPending} className="mt-5 w-full">
             로그인
           </Button>
         </form>

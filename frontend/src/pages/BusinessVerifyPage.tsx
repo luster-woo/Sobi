@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 
 import type { BizVerifyData } from '@/features/auth/components/BizVerifyResult'
 import BizVerifyResult from '@/features/auth/components/BizVerifyResult'
+import PhoneVerifyPopup from '@/features/auth/components/PhoneVerifyPopup'
 import PreOwnerBranchCard from '@/features/auth/components/PreOwnerBranchCard'
 import { ROUTES } from '@/shared/constants/routes'
 import Button from '@/shared/ui/Button'
@@ -73,7 +74,8 @@ const VERIFY_ERROR = {
   /** BUSINESS_002 · 400 — 번호는 있으나 대표자명·개업연월일이 다르다 */
   MISMATCH: {
     summary: '국세청 정보 불일치',
-    message: '대표자명 또는 개업연월일이 국세청 등록 정보와 달라요. 값을 확인하고 다시 조회해 주세요.',
+    message:
+      '대표자명 또는 개업연월일이 국세청 등록 정보와 달라요. 값을 확인하고 다시 조회해 주세요.',
   },
 } as const
 
@@ -101,6 +103,9 @@ export function BusinessVerifyPage() {
    */
   const [verifiedBrn, setVerifiedBrn] = useState<string | null>(null)
 
+  /** 본인확인 팝업. 실제 본인확인처럼 페이지를 옮기지 않고 이 화면 위에 띄운다 */
+  const [identityOpen, setIdentityOpen] = useState(false)
+
   /** 휴·폐업 사업자는 정책자금 신청 대상이 아니라 사업자로 시작할 수 없다 */
   const canStartAsOwner = status === 'success' && data?.isClose === false
 
@@ -122,9 +127,7 @@ export function BusinessVerifyPage() {
     //   아래 목이 그 두 갈래를 그대로 흉내낸다.
     const found = MOCK_VERIFY[brn.replace(/\D/g, '')]
 
-    setCheckedAt(
-      new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }),
-    )
+    setCheckedAt(new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }))
 
     if (!found) {
       setStatus('error')
@@ -152,7 +155,7 @@ export function BusinessVerifyPage() {
 
     // TODO(139): POST /business { brn: verifiedBrn } → 성공 시 role 이 ENTREPRENEUR 가 된다.
     //   명세에는 `bsn` 으로 적혀 있지만 실제 `BusinessRequest` 필드는 `brn` 이다
-    navigate(ROUTES.MYDATA_IDENTITY)
+    setIdentityOpen(true)
   }
 
   const handleStartAsPreOwner = () => {
@@ -178,7 +181,7 @@ export function BusinessVerifyPage() {
           label="사업자등록번호"
           required
           inputMode="numeric"
-          placeholder="000-00-00000"
+          placeholder="숫자 10자리"
           className="tabular-nums"
           value={brn}
           // 조회 결과는 여기서 지우지 않는다. '다시 조회' 를 누를 때까지 남긴다
@@ -195,7 +198,7 @@ export function BusinessVerifyPage() {
           <Input
             label="대표자명"
             required
-            placeholder="홍길동"
+            placeholder="사업자등록증상 대표자명"
             value={ownerName}
             onChange={(event) => {
               setOwnerName(event.target.value)
@@ -274,6 +277,14 @@ export function BusinessVerifyPage() {
           title="휴업·폐업 상태예요"
           description="정책자금은 영업 중인 사업자만 신청할 수 있어요. 예비 창업자로 시작할 수 있습니다."
           className="mt-3.5 w-full max-w-[560px]"
+        />
+      )}
+
+      {/* 조건부 렌더라 닫으면 언마운트된다 — 다시 열면 1단계부터 시작한다 */}
+      {identityOpen && (
+        <PhoneVerifyPopup
+          onClose={() => setIdentityOpen(false)}
+          onVerified={() => navigate(ROUTES.MYDATA_CONSENT)}
         />
       )}
     </>

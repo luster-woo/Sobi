@@ -46,8 +46,9 @@ export function SidebarBusinessCard() {
   if (isError || !data) {
     return (
       <Frame>
+        {/* 업체 등록은 사업자 인증 화면에서 한다. /onboarding 은 라우트가 없어 404 였다 */}
         <Link
-          to={ROUTES.ONBOARDING}
+          to={ROUTES.BUSINESS_VERIFY}
           className="bg-surface-muted hover:bg-primary-soft border-border-subtle hover:border-primary/30 block rounded-md border border-dashed px-3 py-2.5 transition-colors"
         >
           <span className="text-body2 text-text block font-semibold">업체 등록하기</span>

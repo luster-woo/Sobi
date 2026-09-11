@@ -20,7 +20,25 @@ export interface ApiResponse<T> {
   path: string
   message: string
   data: T
-  error: string | null
+  error: ApiError | null
+}
+
+/**
+ * 실패 응답의 `error`.
+ *
+ * 백엔드 `global/response/ErrorResponse.java` 가 `{ code }` 객체를 담는다.
+ * API 명세 예시에는 `"error": "INVALID_REQUEST"` 문자열로 적혀 있는데 구현이 다르다 —
+ * 구현이 맞다.
+ *
+ * `code` 는 `global/exception/ErrorCode.java` 의 값이다.
+ *   COMMON_001 입력값 검증 실패 · COMMON_002 서버 오류 · U001 없는 사용자
+ *   BUSINESS_001 사업자번호 없음 · BUSINESS_002 사업자 정보 불일치
+ *   BUSINESS_003 업종 코드 없음 · BUSINESS_O04 등록된 업체 없음
+ *
+ * ⚠️ BUSINESS_O04 는 숫자 0 이 아니라 영문 O 다. 백엔드 오타이므로 코드로 분기할 때 주의.
+ */
+export interface ApiError {
+  code: string
 }
 
 /**

@@ -1,8 +1,11 @@
+import { Outlet, useLocation, useNavigate } from 'react-router'
+
 import { supportColumns } from '@/features/support-program/components/supportColumns'
 import SupportFilterBar from '@/features/support-program/components/SupportFilterBar'
 import { useSupportPrograms } from '@/features/support-program/hooks/useSupportPrograms'
 import { useSupportProgramSearch } from '@/features/support-program/hooks/useSupportProgramSearch'
 import type { ProductStatus } from '@/shared/constants/productStatus'
+import { routeTo } from '@/shared/constants/routes'
 import { useListParams } from '@/shared/hooks/useListParams'
 import type { SupportProgramType } from '@/shared/types'
 import EmptyState from '@/shared/ui/EmptyState'
@@ -27,6 +30,8 @@ const PAGE_SIZE = 20
  */
 export function SupportProgramListPage() {
   const { page, values, setPage, setValues } = useListParams({ keys: FILTER_KEYS })
+  const navigate = useNavigate()
+  const location = useLocation()
 
   const q = values.q
   const isSearchMode = Boolean(q)
@@ -99,14 +104,12 @@ export function SupportProgramListPage() {
                 <span className="text-text font-semibold">{totalElements}</span>건
               </p>
               <p className="text-caption text-text-muted mt-1">
-                자연어로 찾은 결과예요 · 판정은 내 자격 기준 · 검색 중에는 필터가 적용되지
-                않습니다
+                자연어로 찾은 결과예요 · 판정은 내 자격 기준 · 검색 중에는 필터가 적용되지 않습니다
               </p>
             </>
           ) : (
             <p className="text-body2 text-text-secondary">
-              내 자격 기준 · 전체 <span className="text-text font-semibold">{totalElements}</span>
-              건
+              내 자격 기준 · 전체 <span className="text-text font-semibold">{totalElements}</span>건
             </p>
           )}
         </div>
@@ -116,6 +119,13 @@ export function SupportProgramListPage() {
           columns={supportColumns}
           rows={programs}
           getRowId={(program) => program.supportProgramId}
+          // 검색어·필터를 들고 이동한다. 모달을 닫으면 그대로 돌아온다
+          onRowClick={(program) =>
+            navigate({
+              pathname: routeTo.supportProgramDetail(program.supportProgramId),
+              search: location.search,
+            })
+          }
           isLoading={isLoading}
           skeletonRows={8}
           bordered={false}
@@ -145,6 +155,9 @@ export function SupportProgramListPage() {
           </div>
         )}
       </Panel>
+
+      {/* /support-programs/:supportProgramId — 상세 모달이 이 자리에 렌더된다 */}
+      <Outlet />
     </div>
   )
 }

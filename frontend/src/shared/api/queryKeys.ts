@@ -33,6 +33,11 @@ export const queryKeys = {
     list: ['notification', 'list'] as const,
   },
 
+  market: {
+    all: ['market'] as const,
+    analysis: (params: object) => ['market', 'analysis', params] as const,
+  },
+
   loan: {
     all: ['loan'] as const,
     list: (params: object) => ['loan', 'list', params] as const,

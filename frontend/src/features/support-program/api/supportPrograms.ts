@@ -1,7 +1,8 @@
 import type {
+  SupportProgramDetail,
   SupportProgramListData,
   SupportProgramListParams,
-  SupportProgramSearchParams
+  SupportProgramSearchParams,
 } from '@/features/support-program/model/types'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
@@ -30,6 +31,14 @@ export async function searchSupportPrograms({ page, size, query }: SupportProgra
     endpoints.supportProgram.search,
     { query },
     { params: { page, size } },
+  )
+  return data.data
+}
+
+/** 지원사업 상세. 모달에서 쓴다 */
+export async function getSupportProgramDetail(supportProgramId: number) {
+  const { data } = await api.get<ApiResponse<SupportProgramDetail>>(
+    endpoints.supportProgram.detail(supportProgramId),
   )
   return data.data
 }

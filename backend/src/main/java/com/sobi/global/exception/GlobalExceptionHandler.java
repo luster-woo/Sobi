@@ -10,7 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 @Slf4j
 @RestControllerAdvice
@@ -95,18 +95,40 @@ public class GlobalExceptionHandler {
                 ));
     }
 
-    // 필수 쿼리 파라미터 누락 / 타입 불일치 예외 처리
-    @ExceptionHandler({
-            MissingServletRequestParameterException.class,
-            MethodArgumentTypeMismatchException.class
-    })
-    public ResponseEntity<ApiResponse<Void>> handleInvalidRequestParameter(
-            Exception e,
+    // @RequestParam / @PathVariable 제약(@Email, @NotBlank 등) 검증 실패
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHandlerMethodValidationException(
+            HandlerMethodValidationException e,
             HttpServletRequest request
     ) {
-        log.warn("요청 파라미터 오류. path={}, message={}",
+        log.warn("파라미터 검증 실패. path={}, message={}",
                 request.getRequestURI(),
                 e.getMessage()
+        );
+
+        ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
+
+        ErrorResponse errorResponse = ErrorResponse.of(errorCode.getCode());
+
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(ApiResponse.fail(
+                        errorCode.getStatus(),
+                        errorCode.getMessage(),
+                        errorResponse,
+                        request
+                ));
+    }
+
+    // 필수 @RequestParam 누락
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestParameterException(
+            MissingServletRequestParameterException e,
+            HttpServletRequest request
+    ) {
+        log.warn("필수 파라미터 누락. path={}, parameter={}",
+                request.getRequestURI(),
+                e.getParameterName()
         );
 
         ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;

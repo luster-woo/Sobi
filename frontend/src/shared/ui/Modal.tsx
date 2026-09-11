@@ -14,15 +14,18 @@ interface ModalProps {
   /** 제목 바로 아래 한 줄 설명 */
   description?: string
   /**
-   * 제목 오른쪽, 닫기 버튼 왼쪽에 들어갈 요소. 상태 배지·북마크처럼 제목과
-   * 한 줄에 놓여야 하는 것들.
+   * 제목 바로 옆에 붙는 요소. 상태 배지·북마크처럼 제목이 가리키는 대상의 속성.
+   * 제목이 길면 다음 줄로 내려간다.
    */
   headerRight?: ReactNode
   children?: ReactNode
   /** 하단 버튼 영역. 넘기면 위에 구분선이 생깁니다. 보통 <Button> 두 개 */
   footer?: ReactNode
-  /** md 440 · lg 720 (px). 상권 분석 조건 입력처럼 넓은 폼은 lg */
-  size?: 'md' | 'lg'
+  /**
+   * md 440 · lg 640 · xl 1000 (px).
+   * 확인 창은 md, 넓은 폼은 lg, 본인확인처럼 단계가 있는 큰 창은 xl.
+   */
+  size?: 'md' | 'lg' | 'xl'
   /**
    * 오버레이를 눌러 닫을 수 있게 할지. 기본 true.
    * 탈퇴·삭제 확인처럼 실수로 닫히면 안 되는 경우 false 로 끕니다.
@@ -33,7 +36,8 @@ interface ModalProps {
 
 const sizeClass = {
   md: 'max-w-[440px]',
-  lg: 'max-w-[720px]',
+  lg: 'max-w-[640px]',
+  xl: 'max-w-[1000px]',
 } as const
 
 /**
@@ -144,18 +148,22 @@ export default function Modal({
         )}
       >
         <div className="flex items-start justify-between gap-4 px-7 pt-7">
-          <div className="space-y-1">
-            <h2 id={titleId} className="text-h3">
-              {title}
-            </h2>
+          <div className="min-w-0 flex-1">
+            {/* 배지는 제목 바로 옆에 붙인다. 셋을 justify-between 으로 늘어놓으면
+                배지가 제목과 닫기 버튼 사이 빈 곳에 떠서 무엇에 붙은 값인지 흐려진다 */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 id={titleId} className="text-h3">
+                {title}
+              </h2>
+              {headerRight}
+            </div>
+
             {description && (
-              <p id={descriptionId} className="text-body2 text-text-secondary">
+              <p id={descriptionId} className="text-body2 text-text-secondary mt-1">
                 {description}
               </p>
             )}
           </div>
-
-          {headerRight && <div className="flex shrink-0 items-center gap-2">{headerRight}</div>}
 
           <button
             type="button"

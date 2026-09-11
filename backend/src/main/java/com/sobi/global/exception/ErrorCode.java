@@ -28,6 +28,12 @@ public enum ErrorCode {
     BUSINESS_CODE_NOT_FOUND(HttpStatus.NOT_FOUND,"BUSINESS_003", "업종 코드가 존재하지 않습니다."),
     BUSINESS_INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_O04", "등록된 사업자 정보가 없습니다."),
 
+    // 상권 분석 관련
+    // 파라미터 누락/형식 오류는 도메인 코드를 따로 두지 않고 COMMON_001 을 쓴다.
+    DONG_NOT_FOUND(HttpStatus.NOT_FOUND, "MARKET_001", "존재하지 않는 행정동입니다."),
+    MARKET_BUSINESS_NOT_FOUND(HttpStatus.NOT_FOUND, "MARKET_002", "존재하지 않는 업종입니다."),
+    MARKET_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "MARKET_003", "해당 상권에 집계된 업종 데이터가 없습니다."),
+
     // 외부 API
     FINANCE_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_001", "금융망 API 호출에 실패했습니다.");
 

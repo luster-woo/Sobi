@@ -115,11 +115,19 @@ export interface RepaymentSummary {
   advice: string | null
 }
 
+/**
+ * 의무보험 체크리스트 한 줄. `GET /insurance` 의 `insuranceList` 항목 모양이다.
+ *
+ * ⚠️ id 가 `insurance.id` 가 아니라 `insurance_checklist.id` 다. 앞은 보험 종류이고
+ *    뒤는 '이 업체의 이 보험' 이라 값이 다르다. 상세·상태 변경도 이 id 를 쓴다.
+ *
+ * ⚠️ 명세의 목록 응답은 status 가 한글('가입 완료')인데 상태 변경 요청 본문과
+ *    `V1__init.sql` 의 CHECK 제약은 영문(COMPLETED·NEEDS_VERIFICATION·REQUIRED·
+ *    EXEMPT)이다. 영문이 맞다고 보고 영문으로 둔다 — 백엔드 확인 필요.
+ */
 export interface DashboardInsurance {
-  insuranceId: ID
-  name: string
-  /** 근거 법령. '다중이용업소법' */
-  law: string
+  insuranceChecklistId: ID
+  insuranceName: string
   status: InsuranceStatus
 }
 

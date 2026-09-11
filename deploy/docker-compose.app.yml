@@ -18,6 +18,12 @@ services:
       AI_BASE_URL: http://ai:8000
       GMS_API_KEY: ${GMS_API_KEY}
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration
+      JWT_SECRET: ${JWT_SECRET}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      SSAFY_FINANCE_BASE_URL: ${SSAFY_FINANCE_BASE_URL}
+      SSAFY_FINANCE_API_KEY: ${SSAFY_FINANCE_API_KEY}
     networks: [backend, data]
     restart: unless-stopped
     healthcheck:

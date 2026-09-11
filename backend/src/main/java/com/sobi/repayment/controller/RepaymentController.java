@@ -3,6 +3,7 @@ package com.sobi.repayment.controller;
 import com.sobi.global.external.ssafy.header.SsafyRequestHeader;
 import com.sobi.global.response.ApiResponse;
 import com.sobi.repayment.dto.LoanListResponse;
+import com.sobi.repayment.service.RepaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RepaymentController {
 
+    private final RepaymentService repaymentService;
+
 
     @PostMapping("/list")
     public ResponseEntity<ApiResponse<LoanListResponse>> getLoanList(
@@ -24,7 +27,9 @@ public class RepaymentController {
             HttpServletRequest request
     ) {
 
+        Long userId = 1L;
 
+        LoanListResponse response = repaymentService.getList(userId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)

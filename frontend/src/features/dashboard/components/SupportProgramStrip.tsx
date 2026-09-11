@@ -1,10 +1,11 @@
-import { useNavigate } from 'react-router'
+import { useState } from 'react'
 
 import NavButton from '@/features/dashboard/components/NavButton'
 import { useBookmarkDraft } from '@/features/dashboard/hooks/useBookmarkDraft'
 import { toAmountRange, toDeadlineChip } from '@/features/dashboard/model/format'
 import type { DashboardSupportProgram, StripSummary } from '@/features/dashboard/model/types'
-import { ROUTES, routeTo } from '@/shared/constants/routes'
+import SupportProgramDetailModal from '@/features/support-program/components/SupportProgramDetailModal'
+import { ROUTES } from '@/shared/constants/routes'
 import CardStrip from '@/shared/ui/CardStrip'
 import EmptyState from '@/shared/ui/EmptyState'
 import ProductCard from '@/shared/ui/ProductCard'
@@ -30,7 +31,7 @@ function toChips(program: DashboardSupportProgram): string[] {
  * 달력에 적으려면 다시 계산해야 한다.
  */
 export default function SupportProgramStrip({ programs }: SupportProgramStripProps) {
-  const navigate = useNavigate()
+  const [openProgramId, setOpenProgramId] = useState<number | null>(null)
   const bookmark = useBookmarkDraft(
     programs.items.filter((p) => p.isBookmark).map((p) => p.supportProgramId),
   )
@@ -45,27 +46,36 @@ export default function SupportProgramStrip({ programs }: SupportProgramStripPro
   }
 
   return (
-    <CardStrip
-      title="지원 가능한 정부 지원금"
-      count={programs.possible}
-      footer={
-        <NavButton to={ROUTES.SUPPORT_PROGRAMS} variant="outline" size="sm" className="w-full">
-          지원금 자격 판정 전체 보기 · {programs.total}개 사업
-        </NavButton>
-      }
-    >
-      {programs.items.map((program) => (
-        <ProductCard
-          key={program.supportProgramId}
-          title={program.pblancNm}
-          organization={program.jrsdInsttNm}
-          chips={toChips(program)}
-          amount={toAmountRange(program.minBalance, program.maxBalance)}
-          isBookmarked={bookmark.isBookmarked(program.supportProgramId)}
-          onToggleBookmark={() => bookmark.toggle(program.supportProgramId)}
-          onClick={() => navigate(routeTo.supportProgramDetail(program.supportProgramId))}
+    <>
+      <CardStrip
+        title="지원 가능한 정부 지원사업"
+        count={programs.possible}
+        footer={
+          <NavButton to={ROUTES.SUPPORT_PROGRAMS} variant="outline" size="sm" className="w-full">
+            지원금 자격 판정 전체 보기 · {programs.total}개 사업
+          </NavButton>
+        }
+      >
+        {programs.items.map((program) => (
+          <ProductCard
+            key={program.supportProgramId}
+            title={program.pblancNm}
+            organization={program.jrsdInsttNm}
+            chips={toChips(program)}
+            amount={toAmountRange(program.minBalance, program.maxBalance)}
+            isBookmarked={bookmark.isBookmarked(program.supportProgramId)}
+            onToggleBookmark={() => bookmark.toggle(program.supportProgramId)}
+            onClick={() => setOpenProgramId(program.supportProgramId)}
+          />
+        ))}
+      </CardStrip>
+
+      {openProgramId !== null && (
+        <SupportProgramDetailModal
+          supportProgramId={openProgramId}
+          onClose={() => setOpenProgramId(null)}
         />
-      ))}
-    </CardStrip>
+      )}
+    </>
   )
 }

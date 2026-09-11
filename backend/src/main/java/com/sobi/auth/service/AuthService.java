@@ -21,4 +21,6 @@ public interface AuthService {
     ResetVerifyResponse verifyEmailForReset(String email, String verificationCode);
 
     void resetPassword(PasswordResetRequest request);
+
+    LoginResponse oauthLogin(String provider, OAuthLoginRequest request);
 }

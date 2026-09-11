@@ -7,11 +7,12 @@ import { FAVORITE_KIND, type FavoriteKind } from '@/features/mypage/model/types'
 import SupportProgramDetailModal from '@/features/support-program/components/SupportProgramDetailModal'
 import { LOAN_STATUS_LABEL, SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { ROUTES } from '@/shared/constants/routes'
+import BookmarkIcon from '@/shared/ui/BookmarkIcon'
 import EmptyState from '@/shared/ui/EmptyState'
 import Panel from '@/shared/ui/Panel'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
 import { cn } from '@/shared/utils/cn'
-import { formatMoneyShort } from '@/shared/utils/formatters'
+import { formatDeadlineDate, formatMoneyShort } from '@/shared/utils/formatters'
 
 type Filter = 'ALL' | FavoriteKind
 
@@ -39,17 +40,6 @@ function toValueText(kind: FavoriteKind, amount: number) {
   return kind === FAVORITE_KIND.LOAN
     ? `연 ${amount.toFixed(1)}%`
     : `최대 ${formatMoneyShort(amount)}`
-}
-
-/**
- * '2026-09-16' → '~ 9. 16'. 상시 접수는 날짜가 없다.
- *
- * D-day 를 빼는 이유: 여기는 저장해둔 것을 훑는 자리라 네 줄이 같은 무게로 읽혀야
- * 한다. 'D-64' 는 급한 것을 골라주는 대신 읽는 품만 든다.
- */
-function toDeadlineText(endDate: string | null) {
-  if (!endDate) return '상시 접수'
-  return `~ ${Number(endDate.slice(5, 7))}. ${Number(endDate.slice(8, 10))}`
 }
 
 /**
@@ -168,14 +158,15 @@ export function FavoritesPage() {
                 </span>
 
                 {/* 마감일에 색을 넣지 않는다. 저장해둔 것을 훑는 자리라 급한 것을
-                    골라주기보다 네 줄이 같은 무게로 읽히는 편이 낫다 */}
+                    골라주기보다 네 줄이 같은 무게로 읽히는 편이 낫다.
+                    문구는 지원사업 목록과 같다 (shared 의 formatDeadlineDate) */}
                 <span
                   className={cn(
                     'text-right text-[12.5px] tabular-nums',
                     impossible ? 'text-text-muted' : 'text-text-secondary',
                   )}
                 >
-                  {toDeadlineText(item.endDate)}
+                  {formatDeadlineDate(item.endDate)}
                 </span>
 
                 {/*
@@ -197,14 +188,8 @@ export function FavoritesPage() {
                     onClick={() => setRemoved((previous) => new Set(previous).add(item.id))}
                     className="text-text hover:text-text-muted focus-visible:outline-primary rounded p-1 transition-colors focus-visible:outline focus-visible:outline-offset-1"
                   >
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 24 24"
-                      className="size-4"
-                      fill="currentColor"
-                    >
-                      <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z" />
-                    </svg>
+                    {/* 저장돼 있는 것만 모인 자리라 항상 채워진 리본이다 */}
+                    <BookmarkIcon filled />
                   </button>
                 </span>
               </div>

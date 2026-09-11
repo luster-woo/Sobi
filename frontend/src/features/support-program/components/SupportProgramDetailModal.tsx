@@ -10,8 +10,7 @@ import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
 import Skeleton from '@/shared/ui/Skeleton'
-import { cn } from '@/shared/utils/cn'
-import { formatDeadline, formatMoneyShort, isDeadlineNear } from '@/shared/utils/formatters'
+import { formatMoneyShort } from '@/shared/utils/formatters'
 
 /**
  * 상태별 하단 버튼 문구와 갈 곳.
@@ -119,7 +118,7 @@ export default function SupportProgramDetailModal({
             <Row label="금액">
               최소 {formatMoneyShort(data.minBalance)} ~ 최대 {formatMoneyShort(data.maxBalance)}
               {data.type === 'LOAN' && (
-                <span className="text-text-muted ml-2">연 {data.interestRate}%</span>
+                <span className="text-text-muted ml-2">연 {data.interestRate.toFixed(1)}%</span>
               )}
             </Row>
           )}
@@ -127,12 +126,12 @@ export default function SupportProgramDetailModal({
           {data.reqstMthPapersCn && <Row label="신청방법">{data.reqstMthPapersCn}</Row>}
           {data.refrncNm && <Row label="문의처">{data.refrncNm}</Row>}
 
-          <Row label="접수">
-            <span className={cn(isDeadlineNear(data.endDate) && 'text-danger font-semibold')}>
-              {data.endDate ? `~ ${data.endDate} · ` : ''}
-              {formatDeadline(data.endDate)}
-            </span>
-          </Row>
+          {/*
+            'D-5' 와 임박 빨강을 넣지 않는다. 목록·관심 목록이 마감일을 날짜로만 보여주는데
+            상세에서만 남은 날짜로 바뀌면 같은 공고가 화면을 옮길 때마다 다른 말로 읽힌다.
+            연도는 남긴다 — 목록과 달리 여기는 내년 공고인지 확인하는 자리다.
+          */}
+          <Row label="접수">{data.endDate ? `~ ${data.endDate}` : '상시 접수'}</Row>
         </dl>
       )}
     </Modal>

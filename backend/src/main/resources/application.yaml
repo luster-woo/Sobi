@@ -52,6 +52,12 @@ jwt:
   access-exp: ${JWT_ACCESS_EXP:1800000}
   refresh-exp: ${JWT_REFRESH_EXP:1209600000}
 
+oauth:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET}
+    token-uri: https://oauth2.googleapis.com/token
+
 server:
   servlet:
     context-path: /api

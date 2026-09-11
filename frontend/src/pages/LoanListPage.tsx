@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router'
 import { loanColumns } from '@/features/loan/components/loanColumns'
 import LoanFilterBar from '@/features/loan/components/LoanFilterBar'
 import { useLoans } from '@/features/loan/hooks/useLoans'
-import type { ProductStatus } from '@/shared/constants/productStatus'
+import { PRODUCT_STATUS, type ProductStatus } from '@/shared/constants/productStatus'
 import { routeTo } from '@/shared/constants/routes'
 import { useListParams } from '@/shared/hooks/useListParams'
 import EmptyState from '@/shared/ui/EmptyState'
@@ -100,6 +100,15 @@ export function LoanListPage() {
           isLoading={isLoading}
           skeletonRows={8}
           bordered={false}
+          // 줄 높이·여백을 관심 목록과 같게 한다
+          dense
+          /*
+           * 자격이 안 되는 줄은 눌러도 신청할 수 없다. 흐리게 두어 먼저 걸러 보게 한다 —
+           * 관심 목록과 같은 처리다.
+           */
+          rowClassName={(loan) =>
+            loan.status === PRODUCT_STATUS.IMPOSSIBLE ? 'bg-surface-muted' : undefined
+          }
           empty={
             isError ? (
               <EmptyState

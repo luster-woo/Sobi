@@ -31,6 +31,7 @@ public enum ErrorCode {
     EMAIL_ALREADY_REGISTERED(HttpStatus.CONFLICT, "AUTH_014", "이미 이메일로 가입된 계정입니다. 이메일 로그인 후 소셜 계정을 연결해주세요."),
     ALREADY_SOCIAL_ACCOUNT(HttpStatus.CONFLICT, "AUTH_015", "이미 소셜 계정으로 전환된 계정입니다."),
     SOCIAL_EMAIL_MISMATCH(HttpStatus.BAD_REQUEST, "AUTH_016", "계정 이메일과 일치하는 구글 계정만 연결할 수 있습니다."),
+    LOCAL_LOGIN_ONLY(HttpStatus.BAD_REQUEST, "AUTH_017", "소셜 로그인 계정은 비밀번호를 변경할 수 없습니다."),
 
     // business 관련
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_001", "사업자 번호가 일치하는 사업자 정보를 찾을 수 없습니다."),

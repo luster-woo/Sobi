@@ -234,9 +234,14 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResetVerifyResponse verifyEmailForReset(String email, String verificationCode) {
-        // 가입되지 않은 이메일도 인증번호 오류와 동일하게 응답 → 계정 존재 여부 노출 방지
-        if (!userRepository.existsByEmail(email)) {
+
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user == null || user.getDeletedAt() != null) {
             throw new BusinessException(ErrorCode.EMAIL_CODE_EXPIRED);
+        }
+        if (user.getPassword() == null) {
+            throw new BusinessException(ErrorCode.SOCIAL_LOGIN_RESET_NOT_ALLOWED);
         }
 
         String savedCode = emailCodeRepository.find(email);

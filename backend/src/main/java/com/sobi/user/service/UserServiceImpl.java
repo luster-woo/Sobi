@@ -1,5 +1,6 @@
 package com.sobi.user.service;
 
+import com.sobi.auth.repository.RefreshTokenRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
 import com.sobi.user.dto.NotificationResponse;
@@ -19,6 +20,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     @Transactional
@@ -43,5 +45,17 @@ public class UserServiceImpl implements UserService {
         }
 
         user.updatePassword(passwordEncoder.encode(request.getPassword()));
+    }
+
+    @Override
+    @Transactional
+    public void withdraw(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .filter(u -> u.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NO_USER));
+
+        user.withdraw();
+        refreshTokenRepository.delete(userId);      // 세션 무효화
     }
 }

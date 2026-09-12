@@ -7,13 +7,12 @@ import com.sobi.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/v1/user")
@@ -55,4 +54,31 @@ public class UserController {
                         request
                 ));
     }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse<Void>> withdraw(
+            @AuthenticationPrincipal Long userId,
+            HttpServletRequest request) {
+
+        userService.withdraw(userId);
+
+        // 로그인 때와 동일한 path 속성이어야 브라우저가 같은 쿠키로 인식해 삭제됨
+        ResponseCookie deleteCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/api/v1/auth")
+                .maxAge(0)
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "회원 탈퇴가 완료되었습니다.",
+                        request
+                ));
+    }
+
 }

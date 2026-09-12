@@ -8,4 +8,6 @@ public interface UserService {
     NotificationResponse toggleNotification(Long userId);
 
     void changePassword(Long userId, PasswordChangeReqeust request);
+
+    void withdraw(Long userId);
 }

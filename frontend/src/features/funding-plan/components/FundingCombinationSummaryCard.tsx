@@ -27,7 +27,7 @@ export default function FundingCombinationSummaryCard({
   const hidden = combination.items.length - shown.length
 
   const composition = shown
-    .map((item) => `${item.name} ${formatMoneyShort(item.supportAmount)}`)
+    .map((item) => `${item.name} ${formatMoneyShort(item.allocatedAmount)}`)
     .join(' + ')
 
   return (

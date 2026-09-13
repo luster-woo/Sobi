@@ -45,7 +45,7 @@ export default function FundingComparisonTable({
       header: '구성',
       render: (row) =>
         row.combination.items
-          .map((item) => `${item.name} ${formatMoneyShort(item.supportAmount)}`)
+          .map((item) => `${item.name} ${formatMoneyShort(item.allocatedAmount)}`)
           .join(' + '),
     },
     {

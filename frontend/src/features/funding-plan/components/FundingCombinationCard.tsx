@@ -59,7 +59,7 @@ export default function FundingCombinationCard({
           <ol className="flex flex-col">
             {combination.items.map((item, index) => (
               <li
-                key={`${item.type}-${item.id}`}
+                key={`${item.sourceType}-${item.id}`}
                 className="border-border-subtle flex items-center gap-3 border-b py-2.5 last:border-b-0"
               >
                 <span className="bg-bg-canvas text-text-secondary grid size-5 shrink-0 place-items-center rounded-full text-[11px] tabular-nums">
@@ -69,7 +69,7 @@ export default function FundingCombinationCard({
                 <span className="text-body2 text-text min-w-0 flex-1 truncate">{item.name}</span>
 
                 <span className="text-body2 text-text shrink-0 font-semibold tabular-nums">
-                  {formatMoneyShort(item.supportAmount)}
+                  {formatMoneyShort(item.allocatedAmount)}
                 </span>
 
                 <span

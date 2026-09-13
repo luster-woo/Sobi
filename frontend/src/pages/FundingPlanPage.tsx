@@ -27,7 +27,10 @@ export function FundingPlanPage() {
   const rawAmount = Number(searchParams.get('amount'))
   const amount = Number.isFinite(rawAmount) && rawAmount > 0 ? rawAmount : undefined
 
-  const { data: combinations, isLoading, isError } = useFundingRecommend(amount)
+  const { data, isLoading, isError } = useFundingRecommend(amount)
+
+  // 응답이 { targetAmount, recommendedCombinations } 한 덩어리로 온다
+  const combinations = data?.recommendedCombinations
 
   const handleSubmit = (won: number) => {
     setSearchParams({ amount: String(won) })
@@ -64,11 +67,12 @@ export function FundingPlanPage() {
         />
       )}
 
-      {selected && amount && (
+      {selected && data && (
         <FundingCombinationCard
           combination={selected}
           order={selectedIndex + 1}
-          targetAmount={amount}
+          // 주소의 금액이 아니라 서버가 실제로 계산에 쓴 금액을 넘긴다
+          targetAmount={data.targetAmount}
         />
       )}
 

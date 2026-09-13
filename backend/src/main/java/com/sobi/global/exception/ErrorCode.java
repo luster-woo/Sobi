@@ -47,7 +47,11 @@ public enum ErrorCode {
     MARKET_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "MARKET_003", "해당 상권에 집계된 업종 데이터가 없습니다."),
 
     // 외부 API
-    FINANCE_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_001", "금융망 API 호출에 실패했습니다.");
+    FINANCE_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_001", "금융망 API 호출에 실패했습니다."),
+
+    // funding 관련
+    TARGET_AMOUNT_ERROR(HttpStatus.BAD_REQUEST, "FUNDING_001", "목표 금액은 0보다 커야합니다.");
+
 
 
     private final HttpStatus status;

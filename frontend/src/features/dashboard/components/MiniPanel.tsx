@@ -73,7 +73,10 @@ export default function MiniPanel({
 
   if (to) {
     return (
-      <Link to={to} className={cn(FRAME, 'hover:border-border-strong transition-colors', className)}>
+      <Link
+        to={to}
+        className={cn(FRAME, 'hover:border-border-strong transition-colors', className)}
+      >
         {body}
       </Link>
     )

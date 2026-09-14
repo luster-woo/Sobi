@@ -8,8 +8,8 @@ import type { LoginRequest } from '@/shared/types'
 /**
  * 로그인 후 스토어를 채운다.
  *
- * `/auth/login` 응답에 유저 정보가 4개 필드만 오거나(명세) 아예 없어서(현재 목),
- * 로그인 직후 `/auth/me` 를 한 번 더 부른다. 그 호출에 토큰이 필요하므로
+ * `/auth/login` 응답에 유저 정보가 4개 필드만 오거나(백엔드) 아예 없어서(현재 목),
+ * 로그인 직후 `/user/me` 를 한 번 더 부른다. 그 호출에 토큰이 필요하므로
  * `setAccessToken` 을 먼저 하고 `setSession` 으로 마무리한다.
  */
 export function useLogin() {

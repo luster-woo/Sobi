@@ -157,6 +157,7 @@ export function ApplicationApplyPage() {
               onFileError={(message) => showToast(message, 'warning')}
               onRequestDraft={handleRequestDraft}
               onDownload={handleDownload}
+              readOnly={!isEditable}
             />
 
             {isEditable ? (

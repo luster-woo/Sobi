@@ -18,6 +18,13 @@ interface ApplicationDocumentListProps {
   onRequestDraft: (applicationDocumentId: number) => void
   /** 서식 원본·초안 내려받기 */
   onDownload: (url: string) => void
+  /**
+   * 신청이 접수된 뒤라 서류를 더 바꿀 수 없는 상태.
+   *
+   * 서버가 거절할 요청을 보낼 수 있게 두면 사용자는 이유 모를 실패를 본다.
+   * 내려받기는 남긴다 — 뭐를 냈는지 다시 볼 수 있어야 한다.
+   */
+  readOnly?: boolean
 }
 
 /**
@@ -35,6 +42,7 @@ export default function ApplicationDocumentList({
   onFileError,
   onRequestDraft,
   onDownload,
+  readOnly = false,
 }: ApplicationDocumentListProps) {
   const { verify, write } = splitByType(documents)
 
@@ -52,6 +60,7 @@ export default function ApplicationDocumentList({
                 description={describeDocument(doc)}
                 accept={UPLOAD_ACCEPT}
                 maxSizeMb={UPLOAD_MAX_SIZE_MB}
+                readOnly={readOnly}
                 onSelectFile={(file) => onUpload(doc.applicationDocumentId, file)}
                 onFileError={onFileError}
               />
@@ -79,8 +88,13 @@ export default function ApplicationDocumentList({
                 onDownloadDraft={
                   doc.draftUrl ? () => onDownload(doc.draftUrl as string) : undefined
                 }
-                onStartDraft={() => onRequestDraft(doc.applicationDocumentId)}
-                onSelectFile={(file) => onUpload(doc.applicationDocumentId, file)}
+                // 읽기 전용이면 핸들러를 안 넘긴다. 그러면 그 버튼들이 사라진다
+                onStartDraft={
+                  readOnly ? undefined : () => onRequestDraft(doc.applicationDocumentId)
+                }
+                onSelectFile={
+                  readOnly ? undefined : (file) => onUpload(doc.applicationDocumentId, file)
+                }
                 onFileError={onFileError}
               />
             ))}

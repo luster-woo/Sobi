@@ -6,7 +6,6 @@ import type {
 } from '@/features/application/model/types'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
-import type { ApiResponse } from '@/shared/types'
 
 /**
  * 신청 건 생성.
@@ -14,32 +13,28 @@ import type { ApiResponse } from '@/shared/types'
  * 대상은 body 가 아니라 쿼리로 보낸다(`?type=LOAN&programId=2`). 서버가 이 시점에
  * 서류 행을 미리 깔아 주기 때문에, 응답의 documents 에는 아직 안 올린 서류도 들어 있다.
  * 금액·계좌는 여기서 보내지 않는다 — 화면에서 입력받아 최종 신청 때 함께 보낸다.
+ *
+ * 봉투는 `client.ts` 인터셉터가 벗긴다. 여기서는 알맹이 타입만 쓴다.
  */
 export async function createApplication(params: CreateApplicationParams) {
-  const { data } = await api.post<ApiResponse<ApplicationDetail>>(
-    endpoints.application.create,
-    null,
-    { params },
-  )
-  return data.data
+  const { data } = await api.post<ApplicationDetail>(endpoints.application.create, null, { params })
+  return data
 }
 
 /** 신청 상세. 검증이 비동기라 이 응답을 폴링해서 서류 상태를 갱신한다 */
 export async function getApplicationDetail(applicationId: number) {
-  const { data } = await api.get<ApiResponse<ApplicationDetail>>(
-    endpoints.application.detail(applicationId),
-  )
-  return data.data
+  const { data } = await api.get<ApplicationDetail>(endpoints.application.detail(applicationId))
+  return data
 }
 
 /** 신청 취소. 신청 건과 올린 서류가 함께 삭제된다 — 되돌릴 수 없다 */
 export async function cancelApplication(applicationId: number) {
-  await api.delete<ApiResponse<null>>(endpoints.application.cancel(applicationId))
+  await api.delete<null>(endpoints.application.cancel(applicationId))
 }
 
 /** 최종 신청. 서류가 다 끝난 뒤에만 호출한다 */
 export async function submitApplication(body: SubmitApplicationBody) {
-  await api.post<ApiResponse<null>>(endpoints.application.submit, body)
+  await api.post<null>(endpoints.application.submit, body)
 }
 
 /**
@@ -49,7 +44,7 @@ export async function submitApplication(body: SubmitApplicationBody) {
  * 바뀐 뒤 폴링으로 draftUrl 을 기다린다.
  */
 export async function requestDraft(applicationDocumentId: number) {
-  await api.post<ApiResponse<null>>(endpoints.application.requestDraft, { applicationDocumentId })
+  await api.post<null>(endpoints.application.requestDraft, { applicationDocumentId })
 }
 
 /**
@@ -70,5 +65,5 @@ export async function uploadDocument({ applicationDocumentId, file }: UploadDocu
     new Blob([JSON.stringify({ applicationDocumentId })], { type: 'application/json' }),
   )
 
-  await api.post<ApiResponse<null>>(endpoints.application.uploadDocument, formData)
+  await api.post<null>(endpoints.application.uploadDocument, formData)
 }

@@ -25,6 +25,11 @@ interface DocumentUploadItemProps {
   onFileError?: (message: string) => void
   accept?: string[]
   maxSizeMb?: number
+  /**
+   * 읽기 전용. 신청이 접수된 뒤처럼 더 손덩 수 없는 때 켭니다.
+   * 미제출·검증 실패여도 올리기를 열지 않습니다.
+   */
+  readOnly?: boolean
   className?: string
 }
 
@@ -56,10 +61,11 @@ export default function DocumentUploadItem({
   onFileError,
   accept,
   maxSizeMb,
+  readOnly = false,
   className,
 }: DocumentUploadItemProps) {
   const isEmpty = status === 'EMPTY'
-  const isUploadable = isEmpty || status === 'FAILED'
+  const isUploadable = !readOnly && (isEmpty || status === 'FAILED')
 
   const body = (
     <span className="flex w-full items-center gap-4">
@@ -77,7 +83,7 @@ export default function DocumentUploadItem({
         {SUBMIT_DOCUMENT_STATUS_LABEL[status]}
       </span>
 
-      {status === 'FAILED' && (
+      {status === 'FAILED' && !readOnly && (
         /*
          * 실제 button 이 아니라 span 입니다. 바깥이 이미 button 이라 중첩을 피해야 하고,
          * 클릭은 어차피 바깥으로 전달돼 파일 선택이 열립니다.

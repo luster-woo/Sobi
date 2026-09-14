@@ -9,6 +9,6 @@ import { endpoints } from '@/shared/api/endpoints'
  * 상태라서 여기서 삼키지 않고 그대로 던진다 — 판단은 호출하는 훅이 한다.
  */
 export async function getBusinessSummary() {
-  const { data } = await api.get<BusinessSummary>(endpoints.business.meSummary)
+  const { data } = await api.get<BusinessSummary>(endpoints.business.me)
   return data
 }

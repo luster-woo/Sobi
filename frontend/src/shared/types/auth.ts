@@ -74,8 +74,30 @@ export interface SocialLinkResponse {
   provider: string
 }
 
+/**
+ * 이메일 중복 확인 결과.
+ *
+ * ⚠️ `available` 이 아니라 `isDuplicate` 이고 **의미가 반대**다.
+ *    백엔드가 `userRepository.existsByEmail()` 결과를 그대로 담는다 —
+ *    `true` 면 **이미 쓰는 이메일**이라 가입할 수 없다.
+ */
 export interface EmailCheckResponse {
-  available: boolean
+  isDuplicate: boolean
+}
+
+/** 인증번호 검증 결과. 실패는 200 이 아니라 400(AUTH_003 · AUTH_004)으로 온다 */
+export interface EmailVerifyResponse {
+  verified: boolean
+}
+
+export interface EmailSendRequest {
+  email: string
+}
+
+export interface EmailVerifyRequest {
+  email: string
+  /** 숫자 6자리 **문자열**. 백엔드가 `^\d{6}$` 로 검증한다 */
+  verificationCode: string
 }
 
 export interface OAuthLoginRequest {

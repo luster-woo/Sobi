@@ -5,8 +5,12 @@ import AuthCodeField from '@/features/auth/components/AuthCodeField'
 import GoogleAuthButton from '@/features/auth/components/GoogleAuthButton'
 import OrDivider from '@/features/auth/components/OrDivider'
 import { useCountdown } from '@/features/auth/hooks/useCountdown'
+import { useSendEmailCode, useSignUp, useVerifyEmailCode } from '@/features/auth/hooks/useSignUp'
+import { buildAuthorizeUrl, isGoogleOAuthConfigured } from '@/features/auth/model/googleOAuth'
+import { ERROR_CODE, getErrorCode, getErrorMessage } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
 import { VALIDATION_MESSAGE } from '@/shared/constants/validation'
+import { useUiStore } from '@/shared/lib/store/useUiStore'
 import Button from '@/shared/ui/Button'
 import Input from '@/shared/ui/Input'
 import {
@@ -17,7 +21,7 @@ import {
   validateRequired,
 } from '@/shared/utils/validators'
 
-/** 인증번호 유효시간(초). 서버 정책이 확정되면 맞춰야 한다 */
+/** 인증번호 유효시간(초). 서버 Redis TTL 과 맞춰야 한다 */
 const CODE_TTL_SECONDS = 300
 
 const MESSAGE = {
@@ -44,38 +48,86 @@ export function SignUpPage() {
   const [errors, setErrors] = useState<Errors>({})
 
   const { remaining, running, start, stop } = useCountdown()
+  const showToast = useUiStore((s) => s.showToast)
+
+  const { mutate: sendCode, isPending: sending } = useSendEmailCode()
+  const { mutate: verifyCode, isPending: verifying } = useVerifyEmailCode()
+  const { mutate: submitSignUp, isPending: submitting } = useSignUp()
 
   const clearError = (field: keyof Errors) =>
     setErrors((previous) => ({ ...previous, [field]: undefined }))
 
+  const setError = (field: keyof Errors, message: string) =>
+    setErrors((previous) => ({ ...previous, [field]: message }))
+
   const handleSendCode = () => {
     const emailError = validateEmail(email)
     if (emailError) {
-      setErrors((previous) => ({ ...previous, email: emailError }))
+      setError('email', emailError)
       return
     }
 
-    // TODO(136): GET /auth/email/check?email= → data.isDuplication 이 true 면
-    //   VALIDATION_MESSAGE.emailDuplicated 를 email 에 세우고 중단.
-    //   통과하면 POST /auth/email/send
-    setCodeSent(true)
-    setVerified(false)
-    setCode('')
-    start(CODE_TTL_SECONDS)
+    sendCode(email, {
+      onSuccess: (available) => {
+        // 중복은 에러가 아니라 정상 응답이다. 메일도 안 나갔으니 코드 칸을 열지 않는다
+        if (!available) {
+          setError('email', VALIDATION_MESSAGE.emailDuplicated)
+          return
+        }
+
+        setCodeSent(true)
+        setVerified(false)
+        setCode('')
+        start(CODE_TTL_SECONDS)
+      },
+      onError: (error) => {
+        // 1분 쿨다운(429). 남은 시간을 서버가 주지 않아 문구로만 안내한다
+        const message =
+          getErrorCode(error) === ERROR_CODE.MAIL_COOLDOWN
+            ? '잠시 후 다시 시도해 주세요.'
+            : getErrorMessage(error)
+
+        setError('email', message)
+      },
+    })
   }
 
   const handleVerifyCode = () => {
     const codeError = validateAuthCode(code)
     if (codeError) {
-      setErrors((previous) => ({ ...previous, code: codeError }))
+      setError('code', codeError)
       return
     }
 
-    // TODO(136): POST /auth/email/verify { email, verificationCode }
-    //   코드가 틀려도 200 + data.verified: false 로 오므로 토스트가 아니라
-    //   VALIDATION_MESSAGE.authCodeInvalid 를 code 에 세운다
-    setVerified(true)
-    stop()
+    verifyCode(
+      { email, verificationCode: code },
+      {
+        onSuccess: () => {
+          setVerified(true)
+          stop()
+        },
+        /*
+         * 만료·불일치가 200 이 아니라 400 으로 온다. 토스트가 아니라 코드 칸 밑에
+         * 붙여야 어디를 고쳐야 하는지 바로 보인다.
+         */
+        onError: (error) => {
+          const code = getErrorCode(error)
+
+          if (code === ERROR_CODE.CODE_EXPIRED) {
+            setError('code', '인증 시간이 지났어요. 코드를 다시 받아주세요.')
+            stop()
+            return
+          }
+
+          setError(
+            'code',
+            code === ERROR_CODE.CODE_MISMATCH
+              ? VALIDATION_MESSAGE.authCodeInvalid
+              : getErrorMessage(error),
+          )
+        },
+      },
+    )
   }
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -92,9 +144,33 @@ export function SignUpPage() {
     setErrors(next)
     if (Object.values(next).some(Boolean)) return
 
-    // TODO(136): POST /auth/signup { email, password, name }
-    //   응답에 토큰이 없어서 자동 로그인이 안 된다 — 성공 토스트 후 로그인 화면으로 보낸다
-    navigate(ROUTES.LOGIN)
+    submitSignUp(
+      { email, password, name },
+      {
+        // 응답에 토큰이 없어 자동 로그인이 안 된다. 로그인 화면으로 보낸다
+        onSuccess: () => {
+          showToast('가입이 완료됐어요. 로그인해 주세요.')
+          navigate(ROUTES.LOGIN, { replace: true })
+        },
+        onError: (error) => {
+          const code = getErrorCode(error)
+
+          if (code === ERROR_CODE.EMAIL_DUPLICATED) {
+            setError('email', VALIDATION_MESSAGE.emailDuplicated)
+            return
+          }
+
+          // 인증을 건너뛰었거나 서버 쪽 인증 기록이 만료된 경우
+          if (code === ERROR_CODE.EMAIL_NOT_VERIFIED) {
+            setVerified(false)
+            setError('code', MESSAGE.needVerify)
+            return
+          }
+
+          showToast(getErrorMessage(error), 'danger')
+        },
+      },
+    )
   }
 
   return (
@@ -149,6 +225,7 @@ export function SignUpPage() {
             <Button
               variant="outline"
               onClick={handleSendCode}
+              loading={sending}
               disabled={verified || running}
               className="w-[116px] shrink-0 whitespace-nowrap"
             >
@@ -167,7 +244,7 @@ export function SignUpPage() {
               clearError('code')
             }}
             remaining={remaining}
-            actionLabel="확인"
+            actionLabel={verifying ? '확인 중' : '확인'}
             onAction={handleVerifyCode}
             verified={verified}
             error={errors.code}
@@ -209,15 +286,21 @@ export function SignUpPage() {
           }
         />
 
-        <Button type="submit" className="mt-5 w-full">
+        <Button type="submit" loading={submitting} className="mt-5 w-full">
           가입하기
         </Button>
       </form>
 
       <OrDivider />
 
-      {/* TODO(136): /auth/oauth/{provider} 명세가 다른 프로젝트 템플릿이라 비워둔다 */}
-      <GoogleAuthButton label="가입" />
+      {/* 구글은 가입·로그인이 같은 흐름이다. 처음이면 서버가 isNewUser 로 알려준다 */}
+      <GoogleAuthButton
+        label="가입"
+        disabled={!isGoogleOAuthConfigured()}
+        onClick={() => {
+          window.location.assign(buildAuthorizeUrl())
+        }}
+      />
     </div>
   )
 }

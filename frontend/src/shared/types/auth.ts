@@ -100,6 +100,24 @@ export interface EmailVerifyRequest {
   verificationCode: string
 }
 
+/**
+ * 비밀번호 재설정용 인증번호 검증 결과.
+ *
+ * 가입용(`EmailVerifyResponse`)과 달리 `resetToken` 이 같이 온다. 이 토큰을 들고
+ * `POST /auth/password/reset` 을 부른다 — **1회용이고 Redis TTL 이 있다.**
+ */
+export interface ResetVerifyResponse {
+  verified: boolean
+  resetToken: string
+}
+
+export interface PasswordResetRequest {
+  /** `/auth/email/verify/reset` 응답으로 받은 값 */
+  resetToken: string
+  /** 8~20자. 백엔드가 @Size(min=8, max=20) 로 검증한다 */
+  newPassword: string
+}
+
 export interface OAuthLoginRequest {
   /** 소셜 제공자 리다이렉트로 받은 인가 코드 */
   code: string

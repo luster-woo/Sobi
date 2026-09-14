@@ -55,12 +55,13 @@ export function LoginPage() {
         onSuccess: () => navigate(from, { replace: true }),
         onError: (error) => {
           /*
-           * 401 이 두 가지로 온다. AUTH_009(비밀번호 틀림)만 폼 에러로 붙이고,
-           * 나머지(네트워크·500 등)는 서버 문구를 그대로 보여준다.
+           * AUTH_009 하나에 세 상황이 들어온다 — 비밀번호 틀림, 없는 계정, 소셜 계정.
+           * 서버가 일부러 뭉쳐서 화면도 구분하지 않는다. 나머지(네트워크·500)는
+           * 서버 문구를 그대로 보여준다.
            */
           const message =
             getErrorCode(error) === ERROR_CODE.LOGIN_FAILED
-              ? '이메일 또는 비밀번호가 올바르지 않습니다.'
+              ? VALIDATION_MESSAGE.loginFailed
               : getErrorMessage(error)
 
           setSignInError(message)

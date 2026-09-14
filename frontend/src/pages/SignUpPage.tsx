@@ -81,10 +81,9 @@ export function SignUpPage() {
         start(CODE_TTL_SECONDS)
       },
       onError: (error) => {
-        // 1분 쿨다운(429). 남은 시간을 서버가 주지 않아 문구로만 안내한다
         const message =
           getErrorCode(error) === ERROR_CODE.MAIL_COOLDOWN
-            ? '잠시 후 다시 시도해 주세요.'
+            ? VALIDATION_MESSAGE.emailSendCooldown
             : getErrorMessage(error)
 
         setError('email', message)
@@ -111,17 +110,19 @@ export function SignUpPage() {
          * 붙여야 어디를 고쳐야 하는지 바로 보인다.
          */
         onError: (error) => {
-          const code = getErrorCode(error)
+          // 입력값 state 인 `code` 와 이름이 겹치지 않게 errorCode 로 둔다
+          const errorCode = getErrorCode(error)
 
-          if (code === ERROR_CODE.CODE_EXPIRED) {
-            setError('code', '인증 시간이 지났어요. 코드를 다시 받아주세요.')
+          // 가입은 계정이 없는 게 정상이라 AUTH_003 이 진짜 만료뿐이다. 그대로 안내한다
+          if (errorCode === ERROR_CODE.CODE_EXPIRED) {
+            setError('code', VALIDATION_MESSAGE.authCodeExpired)
             stop()
             return
           }
 
           setError(
             'code',
-            code === ERROR_CODE.CODE_MISMATCH
+            errorCode === ERROR_CODE.CODE_MISMATCH
               ? VALIDATION_MESSAGE.authCodeInvalid
               : getErrorMessage(error),
           )
@@ -153,20 +154,27 @@ export function SignUpPage() {
           navigate(ROUTES.LOGIN, { replace: true })
         },
         onError: (error) => {
-          const code = getErrorCode(error)
+          const errorCode = getErrorCode(error)
 
-          if (code === ERROR_CODE.EMAIL_DUPLICATED) {
+          // 발송 전에 확인했지만 그 사이 누가 같은 주소로 가입할 수 있다
+          if (errorCode === ERROR_CODE.EMAIL_DUPLICATED) {
             setError('email', VALIDATION_MESSAGE.emailDuplicated)
             return
           }
 
-          // 인증을 건너뛰었거나 서버 쪽 인증 기록이 만료된 경우
-          if (code === ERROR_CODE.EMAIL_NOT_VERIFIED) {
+          /*
+           * 화면은 인증을 통과했는데 서버 쪽 기록이 없는 경우. 인증 후 한참 뒤에
+           * 가입 버튼을 누르면 서버 기록이 먼저 만료된다. 인증 단계로 되돌리되
+           * 이전 코드는 지운다 — 이미 소진된 값이다.
+           */
+          if (errorCode === ERROR_CODE.EMAIL_NOT_VERIFIED) {
             setVerified(false)
-            setError('code', MESSAGE.needVerify)
+            setCode('')
+            setError('code', VALIDATION_MESSAGE.authCodeRecordExpired)
             return
           }
 
+          // 금융망 가입(EXTERNAL_001) 실패 등. 어느 칸의 문제가 아니라 토스트가 맞다
           showToast(getErrorMessage(error), 'danger')
         },
       },
@@ -214,8 +222,12 @@ export function SignUpPage() {
                 setEmail(event.target.value)
                 setCodeSent(false)
                 setVerified(false)
+                setCode('')
                 stop()
+
+                // 이메일을 바꾸면 이전 주소로 받은 코드는 의미가 없다. 입력값과 에러를 같이 지운다
                 clearError('email')
+                clearError('code')
               }}
               error={errors.email}
               helperText={codeSent && !errors.email ? MESSAGE.emailAvailable : undefined}

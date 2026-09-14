@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router'
 import AuthCodeField from '@/features/auth/components/AuthCodeField'
 import PasswordStrengthMeter from '@/features/auth/components/PasswordStrengthMeter'
 import { useCountdown } from '@/features/auth/hooks/useCountdown'
+import { useSendResetCode, useVerifyResetCode } from '@/features/auth/hooks/usePasswordReset'
+import { ERROR_CODE, getErrorCode, getErrorMessage } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
 import { VALIDATION_MESSAGE } from '@/shared/constants/validation'
 import Button from '@/shared/ui/Button'
@@ -15,7 +17,7 @@ import {
   validatePasswordConfirm,
 } from '@/shared/utils/validators'
 
-/** 인증번호 유효시간(초). 서버 정책이 확정되면 맞춰야 한다 */
+/** 인증번호 유효시간(초). 서버 Redis TTL 과 맞춰야 한다 */
 const CODE_TTL_SECONDS = 300
 
 const MESSAGE = {
@@ -50,39 +52,101 @@ export function PasswordResetPage() {
 
   const { remaining, running, start, stop } = useCountdown()
 
+  const { mutate: sendCode, isPending: sending } = useSendResetCode()
+  const { mutate: verifyCode, isPending: verifying } = useVerifyResetCode()
+
   const verified = resetToken !== null
 
   const clearError = (field: keyof Errors) =>
     setErrors((previous) => ({ ...previous, [field]: undefined }))
 
+  const setError = (field: keyof Errors, message: string) =>
+    setErrors((previous) => ({ ...previous, [field]: message }))
+
   const handleSendCode = () => {
     const emailError = validateEmail(email)
     if (emailError) {
-      setErrors((previous) => ({ ...previous, email: emailError }))
+      setError('email', emailError)
       return
     }
 
-    // TODO(138): POST /auth/email/send { email }
-    //   가입되지 않은 이메일이어도 계정 존재 여부가 드러나지 않게 같은 응답을 준다.
-    //   서버가 그렇게 처리하는지 확인 필요
-    setCodeSent(true)
-    setResetToken(null)
-    setCode('')
-    start(CODE_TTL_SECONDS)
+    sendCode(email, {
+      onSuccess: (registered) => {
+        // 가입되지 않은 주소면 메일도 안 나갔다. 코드 칸을 열지 않고 이메일에 붙인다
+        if (!registered) {
+          setError('email', VALIDATION_MESSAGE.emailNotRegistered)
+          return
+        }
+
+        setCodeSent(true)
+        setResetToken(null)
+        setCode('')
+        start(CODE_TTL_SECONDS)
+      },
+      onError: (error) => {
+        const message =
+          getErrorCode(error) === ERROR_CODE.MAIL_COOLDOWN
+            ? VALIDATION_MESSAGE.emailSendCooldown
+            : getErrorMessage(error)
+
+        setError('email', message)
+      },
+    })
   }
 
   const handleVerifyCode = () => {
     const codeError = validateAuthCode(code)
     if (codeError) {
-      setErrors((previous) => ({ ...previous, code: codeError }))
+      setError('code', codeError)
       return
     }
 
-    // TODO(138): POST /auth/email/verify/reset { email, verificationCode }
-    //   → data { verified, resetToken }. verified 가 false 면 resetToken 이 null 이므로
-    //   VALIDATION_MESSAGE.authCodeInvalid 를 code 에 세운다
-    setResetToken('mock-reset-token')
-    stop()
+    verifyCode(
+      { email, verificationCode: code },
+      {
+        onSuccess: (token) => {
+          setResetToken(token)
+          stop()
+        },
+        onError: (error) => {
+          const errorCode = getErrorCode(error)
+
+          /*
+           * 소셜 계정은 비밀번호가 없어 재설정할 것이 없다. 유일하게 이메일 칸에
+           * 붙이는 에러다 — 고칠 것이 인증번호가 아니라 로그인 방법이라서다.
+           */
+          if (errorCode === ERROR_CODE.SOCIAL_RESET_NOT_ALLOWED) {
+            setError(
+              'email',
+              'Google로 가입한 계정이에요. 로그인 화면에서 Google로 계속하기를 눌러주세요.',
+            )
+            stop()
+            return
+          }
+
+          /*
+           * ⚠️ AUTH_003 이 두 상황을 겸한다 — 진짜 만료와 **없는 계정**이다.
+           *    서버가 가입 여부를 숨기려고 같은 코드를 쓰기 때문에 화면도 구분할 수 없다.
+           *    "만료됐다" 로만 쓰면 방금 코드를 받은 사람에게 앞뒤가 안 맞아서
+           *    두 상황을 다 포괄하는 문구를 쓴다.
+           *
+           *    카운트다운은 멈추지 않는다. 실제로는 아직 유효할 수 있고,
+           *    멈춰버리면 "만료됐다" 를 화면이 단정하는 꼴이 된다.
+           */
+          if (errorCode === ERROR_CODE.CODE_EXPIRED) {
+            setError('code', VALIDATION_MESSAGE.authCodeInvalidOrExpired)
+            return
+          }
+
+          setError(
+            'code',
+            errorCode === ERROR_CODE.CODE_MISMATCH
+              ? VALIDATION_MESSAGE.authCodeInvalid
+              : getErrorMessage(error),
+          )
+        },
+      },
+    )
   }
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -131,8 +195,16 @@ export function PasswordResetPage() {
                 setEmail(event.target.value)
                 setCodeSent(false)
                 setResetToken(null)
+                setCode('')
                 stop()
+
+                /*
+                 * 이메일을 바꾸면 이전 주소로 받은 코드는 의미가 없다. 입력값과 에러를
+                 * 같이 지운다 — 안 지우면 코드 칸이 비었는데 "인증번호가 올바르지 않다"
+                 * 가 남아 방금 뭘 잘못했나 싶어진다.
+                 */
                 clearError('email')
+                clearError('code')
               }}
               error={errors.email}
             />
@@ -140,6 +212,7 @@ export function PasswordResetPage() {
             <Button
               variant="outline"
               onClick={handleSendCode}
+              loading={sending}
               disabled={verified || running}
               className="w-[116px] shrink-0 whitespace-nowrap"
             >
@@ -158,7 +231,7 @@ export function PasswordResetPage() {
               clearError('code')
             }}
             remaining={remaining}
-            actionLabel="확인"
+            actionLabel={verifying ? '확인 중' : '확인'}
             onAction={handleVerifyCode}
             verified={verified}
             error={errors.code}

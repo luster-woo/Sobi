@@ -23,6 +23,10 @@ export const endpoints = {
     emailSend: '/auth/email/send',
     /** 가입용 인증번호 검증. 이걸 통과해야 signup 이 된다 */
     emailVerify: '/auth/email/verify',
+    /** 재설정용 인증번호 검증. 가입용과 달리 resetToken 을 돌려준다 */
+    emailVerifyReset: '/auth/email/verify/reset',
+    /** 비밀번호 재설정. resetToken 과 새 비밀번호를 보낸다 */
+    passwordReset: '/auth/password/reset',
     /** 소셜 로그인·회원가입. 응답은 `/auth/login` 과 같은 모양 */
     oauth: (provider: string) => `/auth/oauth/${provider}`,
     /** 로컬 → 소셜 전환. **인증 필요** */

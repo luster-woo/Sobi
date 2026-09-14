@@ -5,7 +5,7 @@ export const PAGE_TITLES: Readonly<Record<string, string>> = {
   [ROUTES.DASHBOARD]: '대시보드',
   [ROUTES.MARKET_ANALYSIS]: '상권 분석',
   [ROUTES.LOANS]: '대출',
-  [ROUTES.SUPPORT_PROGRAMS]: '지원금',
+  [ROUTES.SUPPORT_PROGRAMS]: '지원사업',
   [ROUTES.FUNDING_PLAN]: '자금 조합',
   [ROUTES.LOAN_REPAYMENTS]: '상환 관리',
   [ROUTES.APPLICATIONS]: '신청 현황',

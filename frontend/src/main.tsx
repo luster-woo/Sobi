@@ -6,15 +6,17 @@ import { createRoot } from 'react-dom/client'
 import App from '@/app/App'
 
 /**
- * MSW를 켤지 정합니다.
+ * MSW를 켤지 정합니다. `VITE_USE_MOCK=true` 일 때만 켜집니다.
  *
- * 개발 중에는 항상 켜고, 배포에서는 `VITE_USE_MOCK=true` 일 때만 켭니다.
- * 백엔드가 아직 없어 배포 사이트에서도 목으로 시연해야 하기 때문입니다.
+ * 예전에는 `import.meta.env.DEV ||` 가 앞에 붙어 개발 모드에서 무조건 켜졌습니다.
+ * 그 상태로는 실서버로 요청이 나갈 수 없어 연동을 검증할 방법이 없었습니다.
  *
- * ⚠️ 이 플래그가 켜지면 목 코드가 번들에 포함됩니다. 백엔드가 붙으면 배포 환경변수에서
- *    지우세요 — 코드는 그대로 두면 됩니다.
+ * 목을 켠 채로 일부 도메인만 실서버로 보내려면 `VITE_MOCK_DOMAINS` 를 씁니다
+ * (`mocks/handlers/index.ts`).
+ *
+ * ⚠️ 켜지면 목 코드와 서비스워커가 번들에 포함됩니다. 배포에서는 꺼야 합니다.
  */
-const useMock = import.meta.env.DEV || import.meta.env.VITE_USE_MOCK === 'true'
+const useMock = import.meta.env.VITE_USE_MOCK === 'true'
 
 async function enableMocking() {
   if (!useMock) return

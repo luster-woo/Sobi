@@ -4,6 +4,7 @@ import {
   BIZ_NO_REGEX,
   EMAIL_REGEX,
   ISO_DATE_REGEX,
+  PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   PASSWORD_REGEX,
   PHONE_DIGITS_REGEX,
@@ -35,8 +36,10 @@ export function validateEmail(value: string): string | null {
   return null
 }
 
+/** 백엔드 `@Size(min = 8, max = 20)` + 조합 규칙과 같다 */
 export function validatePassword(value: string): string | null {
   if (value.length < PASSWORD_MIN_LENGTH) return VALIDATION_MESSAGE.passwordTooShort
+  if (value.length > PASSWORD_MAX_LENGTH) return VALIDATION_MESSAGE.passwordTooLong
   if (!PASSWORD_REGEX.test(value)) return VALIDATION_MESSAGE.passwordWeak
   return null
 }

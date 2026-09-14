@@ -222,6 +222,52 @@ export const authHandlers = [
   }),
 
   /*
+   * POST /api/v1/auth/email/verify/reset
+   *
+   * 가입용과 다른 점 둘.
+   *   - 계정이 실제로 있어야 한다. 없는 계정·탈퇴 계정도 **AUTH_003** 으로 온다 —
+   *     계정 존재 여부를 숨기려고 인증번호 만료와 같은 코드를 쓴다
+   *   - 소셜 계정은 **AUTH_018**. 비밀번호가 없어 재설정할 것이 없다
+   */
+  http.post('/api/v1/auth/email/verify/reset', async ({ request }) => {
+    const { email, verificationCode } = (await request.json()) as {
+      email?: string
+      verificationCode?: string
+    }
+    const path = '/api/v1/auth/email/verify/reset'
+
+    if (!email || !verificationCode) {
+      return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
+    }
+
+    const account = findAccount(email)
+
+    if (!account) {
+      return fail(400, 'AUTH_003', '인증번호가 만료되었거나 존재하지 않습니다.', path)
+    }
+
+    // 목에서 소셜 계정은 비밀번호를 빈 문자열로 둔다
+    if (!account.password) {
+      return fail(
+        400,
+        'AUTH_018',
+        '소셜 로그인으로 가입된 계정입니다. 소셜 로그인으로 시도해주세요.',
+        path,
+      )
+    }
+
+    if (verificationCode !== MOCK_VERIFICATION_CODE) {
+      return fail(400, 'AUTH_004', '인증번호가 일치하지 않습니다', path)
+    }
+
+    return ok(
+      { verified: true, resetToken: `mock-reset-${String(Date.now())}` },
+      '이메일 인증번호 검증 성공',
+      { path },
+    )
+  }),
+
+  /*
    * POST /api/v1/auth/signup
    *
    * 응답에 토큰이 없다. 서버가 인증 완료 여부를 따로 들고 있다가 확인한다.
@@ -259,8 +305,12 @@ export const authHandlers = [
 
     const account = findAccount(email)
 
-    // 어느 쪽이 틀렸는지 알려주지 않는다. 가입된 이메일을 알아낼 수 있다
-    if (!account || account.password !== password) {
+    /*
+     * 어느 쪽이 틀렸는지 알려주지 않는다. 서버도 없는 계정·비밀번호 불일치·소셜 계정
+     * (password null)을 전부 AUTH_009 하나로 뭉친다. 목에서 소셜은 password 가 빈 문자열이라
+     * `!account.password` 로 걸린다.
+     */
+    if (!account || !account.password || account.password !== password) {
       return fail(
         401,
         'AUTH_009',

@@ -1,0 +1,279 @@
+{
+  "version": "2026-09-14",
+  "profiles": [
+    {
+      "id": "P01",
+      "desc": "서울 마포 한식음식점, 업력 8년, 3인, 연매출 2.4억",
+      "user": {
+        "region": "서울",
+        "address": "서울특별시 마포구 월드컵북로 120",
+        "business_code": "CS100001",
+        "employee_count": 3,
+        "open_date": "2018-03-02",
+        "annual_revenue": 240000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000123334", "label": "eligible", "why": "무료 법률·세무·노무 간편상담 — 전국, 제외업종 조항 없음, 소상공인이면 누구나"},
+        {"pblancId": "PBLN_000000000122273", "label": "eligible", "why": "찾아가는 1:1 디지털 교육 — 전국, 5인 미만 충족, 표준 제외업종 아님"},
+        {"pblancId": "PBLN_000000000125880", "label": "eligible", "why": "2차 스마트상점 기술보급 — 전국, 정상 영업 중 점포형 소상공인, 제외업종 아님"},
+        {"pblancId": "PBLN_000000000125603", "label": "eligible", "why": "소담스퀘어 in 부산 제품사진 촬영 — 지역 제한 없는 국내 소상공인 대상, 5인 미만·무점포 아님 충족"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000126232", "label": "ineligible", "why": "시군구 불일치 — 태그는 서울 시도 단위지만 본문은 중랑구 관내 한정, 마포구 탈락"},
+        {"pblancId": "PBLN_000000000125560", "label": "ineligible", "why": "시군구 불일치 — 태그에 시군구 토큰이 없어 SQL은 통과하나 본문은 서초구 소재 한정"},
+        {"pblancId": "PBLN_000000000123844", "label": "unknown", "why": "애매 — 중장년(만40세 이상) 대표자가 필수인데 user 스키마에 대표자 연령이 없어 판정 불가"}
+      ]
+    },
+    {
+      "id": "P02",
+      "desc": "서울 중랑 의류소매, 업력 6년, 5인(소상공인 기준 초과), 연매출 5.5억",
+      "user": {
+        "region": "서울",
+        "address": "서울특별시 중랑구 봉화산로 179",
+        "business_code": "CS300011",
+        "employee_count": 5,
+        "open_date": "2019-11-01",
+        "annual_revenue": 550000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000126232", "label": "eligible", "why": "중랑구 온라인 홍보관 — 중랑구 관내 일치, 대상이 '중소기업 및 소상공인'이라 5인 이상도 통과, 별도 심사 없이 요건 충족 시 선정"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000125560", "label": "ineligible", "why": "시군구 불일치 — 대상이 '중·소상공인'이라 규모 필터는 통과하지만 서초구 소재 한정"},
+        {"pblancId": "PBLN_000000000124676", "label": "unknown", "why": "애매 — 취급 품목(가정용 섬유제품)은 지원품목에 해당하나 대상이 소상공인이고 소매업 상시근로자 5인은 소상공인 기준(5인 미만) 경계 초과"}
+      ]
+    },
+    {
+      "id": "P03",
+      "desc": "경기 양주 양식음식점, 업력 5년, 6인(소상공인 기준 초과), 연매출 6.2억",
+      "user": {
+        "region": "경기",
+        "address": "경기도 양주시 부흥로 1533",
+        "business_code": "CS100004",
+        "employee_count": 6,
+        "open_date": "2021-06-15",
+        "annual_revenue": 620000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000122305", "label": "eligible", "why": "양주시 음식점 미세먼지·악취 방지시설 — 양주시 일치, 대상이 '음식점'이고 규모·매출·업력 조건이 없어 5인 초과도 통과"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000123056", "label": "ineligible", "why": "시군구 불일치 — 동일 방지시설 사업이나 대상 지역이 의정부시·구리시 한정, 시도(경기)만으로는 SQL 통과"},
+        {"pblancId": "PBLN_000000000122373", "label": "ineligible", "why": "시군구 불일치 — 과천시 관내 한정. 태그에 17개 시도가 전부 들어 있어 전국 사업으로 오인될 위험"},
+        {"pblancId": "PBLN_000000000122948", "label": "ineligible", "why": "시군구 불일치 + 필수 업종 불일치 — 시흥시 한정이며 대상이 동네슈퍼·소형마트, 양식음식점 해당 없음"}
+      ]
+    },
+    {
+      "id": "P04",
+      "desc": "부산 해운대 미용실, 업력 4개월, 1인, 연매출 3천만",
+      "user": {
+        "region": "부산",
+        "address": "부산광역시 해운대구 구남로 24",
+        "business_code": "CS200028",
+        "employee_count": 1,
+        "open_date": "2026-05-20",
+        "annual_revenue": 30000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000121931", "label": "eligible", "why": "부산 소상공인 경영전략 컨설팅 — 사업자등록증상 소재지 부산 일치, 업력 조건 없음, 지원제외 업종(유흥·금융·부동산 등) 해당 없음"},
+        {"pblancId": "PBLN_000000000123334", "label": "eligible", "why": "무료 법률·세무·노무 간편상담 — 전국, 업력·업종 조건 없음"},
+        {"pblancId": "PBLN_000000000122273", "label": "eligible", "why": "찾아가는 1:1 디지털 교육 — 전국, 5인 미만 충족. 1인 사업장은 우선지원 요건에도 해당"},
+        {"pblancId": "PBLN_000000000125880", "label": "eligible", "why": "2차 스마트상점 기술보급 — 전국, 점포형 소상공인. 1인 자영업자는 국비비율 +10%p 우대"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000125603", "label": "unknown", "why": "애매 — 자격 자체는 충족하나 '제품사진 촬영 지원'이라 촬영 대상 상품이 없는 대면 서비스업은 실효 대상 여부 불명"},
+        {"pblancId": "PBLN_000000000126060", "label": "ineligible", "why": "필수 요건 불일치 — 온라인 판매 가능 상품 보유가 전제인 온라인쇼핑몰 입점 사업, 미용 서비스는 해당 없음"},
+        {"pblancId": "PBLN_000000000121288", "label": "ineligible", "why": "필수 업종 불일치 — 온라인 판매 가능 소비재·완제품 제조·판매·유통업 한정"}
+      ]
+    },
+    {
+      "id": "P05",
+      "desc": "경북 안동 제과점, 업력 2년 3개월, 2인, 연매출 1.8억",
+      "user": {
+        "region": "경북",
+        "address": "경상북도 안동시 경동로 456",
+        "business_code": "CS100005",
+        "employee_count": 2,
+        "open_date": "2024-06-03",
+        "annual_revenue": 180000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000121646", "label": "eligible", "why": "안동시 카드수수료 — 사업자등록증상 소재지 안동시 일치, 전년 연매출 4억 이하 충족(1.8억), 제외업종 아님"},
+        {"pblancId": "PBLN_000000000125962", "label": "eligible", "why": "경북 상인·소상공인 AI코칭 — 대상 5개 시군(경주·안동·울진·예천·청송)에 안동 포함, 제외업종 조항 없음"},
+        {"pblancId": "PBLN_000000000125166", "label": "eligible", "why": "소담스퀘어 in 경북 — 지역 제한 없는 전국 사업이며 경북 소재는 우대 대상"},
+        {"pblancId": "PBLN_000000000123334", "label": "eligible", "why": "무료 법률·세무·노무 간편상담 — 전국, 조건 없음"},
+        {"pblancId": "PBLN_000000000122273", "label": "eligible", "why": "찾아가는 1:1 디지털 교육 — 전국, 5인 미만 충족"},
+        {"pblancId": "PBLN_000000000125880", "label": "eligible", "why": "2차 스마트상점 기술보급 — 전국, 점포형 소상공인"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000126390", "label": "ineligible", "why": "필수 업종 불일치 — 식품제조업·화장품제조업(KSIC C10·C11·C20) 소공인 한정, 제과점(소매·음식점)은 해당 없음"},
+        {"pblancId": "PBLN_000000000126215", "label": "ineligible", "why": "시군구 불일치 — 동일 카드수수료 사업이나 봉화군 소재 한정, 시도(경북)만으로는 SQL 통과"},
+        {"pblancId": "PBLN_000000000126261", "label": "ineligible", "why": "시군구 불일치 + 업력 미달 — 김천시 관내 한정이며 창업 3년 이상 필수(현재 27개월)"}
+      ]
+    },
+    {
+      "id": "P06",
+      "desc": "울산 남구 부동산중개업(표준 제외업종), 업력 11년, 1인, 연매출 9천만",
+      "user": {
+        "region": "울산",
+        "address": "울산광역시 남구 삼산로 210",
+        "business_code": "CS200033",
+        "employee_count": 1,
+        "open_date": "2015-09-01",
+        "annual_revenue": 90000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000123202", "label": "eligible", "why": "울산 남구 온라인 플랫폼 지원 — 남구 일치, 공고가 부동산 중개업 40개소를 별도 배정한다고 명시해 표준 제외업종이어도 대상"},
+        {"pblancId": "PBLN_000000000125890", "label": "eligible", "why": "울산 온라인 판로·마케팅 — 울산 일치, 공고가 부동산 중개업을 전체 규모의 20%(40개)로 제한하되 허용한다고 명시"},
+        {"pblancId": "PBLN_000000000123334", "label": "eligible", "why": "무료 법률·세무·노무 간편상담 — 전국, 제외업종 조항 자체가 없어 표준 제외업종도 통과"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000121001", "label": "ineligible", "why": "필수 업종 불일치 — 음식점업(요식·외식·커피전문점) 한정"},
+        {"pblancId": "PBLN_000000000121777", "label": "unknown", "why": "애매 — 제외업종 조항이 없어 SQL은 통과하나 중소기업 사업주 산재보험 선가입·납입이 전제, user 스키마로 판정 불가"},
+        {"pblancId": "PBLN_000000000120387", "label": "unknown", "why": "애매 — 제외업종 조항이 없어 SQL은 통과하나 자영업자 고용보험 가입·납입이 전제, user 스키마로 판정 불가"}
+      ]
+    },
+    {
+      "id": "P07",
+      "desc": "광주 북구 커피전문점, 업력 1년 7개월, 3인, 연매출 1.1억",
+      "user": {
+        "region": "전남광주",
+        "address": "광주광역시 북구 임방울대로 1050",
+        "business_code": "CS100010",
+        "employee_count": 3,
+        "open_date": "2025-02-10",
+        "annual_revenue": 110000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000121231", "label": "eligible", "why": "광주 SNS·블로그 홍보지원 — 사업자등록증상 광주 소재 일치, 소상공인 확인 가능, 정책자금 융자제외 업종 아님"},
+        {"pblancId": "PBLN_000000000123334", "label": "eligible", "why": "무료 법률·세무·노무 간편상담 — 전국, 조건 없음"},
+        {"pblancId": "PBLN_000000000122273", "label": "eligible", "why": "찾아가는 1:1 디지털 교육 — 전국, 5인 미만 충족"},
+        {"pblancId": "PBLN_000000000125880", "label": "eligible", "why": "2차 스마트상점 기술보급 — 전국, 카페는 대표 대상 업종"},
+        {"pblancId": "PBLN_000000000125603", "label": "eligible", "why": "소담스퀘어 in 부산 제품사진 촬영 — 지역 제한 없는 국내 소상공인, 5인 미만·무점포 아님 충족"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000120944", "label": "unknown", "why": "애매 — 광주 소재·업력 6개월 이상·5인 미만을 모두 충족하나 2026.1.1 이후 신규채용 근로자 존재가 핵심 요건, user 스키마로 판정 불가"},
+        {"pblancId": "PBLN_000000000125620", "label": "ineligible", "why": "시군구 불일치 — 목포시 소재 한정"},
+        {"pblancId": "PBLN_000000000119375", "label": "unknown", "why": "애매 — 전남지식재산센터 관할 범위에 광주 북구 포함 여부 불명"}
+      ]
+    },
+    {
+      "id": "P08",
+      "desc": "대전 유성 슈퍼마켓, 업력 1년 10개월, 2인, 연매출 2.6억",
+      "user": {
+        "region": "대전",
+        "address": "대전광역시 유성구 대학로 99",
+        "business_code": "CS300001",
+        "employee_count": 2,
+        "open_date": "2024-11-01",
+        "annual_revenue": 260000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000126263", "label": "eligible", "why": "대전 상권분석 경영컨설팅 — 대전 내 사업장 일치, 대상 업종에 도소매 포함, 정책자금 지원제외 업종 아님"},
+        {"pblancId": "PBLN_000000000124890", "label": "eligible", "why": "유성구 디지털 골목상점 — 대전 유성구 일치, 5인 미만 충족, 불건전 업종·프랜차이즈 아님. 단 hashTags 시도가 '대구'로 오기되어 SQL에서 false negative 위험(문서 2절 태그오류 5건 중 1건)"},
+        {"pblancId": "PBLN_000000000124840", "label": "eligible", "why": "대전 소상공인 IP출원(상표출원) — 대전지식재산센터 관할, 지원제외 업종(유흥·전문·금융·부동산) 아님, 프랜차이즈 아님"},
+        {"pblancId": "PBLN_000000000117221", "label": "eligible", "why": "대전 경영위기극복 특례보증 — 대전 관내 일치, 소상공인 확인, 도소매업은 T2 생활밀접업종 트랙 해당, 제외업종 아님"},
+        {"pblancId": "PBLN_000000000123334", "label": "eligible", "why": "무료 법률·세무·노무 간편상담 — 전국, 조건 없음"},
+        {"pblancId": "PBLN_000000000122273", "label": "eligible", "why": "찾아가는 1:1 디지털 교육 — 전국, 5인 미만 충족"},
+        {"pblancId": "PBLN_000000000125880", "label": "eligible", "why": "2차 스마트상점 기술보급 — 전국, 점포형 소상공인"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000122254", "label": "ineligible", "why": "상권 단위 조건 불일치 — 대전 관내 전통시장·상점가·골목형상점가 소속 + 상인회 가입 점포 한정, 시도만으로는 SQL 통과"},
+        {"pblancId": "PBLN_000000000122587", "label": "ineligible", "why": "대표자 조건 — 육아휴직 대상자(출산 예정 또는 만8세 이하·초2 이하 자녀 양육 부모)가 필수"},
+        {"pblancId": "PBLN_000000000117223", "label": "unknown", "why": "애매 — Track1 신규는 특별지원 대상(성실상환자·땡겨요 입점·만70세 이상)만, Track2는 기존 대전신보 보증부대출 보유자 한정"}
+      ]
+    },
+    {
+      "id": "P09",
+      "desc": "충북 청주 사진관, 업력 1년 8개월, 2인, 연매출 7천만",
+      "user": {
+        "region": "충북",
+        "address": "충청북도 청주시 서원구 사직대로 233",
+        "business_code": "CS200041",
+        "employee_count": 2,
+        "open_date": "2025-01-05",
+        "annual_revenue": 70000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000117908", "label": "eligible", "why": "소상공인 경영안정 바우처 — 전국, 2025 연매출 0원 초과 1억400만원 미만 충족(7천만), 개업일 2025.12.31 이전 충족, 융자제외 업종 아님"},
+        {"pblancId": "PBLN_000000000123334", "label": "eligible", "why": "무료 법률·세무·노무 간편상담 — 전국, 조건 없음"},
+        {"pblancId": "PBLN_000000000122273", "label": "eligible", "why": "찾아가는 1:1 디지털 교육 — 전국, 5인 미만 충족"},
+        {"pblancId": "PBLN_000000000125880", "label": "eligible", "why": "2차 스마트상점 기술보급 — 전국, 점포형 소상공인"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000119719", "label": "unknown", "why": "애매 — 충북 거주·사업장, 업력 6개월 이상, 직전연도 매출 1200만~6억을 모두 충족하나 만2세 미만 자녀 보유가 필수 조건, user 스키마에 자녀 정보 없음"},
+        {"pblancId": "PBLN_000000000126059", "label": "unknown", "why": "애매 — 충북 소재·제외업종 아님으로 SQL 통과하나 생명보험은 1·2금융권 대출 또는 정책 서민금융 이용자 한정, 대표자 연령(20~65세) 확인도 불가"},
+        {"pblancId": "PBLN_000000000126060", "label": "ineligible", "why": "필수 요건 불일치 — 온라인 판매 가능 상품 보유가 전제, 촬영 서비스는 해당 없음"}
+      ]
+    },
+    {
+      "id": "P10",
+      "desc": "제주 제주시 게스트하우스, 업력 5개월, 1인, 연매출 2천만",
+      "user": {
+        "region": "제주",
+        "address": "제주특별자치도 제주시 연동8길 15",
+        "business_code": "CS200035",
+        "employee_count": 1,
+        "open_date": "2026-04-01",
+        "annual_revenue": 20000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000123334", "label": "eligible", "why": "무료 법률·세무·노무 간편상담 — 전국, 업력·매출 조건 없음"},
+        {"pblancId": "PBLN_000000000122273", "label": "eligible", "why": "찾아가는 1:1 디지털 교육 — 전국, 5인 미만 충족. 1인 사업장은 우선지원 요건 해당"},
+        {"pblancId": "PBLN_000000000125880", "label": "eligible", "why": "2차 스마트상점 기술보급 — 전국, 업력 조건 없음, 정상 영업 중 점포형 소상공인"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000126296", "label": "ineligible", "why": "시군구 불일치 + 대표자 조건 — 서귀포시 사업이며 당해 연도 출산한 1인 여성 소상공인 한정, 업력도 6개월 미달"},
+        {"pblancId": "PBLN_000000000125893", "label": "unknown", "why": "애매 — 제주 소재로 SQL 통과하나 도내 대출 1000만원 이상 보유와 보험나이 20~65세가 전제, user 스키마로 판정 불가"},
+        {"pblancId": "PBLN_000000000121366", "label": "unknown", "why": "애매 — 제주 소재·제외업종 아님이나 새출발기금 채무조정 약정 체결이 핵심 자격, user 스키마로 판정 불가"}
+      ]
+    },
+    {
+      "id": "P11",
+      "desc": "세종 문구소매, 업력 2년, 2인, 연매출 1.6억 — 지역 공고 미해당, 전국 사업만 대상",
+      "user": {
+        "region": "세종",
+        "address": "세종특별자치시 한누리대로 2130",
+        "business_code": "CS300021",
+        "employee_count": 2,
+        "open_date": "2024-09-01",
+        "annual_revenue": 160000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000123334", "label": "eligible", "why": "무료 법률·세무·노무 간편상담 — 전국, 조건 없음"},
+        {"pblancId": "PBLN_000000000122273", "label": "eligible", "why": "찾아가는 1:1 디지털 교육 — 전국, 5인 미만 충족"},
+        {"pblancId": "PBLN_000000000125880", "label": "eligible", "why": "2차 스마트상점 기술보급 — 전국, 점포형 소상공인"},
+        {"pblancId": "PBLN_000000000126060", "label": "eligible", "why": "5차 온라인쇼핑몰 판매지원 — 전국, 소상공인 확인 가능, 융자제외 업종 아님, 온라인 판매 가능 상품(문구) 보유"},
+        {"pblancId": "PBLN_000000000125603", "label": "eligible", "why": "소담스퀘어 in 부산 제품사진 촬영 — 지역 제한 없는 국내 소상공인, 5인 미만·무점포 아님 충족"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000120684", "label": "ineligible", "why": "필수 업종 불일치 — 식품위생법상 영업자(식품제조가공·식품접객·집단급식소 등) 한정. 세종 소재라 지역 필터는 통과"},
+        {"pblancId": "PBLN_000000000121480", "label": "unknown", "why": "애매 — 자체 기획·제조 상품 없이 대기업 제품을 유통할 경우 '대기업 제품 제외' 조항 해당 여부 불명"},
+        {"pblancId": "PBLN_000000000125664", "label": "ineligible", "why": "필수 요건 불일치 — 지역 특산물 가공품·지역 굿즈·로컬 브랜드 보유가 전제"}
+      ]
+    },
+    {
+      "id": "P12",
+      "desc": "강원 춘천 치킨전문점, 업력 2년 7개월, 4인, 연매출 5.8억 — 지역 공고 미해당, 전국 사업만 대상",
+      "user": {
+        "region": "강원",
+        "address": "강원특별자치도 춘천시 금강로 45",
+        "business_code": "CS100007",
+        "employee_count": 4,
+        "open_date": "2024-02-01",
+        "annual_revenue": 580000000
+      },
+      "expected": [
+        {"pblancId": "PBLN_000000000123334", "label": "eligible", "why": "무료 법률·세무·노무 간편상담 — 전국, 조건 없음"},
+        {"pblancId": "PBLN_000000000122273", "label": "eligible", "why": "찾아가는 1:1 디지털 교육 — 전국, 음식점업 5인 미만 충족"},
+        {"pblancId": "PBLN_000000000125880", "label": "eligible", "why": "2차 스마트상점 기술보급 — 전국, 점포형 소상공인. 음식점은 대표 대상 업종"},
+        {"pblancId": "PBLN_000000000125603", "label": "eligible", "why": "소담스퀘어 in 부산 제품사진 촬영 — 지역 제한 없는 국내 소상공인, 5인 미만·무점포 아님 충족"}
+      ],
+      "hard_negatives": [
+        {"pblancId": "PBLN_000000000123709", "label": "unknown", "why": "애매 — 강원 소재·소상공인·보증제한업종 아님으로 SQL은 통과하나 개인신용평점(NICE 710 또는 KCB 620 이상)이 필수, user 스키마로 판정 불가"},
+        {"pblancId": "PBLN_000000000125717", "label": "ineligible", "why": "선행 지정 필요 — 업종(일반음식점)은 식품안심업소 대상에 해당하나 백년소상공인 지정업체만 신청 가능"},
+        {"pblancId": "PBLN_000000000126060", "label": "unknown", "why": "애매 — 매장 조리 치킨의 온라인 배송 상품화 여부가 불명해 '온라인 판매 가능 상품 보유' 충족 판정 불가"}
+      ]
+    }
+  ]
+}

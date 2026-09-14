@@ -2,6 +2,7 @@ package com.sobi.funding.controller;
 
 
 import com.sobi.business.repository.BusinessReporitory;
+import com.sobi.funding.dto.BatchRequest;
 import com.sobi.funding.dto.FundingRecommendRequest;
 import com.sobi.funding.dto.FundingRecommendResponse;
 import com.sobi.funding.service.FundingService;
@@ -48,6 +49,26 @@ public class FundingController {
 
     }
 
+    @PostMapping("/batch")
+    public ResponseEntity<ApiResponse<Void>> batchRecommend(
+            @AuthenticationPrincipal Long userId,
+            @RequestBody BatchRequest batchRequest,
+            HttpServletRequest request
+
+            ){
 
 
+
+        fundingService.application(userId, batchRequest);
+
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "자금 조합 기반 신청에 성공했습니다",
+                        request
+                ));
+
+    }
 }

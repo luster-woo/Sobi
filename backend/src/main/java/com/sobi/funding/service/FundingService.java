@@ -8,6 +8,8 @@ import com.sobi.funding.domain.FundingCandidate;
 import com.sobi.funding.domain.FundingCombination;
 import com.sobi.funding.domain.FundingSourceType;
 import com.sobi.funding.domain.FundingType;
+import com.sobi.funding.dto.BatchItem;
+import com.sobi.funding.dto.BatchRequest;
 import com.sobi.funding.dto.FundingRecommendRequest;
 import com.sobi.funding.dto.FundingRecommendResponse;
 import com.sobi.global.exception.BusinessException;
@@ -35,6 +37,17 @@ public class FundingService {
     private final SuggestSupportProgramRepository suggestSupportProgramRepository;
     private final FundingRecommendationEngine recommendationEngine;
     private final BusinessReporitory businessReporitory;
+
+    public void application(Long userId, BatchRequest batchRequest) {
+
+        for (BatchItem batchItem : batchRequest.getItem()) {
+            // 신청 메서드로 신청
+
+
+        }
+
+    }
+
 
 
     // 추천

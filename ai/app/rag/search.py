@@ -64,8 +64,13 @@ class ProgramHit:
     chunks: list[str]
     llm_conditions: dict | None
 
+@dataclass
+class SearchResult:
+    query_text: str
+    industry_name: str
+    hits: list[ProgramHit]
 
-async def _lookup_industry(business_code: str) -> tuple[str, bool]:
+async def lookup_industry(business_code: str) -> tuple[str, bool]:
     """업종 코드 → (이름, 표준제외업종 여부)."""
     async with db.acquire() as conn:
         cur = await conn.execute(
@@ -87,9 +92,9 @@ async def search(
     open_date: date,
     annual_revenue: int | None = None,
     limit: int = PROGRAM_LIMIT,
-) -> tuple[str, list[ProgramHit]]:
-    """(질의문, 공고 목록)을 돌려준다. 질의문은 디버깅·응답 확인용."""
-    industry_name, std_excluded = await _lookup_industry(business_code)
+) -> SearchResult:
+    """검색 질의문·업종명·공고 목록을 돌려준다."""
+    industry_name, std_excluded = await lookup_industry(business_code)
 
     query_text = profile.to_query(
         region=region,
@@ -135,4 +140,8 @@ async def search(
             hit.chunks.append(row["content"])
 
     logger.info("검색: %d청크 → %d공고", len(rows), len(hits))
-    return query_text, list(hits.values())
+    return SearchResult(
+        query_text=query_text,
+        industry_name=industry_name,
+        hits=list(hits.values()),
+    )

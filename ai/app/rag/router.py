@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from app.rag.embedding import koe5
 from app.rag import search as rag_search
+from app.rag import recommend as rag_recommend
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 
@@ -40,9 +41,9 @@ async def embed(req: EmbedRequest):
 
 @router.post("/search")
 async def search(req: SearchRequest):
-    query_text, hits = await rag_search.search(**req.model_dump())
+    result = await rag_search.search(**req.model_dump())
     return {
-        "query": query_text,
+        "query": result.query_text,
         "programs": [
             {
                 "program_id": h.program_id,
@@ -51,6 +52,10 @@ async def search(req: SearchRequest):
                 "distance": round(h.best_distance, 4),
                 "chunks": h.chunks,
             }
-            for h in hits
+            for h in result.hits
         ],
     }
+
+@router.post("/recommend")
+async def recommend(req: SearchRequest):
+    return await rag_recommend.recommend(**req.model_dump())

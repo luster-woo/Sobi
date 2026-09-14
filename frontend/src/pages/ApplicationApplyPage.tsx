@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 
 import ApplicationChecklist from '@/features/application/components/ApplicationChecklist'
 import ApplicationDocumentList from '@/features/application/components/ApplicationDocumentList'
@@ -28,15 +28,14 @@ import { formatMoneyShort } from '@/shared/utils/formatters'
  * 두 도메인이 이 화면 하나를 공유한다. 다른 건 신청 금액 입력뿐이라 컴포넌트를 나누지
  * 않고 loanId 유무로 갈랐다.
  *
- * 경로를 /loans/apply/:id 와 /support-programs/apply/:id 둘로 둔 이유는 '목록으로'
- * 링크 때문이다. 응답이 오기 전에도 어디서 왔는지 알아야 링크를 그릴 수 있다.
+ * 지원사업 경로(/support-programs/apply/:id)는 194 에서 붙인다. 화면은 그대로 쓰고
+ * 목록으로 돌아갈 곳만 달라진다.
  *
  * 검증은 서버가 비동기로 돌린다. useApplicationDetail 이 검증 중인 서류가 있는 동안만
  * 폴링하고 끝나면 멈춘다 — 이 화면은 받은 데이터를 그리기만 한다.
  */
 export function ApplicationApplyPage() {
   const { applicationId: rawId } = useParams()
-  const { pathname } = useLocation()
   const navigate = useNavigate()
   const showToast = useUiStore((state) => state.showToast)
 
@@ -61,10 +60,6 @@ export function ApplicationApplyPage() {
     setAccountNo(detail.accountNo ?? '')
   }
 
-  const isFromLoans = pathname.startsWith('/loans')
-  const backTo = isFromLoans ? ROUTES.LOANS : ROUTES.SUPPORT_PROGRAMS
-  const backLabel = isFromLoans ? '대출' : '지원 사업'
-
   if (isLoading) {
     return (
       <div className="flex flex-col gap-5">
@@ -83,8 +78,8 @@ export function ApplicationApplyPage() {
         title="신청 내역을 불러오지 못했어요"
         description="주소가 잘못되었거나 이미 취소된 신청일 수 있어요."
         action={
-          <Button variant="outline" onClick={() => navigate(backTo)}>
-            {backLabel} 목록으로
+          <Button variant="outline" onClick={() => navigate(ROUTES.LOANS)}>
+            대출 목록으로
           </Button>
         }
       />

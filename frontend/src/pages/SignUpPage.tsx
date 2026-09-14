@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router'
 import AuthCodeField from '@/features/auth/components/AuthCodeField'
 import GoogleAuthButton from '@/features/auth/components/GoogleAuthButton'
 import OrDivider from '@/features/auth/components/OrDivider'
+import PasswordStrengthMeter from '@/features/auth/components/PasswordStrengthMeter'
 import { useCountdown } from '@/features/auth/hooks/useCountdown'
 import { useSendEmailCode, useSignUp, useVerifyEmailCode } from '@/features/auth/hooks/useSignUp'
 import { buildAuthorizeUrl, isGoogleOAuthConfigured } from '@/features/auth/model/googleOAuth'
@@ -264,20 +265,23 @@ export function SignUpPage() {
           />
         )}
 
-        <Input
-          className="mt-4"
-          label="비밀번호"
-          required
-          type="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(event) => {
-            setPassword(event.target.value)
-            clearError('password')
-          }}
-          error={errors.password}
-          helperText="영문·숫자·특수문자 조합 8자 이상"
-        />
+        {/* 재설정 화면과 같은 구성이다 — 강도 막대를 Input 바깥에 두고 간격만 맞춘다 */}
+        <div className="mt-4">
+          <Input
+            label="비밀번호"
+            required
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value)
+              clearError('password')
+            }}
+            error={errors.password}
+            helperText="영문·숫자·특수문자 조합 8자 이상"
+          />
+          <PasswordStrengthMeter password={password} className="mt-2" />
+        </div>
 
         <Input
           className="mt-4"

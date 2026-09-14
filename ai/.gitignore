@@ -1,0 +1,9 @@
+# 루트 .gitignore가 Python/.env/로그는 이미 처리함. 여기는 ai/ 전용만.
+
+# 모델 캐시 (Dockerfile HF_HOME=/models 와 동일 이름)
+models/
+
+# 공고문 원본 — 용량 커서 공유 드라이브로 관리, 저장소엔 survey.csv만
+data/raw/
+
+.pytest_cache/

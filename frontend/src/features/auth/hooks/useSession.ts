@@ -2,7 +2,29 @@ import { useQuery } from '@tanstack/react-query'
 
 import { getMe, reissue } from '@/features/auth/api/session'
 import { queryKeys } from '@/shared/api/queryKeys'
+import { sessionUserFromToken } from '@/shared/lib/accessToken'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
+import type { SessionUser } from '@/shared/types'
+
+/**
+ * 사용자 정보를 가져온다. `/user/me` 가 없으면 토큰에서 꺼낸다.
+ *
+ * ⚠️ 폴백은 임시다. 백엔드에 `GET /user/me` 가 없어서(BE-02) 그대로 두면 새로고침할
+ *    때마다 로그아웃된다. 토큰 claim 에 `name` 이 없어 이름은 이메일 앞부분으로
+ *    대신한다 — 정확하진 않지만 세션이 끊기는 것보다 낫다.
+ *    엔드포인트가 생기면 이 함수를 지우고 `getMe()` 만 부르면 된다.
+ */
+async function fetchSessionUser(accessToken: string): Promise<SessionUser> {
+  try {
+    return await getMe()
+  } catch (error) {
+    const fallback = sessionUserFromToken(accessToken)
+    if (fallback === null) throw error
+
+    console.warn('[auth] /user/me 응답을 받지 못해 accessToken 으로 세션을 복구합니다.')
+    return fallback
+  }
+}
 
 /**
  * 스토어를 직접 채운다.
@@ -13,7 +35,7 @@ import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 async function restoreSession() {
   try {
     const { accessToken } = await reissue()
-    const user = await getMe()
+    const user = await fetchSessionUser(accessToken)
 
     useAuthStore.getState().setSession(accessToken, user)
     return user

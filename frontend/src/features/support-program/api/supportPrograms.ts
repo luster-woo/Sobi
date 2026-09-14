@@ -6,18 +6,11 @@ import type {
 } from '@/features/support-program/model/types'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
-import type { ApiResponse } from '@/shared/types'
 
-/**
- * 지원사업 목록 조회.
- * 봉투를 여기서 벗긴다. client.ts 인터셉터로 옮기기로 정해지면 이 함수만 고치면 된다.
- */
+/** 지원사업 목록 조회. 봉투는 `client.ts` 인터셉터가 벗긴다 */
 export async function getSupportPrograms(params: SupportProgramListParams) {
-  const { data } = await api.get<ApiResponse<SupportProgramListData>>(
-    endpoints.supportProgram.list,
-    { params },
-  )
-  return data.data
+  const { data } = await api.get<SupportProgramListData>(endpoints.supportProgram.list, { params })
+  return data
 }
 
 /**
@@ -27,18 +20,18 @@ export async function getSupportPrograms(params: SupportProgramListParams) {
  * 응답 형태는 목록과 같아서 SupportProgramListData 를 그대로 쓴다.
  */
 export async function searchSupportPrograms({ page, size, query }: SupportProgramSearchParams) {
-  const { data } = await api.post<ApiResponse<SupportProgramListData>>(
+  const { data } = await api.post<SupportProgramListData>(
     endpoints.supportProgram.search,
     { query },
     { params: { page, size } },
   )
-  return data.data
+  return data
 }
 
 /** 지원사업 상세. 모달에서 쓴다 */
 export async function getSupportProgramDetail(supportProgramId: number) {
-  const { data } = await api.get<ApiResponse<SupportProgramDetail>>(
+  const { data } = await api.get<SupportProgramDetail>(
     endpoints.supportProgram.detail(supportProgramId),
   )
-  return data.data
+  return data
 }

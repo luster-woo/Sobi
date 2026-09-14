@@ -1,7 +1,7 @@
-import { http, HttpResponse } from 'msw'
+import { http } from 'msw'
 
 import type { FundingRecommendData } from '@/features/funding-plan/model/types'
-import type { ApiResponse } from '@/shared/types'
+import { fail, ok } from '@/mocks/lib/envelope'
 
 /**
  * 자금 조합 목.
@@ -103,37 +103,20 @@ export const fundingHandlers = [
     const { targetAmount } = (await request.json()) as { targetAmount: number }
 
     if (!targetAmount || targetAmount <= 0) {
-      return HttpResponse.json(
-        {
-          statusCode: 400,
-          timestamp: '2026-09-11T10:00:00',
-          path: '/api/v1/funding/recommend',
-          message: '유효하지 않은 요청입니다.',
-          data: null,
-          error: 'INVALID_REQUEST',
-        },
-        { status: 400 },
+      return fail(
+        400,
+        'COMMON_001',
+        '입력값 중에 기준을 만족하지 않은 입력값이 있습니다.',
+        '/api/v1/funding/recommend',
       )
     }
 
-    return HttpResponse.json({
-      statusCode: 200,
-      timestamp: '2026-09-11T10:00:00',
+    return ok(build(targetAmount), '자금 조합 추천에 성공하였습니다.', {
       path: '/api/v1/funding/recommend',
-      message: '자금 조합 추천에 성공하였습니다.',
-      data: build(targetAmount),
-      error: null,
-    } satisfies ApiResponse<FundingRecommendData>)
+    })
   }),
 
   http.post('/api/v1/funding/batch', () =>
-    HttpResponse.json({
-      statusCode: 200,
-      timestamp: '2026-09-11T10:00:00',
-      path: '/api/v1/funding/batch',
-      message: '조합 기반 신청목록 생성에 성공하였습니다.',
-      data: null,
-      error: null,
-    } satisfies ApiResponse<null>),
+    ok(null, '조합 기반 신청목록 생성에 성공하였습니다.', { path: '/api/v1/funding/batch' }),
   ),
 ]

@@ -49,10 +49,7 @@ export default function LinkRow({ label, value, to, className }: LinkRowProps) {
 
   if (to) {
     return (
-      <Link
-        to={to}
-        className={cn(base, 'hover:bg-surface-muted transition-colors', className)}
-      >
+      <Link to={to} className={cn(base, 'hover:bg-surface-muted transition-colors', className)}>
         {body}
       </Link>
     )

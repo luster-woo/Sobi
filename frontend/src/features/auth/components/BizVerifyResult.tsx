@@ -54,7 +54,10 @@ function Row({
     >
       <dt className="text-caption text-text-muted shrink-0">{term}</dt>
       {/* 주소가 길면 자른다. 전체는 title 로 본다 */}
-      <dd className="text-body2 text-text min-w-0 truncate font-medium tabular-nums" title={description}>
+      <dd
+        className="text-body2 text-text min-w-0 truncate font-medium tabular-nums"
+        title={description}
+      >
         {description}
       </dd>
     </div>

@@ -1,7 +1,7 @@
-import { http, HttpResponse } from 'msw'
+import { http } from 'msw'
 
 import type { MarketAnalysis } from '@/features/market-analysis/model/types'
-import type { ApiResponse } from '@/shared/types'
+import { fail, ok } from '@/mocks/lib/envelope'
 import type { BusinessTree, RegionTree } from '@/shared/types/commonCode'
 
 /**
@@ -262,25 +262,15 @@ const BUSINESS_TREE: BusinessTree = {
 
 export const marketHandlers = [
   http.get('/api/v1/common/market/regions', () =>
-    HttpResponse.json({
-      statusCode: 200,
-      timestamp: '2026-09-11T10:00:00',
+    ok<RegionTree>(REGION_TREE, '행정동 목록 조회에 성공하였습니다.', {
       path: '/api/v1/common/market/regions',
-      message: '행정동 목록 조회에 성공하였습니다.',
-      data: REGION_TREE,
-      error: null,
-    } satisfies ApiResponse<RegionTree>),
+    }),
   ),
 
   http.get('/api/v1/common/market/businesses', () =>
-    HttpResponse.json({
-      statusCode: 200,
-      timestamp: '2026-09-11T10:00:00',
+    ok<BusinessTree>(BUSINESS_TREE, '업종 목록 조회에 성공하였습니다.', {
       path: '/api/v1/common/market/businesses',
-      message: '업종 목록 조회에 성공하였습니다.',
-      data: BUSINESS_TREE,
-      error: null,
-    } satisfies ApiResponse<BusinessTree>),
+    }),
   ),
 
   http.get('/api/v1/common/market', ({ request }) => {
@@ -289,29 +279,15 @@ export const marketHandlers = [
     const found = BY_DONG[dongCode]
 
     if (!found) {
-      return HttpResponse.json(
-        {
-          statusCode: 404,
-          timestamp: '2026-09-10T10:00:00',
-          path: '/api/v1/common/market',
-          message: '존재하지 않는 행정동입니다.',
-          data: null,
-          error: { code: 'MARKET_001' },
-        },
-        { status: 404 },
-      )
+      return fail(404, 'MARKET_001', '존재하지 않는 행정동입니다.', '/api/v1/common/market')
     }
 
-    // 파라미터로 행수를 자르는 것까지 서버 동작을 따라간다. 화면에서 개수를 바꿔볼 수 있다
+    // 파라미터로 행수를 자르는 것까지 서버 동작을 따라간다
     const compareLimit = Number(params.get('compareLimit')) || found.neighbors.length
     const mixLimit = Number(params.get('mixLimit')) || found.businessMix.items.length
 
-    const body: ApiResponse<MarketAnalysis> = {
-      statusCode: 200,
-      timestamp: '2026-09-10T10:00:00',
-      path: '/api/v1/common/market',
-      message: '상권 분석 조회 성공.',
-      data: {
+    return ok<MarketAnalysis>(
+      {
         ...found,
         neighbors: found.neighbors.slice(0, compareLimit),
         businessMix: {
@@ -319,9 +295,8 @@ export const marketHandlers = [
           items: found.businessMix.items.slice(0, mixLimit),
         },
       },
-      error: null,
-    }
-
-    return HttpResponse.json(body)
+      '상권 분석 조회 성공.',
+      { path: '/api/v1/common/market' },
+    )
   }),
 ]

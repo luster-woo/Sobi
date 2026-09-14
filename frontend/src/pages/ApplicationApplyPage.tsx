@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useLocation, useNavigate, useParams } from 'react-router'
 
 import ApplicationChecklist from '@/features/application/components/ApplicationChecklist'
 import ApplicationDocumentList from '@/features/application/components/ApplicationDocumentList'
@@ -11,6 +11,7 @@ import {
   useUploadDocument,
 } from '@/features/application/hooks/useApplication'
 import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
+import { describeProduct } from '@/features/application/model/summary'
 import { UPLOAD_ACCEPT_LABEL, UPLOAD_MAX_SIZE_MB } from '@/features/application/model/upload'
 import { ROUTES } from '@/shared/constants/routes'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
@@ -20,7 +21,6 @@ import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
 import Panel from '@/shared/ui/Panel'
 import Skeleton from '@/shared/ui/Skeleton'
-import { formatMoneyShort } from '@/shared/utils/formatters'
 
 /**
  * 대출·지원사업 신청 · 서류 제출 (S15P21D101-189 · 194)
@@ -28,14 +28,15 @@ import { formatMoneyShort } from '@/shared/utils/formatters'
  * 두 도메인이 이 화면 하나를 공유한다. 다른 건 신청 금액 입력뿐이라 컴포넌트를 나누지
  * 않고 loanId 유무로 갈랐다.
  *
- * 지원사업 경로(/support-programs/apply/:id)는 194 에서 붙인다. 화면은 그대로 쓰고
- * 목록으로 돌아갈 곳만 달라진다.
+ * 경로를 /loans/apply/:id 와 /support-programs/apply/:id 둘로 둔 이유는 '목록으로'
+ * 링크 때문이다. 응답이 오기 전에도 어디서 왔는지 알아야 링크를 그릴 수 있다.
  *
  * 검증은 서버가 비동기로 돌린다. useApplicationDetail 이 검증 중인 서류가 있는 동안만
  * 폴링하고 끝나면 멈춘다 — 이 화면은 받은 데이터를 그리기만 한다.
  */
 export function ApplicationApplyPage() {
   const { applicationId: rawId } = useParams()
+  const { pathname } = useLocation()
   const navigate = useNavigate()
   const showToast = useUiStore((state) => state.showToast)
 
@@ -60,6 +61,14 @@ export function ApplicationApplyPage() {
     setAccountNo(detail.accountNo ?? '')
   }
 
+  /*
+   * 데이터가 오기 전에도 '목록으로' 를 그려야 해서 경로로 판단한다.
+   * detail.loanId 로 가르면 로딩·에러 화면에서는 알 수 없다.
+   */
+  const isFromLoans = pathname.startsWith('/loans')
+  const backTo = isFromLoans ? ROUTES.LOANS : ROUTES.SUPPORT_PROGRAMS
+  const backLabel = isFromLoans ? '대출' : '지원 사업'
+
   if (isLoading) {
     return (
       <div className="flex flex-col gap-5">
@@ -78,8 +87,8 @@ export function ApplicationApplyPage() {
         title="신청 내역을 불러오지 못했어요"
         description="주소가 잘못되었거나 이미 취소된 신청일 수 있어요."
         action={
-          <Button variant="outline" onClick={() => navigate(ROUTES.LOANS)}>
-            대출 목록으로
+          <Button variant="outline" onClick={() => navigate(backTo)}>
+            {backLabel} 목록으로
           </Button>
         }
       />
@@ -87,6 +96,7 @@ export function ApplicationApplyPage() {
   }
 
   const { product, documents, status } = detail
+  const summary = describeProduct(product)
   // 제출하고 나면 서류도 금액도 더 손댈 수 없다
   const isEditable = status === 'PREPARING'
   const selectedAccount = accounts?.find((account) => account.accountNo === accountNo)
@@ -138,9 +148,8 @@ export function ApplicationApplyPage() {
           <h1 className="text-h2 text-text font-bold break-keep">{product.name}</h1>
           {!isEditable && <Badge variant="neutral">{APPLICATION_STATUS_LABEL[status]}</Badge>}
         </div>
-        <p className="text-body2 text-text-secondary mt-1">
-          연 {product.interestRate}% · 최대 {formatMoneyShort(product.maxLoanBalance)}
-        </p>
+        {/* 금리도 금액도 없는 공고가 있어서, 요약이 비면 줄 자체를 안 그린다 */}
+        {summary && <p className="text-body2 text-text-secondary mt-1">{summary}</p>}
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">

@@ -1,5 +1,6 @@
 import { http } from 'msw'
 
+import type { ApplicationProduct } from '@/features/application/model/types'
 import type { LoanDetail, LoanListData, LoanListItem } from '@/features/loan/model/types'
 import { fail, ok } from '@/mocks/lib/envelope'
 import type { ProductStatus } from '@/shared/constants/productStatus'
@@ -82,6 +83,34 @@ const mockLoans: LoanListItem[] = [
 ]
 
 /**
+ * 목록 응답에는 최소 한도가 없어서 최대 한도에서 만든다.
+ * 상세와 신청 화면이 같은 값을 보여야 해서 계산식을 한 군데 둔다.
+ */
+function minBalanceOf(maxLoanBalance: number): number {
+  return Math.round((maxLoanBalance * 0.4) / 10_000_000) * 10_000_000
+}
+
+/**
+ * 신청 화면 상단에 쓸 상품 요약. 신청 목(handlers/application.ts)이 가져간다.
+ *
+ * 두 목이 따로 데이터를 들면 목록에서 고른 상품과 신청 화면의 상품이 어긋난다.
+ * 대출은 마감이 없어서 deadline 은 항상 null 이다.
+ */
+export function findLoanProductSummary(loanId: number): ApplicationProduct | null {
+  const found = mockLoans.find((loan) => loan.loanId === loanId)
+  if (!found) return null
+
+  return {
+    name: found.accountName,
+    organization: found.bankName,
+    interestRate: found.interestRate,
+    minAmount: minBalanceOf(found.maxLoanBalance),
+    maxAmount: found.maxLoanBalance,
+    deadline: null,
+  }
+}
+
+/**
  * 대출 (loan) 목 핸들러. 백엔드 미구현이라 이 목이 유일한 구현이다.
  *
  * ⚠️ sort 형식은 'interestRate,asc' (Spring) 으로 가정. 확정되면 이 파일만 고친다.
@@ -156,7 +185,7 @@ export const loanHandlers = [
         status: found.status,
         isBookmark: found.isBookmark,
         interestRate: found.interestRate,
-        minLoanBalance: Math.round((found.maxLoanBalance * 0.4) / 10_000_000) * 10_000_000,
+        minLoanBalance: minBalanceOf(found.maxLoanBalance),
         maxLoanBalance: found.maxLoanBalance,
         period: 18 + (loanId % 4) * 6,
         firmAge: 6 + (loanId % 3) * 6,

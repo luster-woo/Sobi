@@ -8,6 +8,8 @@ import type {
   VerifyStatus,
   WriteStatus,
 } from '@/features/application/model/types'
+import { findLoanProductSummary } from '@/mocks/handlers/loan'
+import { findSupportProductSummary } from '@/mocks/handlers/support'
 import type { ApiResponse } from '@/shared/types'
 import type { ApplicationStatus } from '@/shared/types/application'
 
@@ -76,12 +78,13 @@ interface MockApplication {
 }
 
 /** 서류 서식. 신청을 만들 때 이걸 복제해서 행을 미리 깔아 둔다 */
-const DOCUMENT_TEMPLATES: ReadonlyArray<
-  Pick<
-    MockDocument,
-    'docName' | 'issuer' | 'documentType' | 'failsFirstAttempt' | 'passedDetail' | 'templateUrl'
-  >
-> = [
+type DocumentTemplate = Pick<
+  MockDocument,
+  'docName' | 'issuer' | 'documentType' | 'failsFirstAttempt' | 'passedDetail' | 'templateUrl'
+>
+
+/** 대출 서류. loan_document 를 항내 낸다 */
+const LOAN_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   {
     docName: '부가세 과세표준증명원',
     issuer: '홈택스',
@@ -125,49 +128,70 @@ const DOCUMENT_TEMPLATES: ReadonlyArray<
   },
 ]
 
-/** loanId → 상품 요약. 대출 목 데이터와 이름을 맞춰 뒀다 */
-const LOAN_PRODUCTS: Record<number, ApplicationProduct> = {
-  1: {
-    name: '소상공인 성장촉진대출',
-    interestRate: 3.4,
-    minLoanBalance: 10_000_000,
-    maxLoanBalance: 100_000_000,
+/**
+ * 지원사업 서류. program_document 를 항내 낸다.
+ *
+ * 대출과 개수도 구성도 다르다 — 검증 3 + 작성 2 다. 화면이 목록을 하드코딩하지 않고
+ * 응답대로 그리는지 확인하려면 모양이 달라야 한다.
+ */
+const SUPPORT_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
+  {
+    docName: '사업자등록증명원',
+    issuer: '홈택스',
+    documentType: 'VERIFY',
+    failsFirstAttempt: false,
+    passedDetail: '발급일 2026. 09. 02 · 업종 일치 · 직인 확인',
+    templateUrl: null,
   },
-  2: {
-    name: '소진공 일반경영안정자금',
-    interestRate: 3.4,
-    minLoanBalance: 30_000_000,
-    maxLoanBalance: 70_000_000,
+  {
+    docName: '국세 납세증명서',
+    issuer: '홈택스·정부24',
+    documentType: 'VERIFY',
+    failsFirstAttempt: true,
+    passedDetail: '발급일 2026. 09. 10 · 체납 없음',
+    templateUrl: null,
   },
-  3: {
-    name: '지역신보 보증부 대출',
-    interestRate: 4.1,
-    minLoanBalance: 5_000_000,
-    maxLoanBalance: 50_000_000,
+  {
+    docName: '지방세 납세증명서',
+    issuer: '위택스',
+    documentType: 'VERIFY',
+    failsFirstAttempt: false,
+    passedDetail: '발급일 2026. 09. 08 · 체납 없음',
+    templateUrl: null,
   },
-}
+  {
+    docName: '사업계획서',
+    issuer: '화면에서 작성',
+    documentType: 'WRITE',
+    failsFirstAttempt: false,
+    passedDetail: null,
+    templateUrl: '/mock/사업계획서_서식.hwpx',
+  },
+  {
+    docName: '개인정보 수집·이용 동의서',
+    issuer: '서식 내려받아 서명',
+    documentType: 'WRITE',
+    failsFirstAttempt: false,
+    passedDetail: null,
+    templateUrl: '/mock/개인정보동의서_서식.pdf',
+  },
+]
 
-const SUPPORT_PRODUCTS: Record<number, ApplicationProduct> = {
-  21: {
-    name: '스마트상점 바우처',
-    interestRate: 0,
-    minLoanBalance: 0,
-    maxLoanBalance: 5_000_000,
-  },
-}
-
+/** 목에 없는 id 로 신청이 들어왔을 때. 화면이 비는 것보다 낫다 */
 const FALLBACK_PRODUCT: ApplicationProduct = {
-  name: '소진공 일반경영안정자금',
-  interestRate: 3.4,
-  minLoanBalance: 30_000_000,
-  maxLoanBalance: 70_000_000,
+  name: '알 수 없는 상품',
+  organization: null,
+  interestRate: null,
+  minAmount: null,
+  maxAmount: null,
+  deadline: null,
 }
 
 let nextApplicationId = 13
 let nextDocumentId = 200
 
-function createDocuments(): MockDocument[] {
-  return DOCUMENT_TEMPLATES.map((template) => ({
+function createDocuments(templates: readonly DocumentTemplate[]): MockDocument[] {
+  return templates.map((template) => ({
     ...template,
     applicationDocumentId: nextDocumentId++,
     originalFilename: null,
@@ -188,7 +212,7 @@ function nowIso(): string {
  * 화면을 만들면서 통과·검증중·실패·미제출을 한 화면에서 다 봐야 한다.
  */
 function seedApplication(): MockApplication {
-  const documents = createDocuments()
+  const documents = createDocuments(LOAN_DOCUMENT_TEMPLATES)
 
   documents[0].frozenStatus = 'PASSED'
   documents[0].originalFilename = '부가세과세표준증명원.pdf'
@@ -213,7 +237,8 @@ function seedApplication(): MockApplication {
     rejectReason: null,
     applyAmount: null,
     accountNo: null,
-    product: LOAN_PRODUCTS[2],
+    // 목록과 같은 데이터를 쓴다. 시드만 따로 놓으면 상세 모달과 어긋난다
+    product: findLoanProductSummary(2) ?? FALLBACK_PRODUCT,
     documents,
     createdAt: '2026-09-05T10:20:30',
     updatedAt: '2026-09-07T15:10:12',
@@ -349,9 +374,13 @@ export const applicationHandlers = [
     }
 
     const isLoan = type === 'LOAN'
+    /*
+     * 지원사업은 support 목에서 가져온다. 여기서 따로 들고 있으면 목록에서 고른
+     * 공고와 신청 화면의 상품이 어긋난다.
+     */
     const product = isLoan
-      ? (LOAN_PRODUCTS[programId] ?? FALLBACK_PRODUCT)
-      : (SUPPORT_PRODUCTS[programId] ?? FALLBACK_PRODUCT)
+      ? (findLoanProductSummary(programId) ?? FALLBACK_PRODUCT)
+      : (findSupportProductSummary(programId) ?? FALLBACK_PRODUCT)
 
     // 같은 상품에 준비중인 건이 있으면 새로 만들지 않고 그걸 돌려준다
     const existing = [...applications.values()].find(
@@ -374,7 +403,7 @@ export const applicationHandlers = [
       applyAmount: null,
       accountNo: null,
       product,
-      documents: createDocuments(),
+      documents: createDocuments(isLoan ? LOAN_DOCUMENT_TEMPLATES : SUPPORT_DOCUMENT_TEMPLATES),
       createdAt: nowIso(),
       updatedAt: nowIso(),
     }
@@ -443,7 +472,9 @@ export const applicationHandlers = [
       if (amount === null || amount === undefined) {
         return failure('/api/v1/application/finan', '신청 금액을 입력해 주세요.')
       }
-      if (amount < app.product.minLoanBalance || amount > app.product.maxLoanBalance) {
+      // 범위가 없는 상품은 검사할 기준이 없다
+      const { minAmount, maxAmount } = app.product
+      if (minAmount !== null && maxAmount !== null && (amount < minAmount || amount > maxAmount)) {
         return failure('/api/v1/application/finan', '신청 가능한 금액 범위를 벗어났습니다.')
       }
     }

@@ -76,7 +76,7 @@ let reissuePromise: Promise<string> | null = null
 
 function reissueAccessToken(): Promise<string> {
   reissuePromise ??= reissueClient
-    .post<TokenResponse>(endpoints.auth.reissue)
+    .post<TokenResponse>(endpoints.auth.refresh)
     .then(({ data }) => {
       useAuthStore.getState().setAccessToken(data.accessToken)
       return data.accessToken

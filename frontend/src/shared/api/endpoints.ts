@@ -7,7 +7,7 @@ export const API_BASE_URL = '/api/v1'
 /**
  * 엔드포인트 경로. `API_BASE_URL` 이 붙으므로 여기엔 `/api/v1` 을 쓰지 않는다.
  *
- * 아직 백엔드 명세가 없어 MSW 핸들러(`mocks/handlers/auth.ts`)가 잡아둔 auth 만 있다.
+ * 백엔드 구현(`AuthController` 등)을 기준으로 한다. Notion 명세와 다르면 구현이 맞다.
  * 각 feature 작업을 시작할 때 여기에 추가한다.
  */
 export const endpoints = {
@@ -15,16 +15,20 @@ export const endpoints = {
     login: '/auth/login',
     logout: '/auth/logout',
     signUp: '/auth/signup',
-    /** refreshToken 쿠키로 accessToken 재발급 */
-    reissue: '/auth/reissue',
-    /** 로그인한 본인 정보. 세션 복구에서 재발급 직후 호출한다 */
-    me: '/auth/me',
+    /** refreshToken 쿠키로 accessToken 재발급. 응답에 expiresIn 이 없다 */
+    refresh: '/auth/refresh',
     emailCheck: '/auth/email/check',
   },
 
+  /** ⚠️ 백엔드 `com.sobi.user` 에 controller 가 없다. 목으로만 돈다 (S15P21D101-377) */
+  user: {
+    /** 로그인한 본인 정보. 세션 복구에서 재발급 직후 호출한다 */
+    me: '/user/me',
+  },
+
   business: {
-    /** 사이드바 하단 카드에 쓰는 내 업체 요약(상호·지역·업종명). 미등록이면 404 */
-    meSummary: '/businesses/me/summary',
+    /** 사이드바 하단 카드에 쓰는 내 업체 정보. 미등록이면 404 BUSINESS_O04 */
+    me: '/business/me',
   },
 
   /**
@@ -124,5 +128,5 @@ export const endpoints = {
 export const NO_REISSUE_PATHS: readonly string[] = [
   endpoints.auth.login,
   endpoints.auth.signUp,
-  endpoints.auth.reissue,
+  endpoints.auth.refresh,
 ]

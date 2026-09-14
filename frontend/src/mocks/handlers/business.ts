@@ -22,26 +22,20 @@ const mockSummary: BusinessSummary = {
 /**
  * 업체 (business) 목 핸들러.
  *
- * ⚠️ 경로·응답이 아직 실제와 다르다. 각자 자기 티켓에서 고친다.
- *    - 경로: `/businesses/me/summary` → **`/business/me`**
- *    - 응답: 실제는 `{ businessName, bsn, name, businessType, address, openDate }`.
- *      `address` 가 전체 주소라 지역은 프론트에서 잘라 써야 한다
+ * ⚠️ 응답 필드가 아직 실제와 다르다. 실제는
+ *    `{ businessName, bsn, name, businessType, address, openDate }` 이고
+ *    `address` 가 전체 주소라 지역은 프론트에서 잘라 써야 한다 (S15P21D101-361).
  */
 export const businessHandlers = [
-  // GET /api/v1/businesses/me/summary
-  http.get('/api/v1/businesses/me/summary', () => {
+  // GET /api/v1/business/me
+  http.get('/api/v1/business/me', () => {
     // 업체 미등록은 404 + BUSINESS_O04 다. 코드의 O 는 숫자 0 이 아니라 영문 대문자 (백엔드 오타)
     if (sessionStorage.getItem(BUSINESS_KEY) === 'none') {
-      return fail(
-        404,
-        'BUSINESS_O04',
-        '등록된 사업자 정보가 없습니다.',
-        '/api/v1/businesses/me/summary',
-      )
+      return fail(404, 'BUSINESS_O04', '등록된 사업자 정보가 없습니다.', '/api/v1/business/me')
     }
 
     return ok(mockSummary, '사업자 번호 기반 정보등록에 성공했습니다.', {
-      path: '/api/v1/businesses/me/summary',
+      path: '/api/v1/business/me',
     })
   }),
 ]

@@ -20,7 +20,7 @@ interface LoginRequest {
  * 133(인증/온보딩)에서 실제 쿠키 흐름으로 교체한다.
  */
 const SESSION_KEY = 'msw:logged-in'
-/** 어느 계정으로 로그인했는지. `/auth/me` 가 이 값으로 유저를 고른다 */
+/** 어느 계정으로 로그인했는지. `/user/me` 가 이 값으로 유저를 고른다 */
 const SESSION_EMAIL_KEY = 'msw:email'
 
 function hasSession() {
@@ -74,10 +74,10 @@ function currentUser(): User | null {
  * 인증 / 계정 (auth) 목 핸들러. 메시지·에러코드는 실제 백엔드 값을 그대로 쓴다.
  *
  * ⚠️ 남은 계약 불일치는 각자 자기 티켓에서 고친다.
- *    - 경로: `/auth/reissue` → `/auth/refresh`, `/auth/me` → `/user/me`
  *    - 로그인 응답: `{ accessToken, refreshToken }` → `{ accessToken, tokenType, expiresIn, user }`
- *      (refreshToken 은 실제로는 httpOnly 쿠키라 바디에 없다)
- *    - 이메일 중복확인: `{ available }` → `{ isDuplicate }` — **의미가 반대**다
+ *      (refreshToken 은 실제로는 httpOnly 쿠키라 바디에 없다) — S15P21D101-348
+ *    - 이메일 중복확인: `{ available }` → `{ isDuplicate }`, **의미가 반대**다 — S15P21D101-354
+ *    - `/user/me` 는 백엔드 미구현이라 목이 유일한 구현이다 — S15P21D101-377
  */
 export const authHandlers = [
   // GET /api/v1/auth/email/check?email=
@@ -115,26 +115,27 @@ export const authHandlers = [
     )
   }),
 
-  // POST /api/v1/auth/reissue
-  http.post('/api/v1/auth/reissue', () => {
+  // POST /api/v1/auth/refresh
+  http.post('/api/v1/auth/refresh', () => {
     if (!hasSession()) {
-      return fail(401, 'AUTH_008', '만료된 토큰입니다.', '/api/v1/auth/reissue')
+      return fail(401, 'AUTH_008', '만료된 토큰입니다.', '/api/v1/auth/refresh')
     }
 
-    return ok({ accessToken: 'mock-access-token', expiresIn: 1800 }, '액세스 토큰 재발급 성공', {
-      path: '/api/v1/auth/reissue',
+    // 실제 응답에는 expiresIn 이 없다. 목도 맞춰둔다
+    return ok({ accessToken: 'mock-access-token' }, '액세스 토큰 재발급 성공', {
+      path: '/api/v1/auth/refresh',
     })
   }),
 
-  // GET /api/v1/auth/me
-  http.get('/api/v1/auth/me', () => {
+  // GET /api/v1/user/me — 백엔드 미구현이라 목이 유일한 구현이다
+  http.get('/api/v1/user/me', () => {
     const user = hasSession() ? currentUser() : null
 
     if (!user) {
-      return fail(401, 'AUTH_010', '인증이 필요합니다.', '/api/v1/auth/me')
+      return fail(401, 'AUTH_010', '인증이 필요합니다.', '/api/v1/user/me')
     }
 
-    return ok(user, '내 정보 조회 성공', { path: '/api/v1/auth/me' })
+    return ok(user, '내 정보 조회 성공', { path: '/api/v1/user/me' })
   }),
 
   // POST /api/v1/auth/logout

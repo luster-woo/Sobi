@@ -6,13 +6,48 @@ React 19 + TypeScript + Vite
 
 ```bash
 npm install
-npm run dev        # localhost:5173
+npm run dev        # localhost:5173 — 실서버(localhost:8080)로 붙는다
+npm run dev:mock   # MSW 목으로 붙는다 (백엔드 없이 화면만 볼 때)
 npm run build      # 배포 빌드 (커밋 전 필수 확인)
 npm run preview    # 빌드 결과 로컬 확인
 npm run lint       # ESLint 검사
 npm run lint:fix   # ESLint 자동 수정
 npm run format     # Prettier 포맷
 ```
+
+> 타입 검사는 `npx tsc --noEmit` 이 아니라 **`npx tsc -b`** 로 한다.
+> 루트 `tsconfig.json` 이 `"files": []` + references 구조라 `--noEmit` 은 아무 파일도 검사하지 않는다.
+
+## 목(MSW)
+
+`VITE_USE_MOCK=true` 일 때만 켜진다. `npm run dev` 는 꺼짐(`.env.development`),
+`npm run dev:mock` 은 켜짐(`.env.mock`)이다.
+
+**목은 백엔드에 아직 없는 엔드포인트만 받는다.** 목이 켜져 있어도 요청은 실서버로
+먼저 나가고, 서버가 응답하면 그 응답을 쓴다. 아직 없는 엔드포인트일 때만 목이 받는다.
+그래서 백엔드가 API 를 올리면 **설정을 안 고쳐도 자동으로 목에서 빠진다.**
+
+콘솔에 엔드포인트별로 어느 쪽이 응답했는지 찍힌다.
+
+```
+[MSW] POST /api/v1/auth/login — 실서버 응답 사용
+[MSW] GET /api/v1/user/me — 백엔드 미구현, 목으로 응답합니다
+```
+
+미구현 판정은 **404·405 중 공통 봉투가 없는 응답**과 연결 실패다. 스프링에 매핑이 없어
+나는 404 와 업무 로직이 내는 404(`BUSINESS_O04` 등)를 본문으로 가른다. 업무 404 는
+실서버 응답을 그대로 쓴다.
+
+손으로 개입해야 하는 경우는 둘뿐이다.
+
+```bash
+# .env.mock
+VITE_MOCK_DOMAINS=loan,support   # 목을 아예 등록하지 않을 때. 비우면 전부 등록
+VITE_MOCK_FORCE=dashboard        # 서버는 있는데 응답 모양이 아직 안 맞을 때
+```
+
+고를 수 있는 값은 `src/mocks/handlers/index.ts` 의 `HANDLERS_BY_DOMAIN` 키다 —
+`auth` `business` `funding` `loan` `market` `notification` `repayment` `support`.
 
 ## 주요 라이브러리
 

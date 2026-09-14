@@ -4,6 +4,7 @@ import { Link, type Location, useLocation, useNavigate } from 'react-router'
 import GoogleAuthButton from '@/features/auth/components/GoogleAuthButton'
 import OrDivider from '@/features/auth/components/OrDivider'
 import { useLogin } from '@/features/auth/hooks/useLogin'
+import { buildAuthorizeUrl, isGoogleOAuthConfigured } from '@/features/auth/model/googleOAuth'
 import { ERROR_CODE, getErrorCode, getErrorMessage } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
 import { VALIDATION_MESSAGE } from '@/shared/constants/validation'
@@ -26,8 +27,13 @@ export function LoginPage() {
 
   const [emailError, setEmailError] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
-  /** 서버는 어느 칸이 틀렸는지 알려주지 않는다. 그래서 폼 아래에 한 줄로 붙인다 */
-  const [signInError, setSignInError] = useState<string | null>(null)
+  /**
+   * 서버는 어느 칸이 틀렸는지 알려주지 않는다. 그래서 폼 아래에 한 줄로 붙인다.
+   * 소셜 로그인이 실패하면 콜백 화면이 여기로 돌려보내면서 문구를 실어준다.
+   */
+  const [signInError, setSignInError] = useState<string | null>(
+    (location.state as { authError?: string } | null)?.authError ?? null,
+  )
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -119,8 +125,14 @@ export function LoginPage() {
 
         <OrDivider />
 
-        {/* TODO(135): /auth/oauth/{provider} 명세가 다른 프로젝트 템플릿이라 비워둔다 */}
-        <GoogleAuthButton label="계속하기" />
+        {/* 구글 동의 화면으로 나간다. 돌아오는 곳은 ROUTES.OAUTH_CALLBACK */}
+        <GoogleAuthButton
+          label="계속하기"
+          disabled={!isGoogleOAuthConfigured()}
+          onClick={() => {
+            window.location.assign(buildAuthorizeUrl())
+          }}
+        />
       </div>
 
       {/* 가입은 약관 동의(03)부터 시작한다.

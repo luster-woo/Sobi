@@ -18,6 +18,10 @@ export const endpoints = {
     /** refreshToken 쿠키로 accessToken 재발급. 응답에 expiresIn 이 없다 */
     refresh: '/auth/refresh',
     emailCheck: '/auth/email/check',
+    /** 소셜 로그인·회원가입. 응답은 `/auth/login` 과 같은 모양 */
+    oauth: (provider: string) => `/auth/oauth/${provider}`,
+    /** 로컬 → 소셜 전환. **인증 필요** */
+    social: (provider: string) => `/auth/social/${provider}`,
   },
 
   /** ⚠️ 백엔드 `com.sobi.user` 에 controller 가 없다. 목으로만 돈다 (S15P21D101-377) */

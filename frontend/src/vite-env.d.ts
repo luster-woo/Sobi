@@ -23,4 +23,19 @@ interface ImportMetaEnv {
    * 백엔드는 있는데 응답 모양이 아직 화면과 안 맞는 시기에만 쓴다.
    */
   readonly VITE_MOCK_FORCE?: string
+
+  /**
+   * 구글 OAuth 클라이언트 ID. 비어 있으면 구글 버튼이 비활성화된다.
+   *
+   * 공개값이라 빌드에 박혀도 된다 — 비밀은 clientSecret 이고 서버만 가진다.
+   */
+  readonly VITE_GOOGLE_CLIENT_ID?: string
+
+  /**
+   * 구글이 인가 코드를 돌려보낼 주소.
+   *
+   * ⚠️ 구글 콘솔의 '승인된 리디렉션 URI' 와 글자 하나까지 같아야 한다.
+   *    생략하면 `{현재 origin}/oauth/google` 을 쓴다.
+   */
+  readonly VITE_GOOGLE_REDIRECT_URI?: string
 }

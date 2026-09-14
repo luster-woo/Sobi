@@ -10,6 +10,14 @@ export const ROUTES = {
   LOGIN: '/login',
   TERMS: '/terms',
   SIGN_UP: '/signup',
+  /**
+   * 구글이 인가 코드를 돌려보내는 자리.
+   *
+   * ⚠️ 구글 클라우드 콘솔의 '승인된 리디렉션 URI', 그리고 서버가 code 를 교환할 때 쓰는
+   *    값과 글자 하나까지 같아야 한다. 셋 중 하나만 달라도 구글이 교환을 거부한다.
+   *    provider 가 늘어나도 이 한 자리로 받는다(어느 제공자인지는 state 로 구분).
+   */
+  OAUTH_CALLBACK: '/oauth/google',
   /** 비로그인 재설정(`/auth/password/reset`). 로그인 상태 변경은 마이페이지의 `/user/password` 다 */
   PASSWORD_RESET: '/password',
 

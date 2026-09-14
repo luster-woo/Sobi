@@ -158,6 +158,80 @@ export const authHandlers = [
     return ok(user, '내 정보 조회 성공', { path: '/api/v1/user/me' })
   }),
 
+  // POST /api/v1/auth/oauth/:provider
+  http.post('/api/v1/auth/oauth/:provider', async ({ request, params }) => {
+    const { code } = (await request.json()) as { code?: string }
+    const path = `/api/v1/auth/oauth/${String(params.provider)}`
+
+    if (params.provider !== 'google') {
+      return fail(400, 'AUTH_012', '지원하지 않는 소셜 로그인입니다.', path)
+    }
+
+    if (!code) {
+      return fail(400, 'AUTH_013', '소셜 로그인 인증에 실패했습니다.', path)
+    }
+
+    /*
+     * 목은 code 를 검증할 수 없다. 항상 사업자 계정으로 로그인시킨다.
+     * 최초 가입 분기(`isNewUser`)를 보려면 code 에 'new' 를 넣어 호출한다 —
+     * 실제로는 서버가 정한다.
+     */
+    const user = ENTREPRENEUR_USER
+    sessionStorage.setItem(SESSION_KEY, 'true')
+    sessionStorage.setItem(SESSION_EMAIL_KEY, user.email)
+
+    return ok(
+      {
+        accessToken: createMockAccessToken(user),
+        tokenType: 'Bearer',
+        expiresIn: 1800,
+        user,
+        ...(code.includes('new') ? { isNewUser: true } : {}),
+      },
+      '소셜 로그인 성공',
+      { path },
+    )
+  }),
+
+  /*
+   * POST /api/v1/auth/social/:provider — 로컬 → 소셜 전환. 인증 필요.
+   *
+   * 되돌릴 수 없다. 서버가 provider 를 GOOGLE 로 바꾸고 password 를 지워서
+   * 이후로는 구글로만 들어올 수 있다.
+   */
+  http.post('/api/v1/auth/social/:provider', async ({ request, params }) => {
+    const path = `/api/v1/auth/social/${String(params.provider)}`
+    const user = hasSession() ? currentUser() : null
+
+    if (!user) return fail(401, 'AUTH_010', '인증이 필요합니다.', path)
+
+    if (params.provider !== 'google') {
+      return fail(400, 'AUTH_012', '지원하지 않는 소셜 로그인입니다.', path)
+    }
+
+    const { code } = (await request.json()) as { code?: string }
+    if (!code) return fail(400, 'AUTH_013', '소셜 로그인 인증에 실패했습니다.', path)
+
+    /*
+     * 서버는 구글 이메일이 계정 이메일과 같을 때만 전환한다. 목은 구글에 물어볼 수
+     * 없으니 code 에 'mismatch' 가 들어오면 그 케이스로 친다 — 화면 확인용이다.
+     */
+    if (code.includes('mismatch')) {
+      return fail(
+        400,
+        'AUTH_016',
+        '계정 이메일과 일치하는 구글 계정만 연결할 수 있습니다.',
+        path,
+      )
+    }
+
+    return ok(
+      { userId: user.userId, email: user.email, provider: 'GOOGLE' },
+      '소셜 계정 연결이 완료되었습니다.',
+      { path },
+    )
+  }),
+
   // POST /api/v1/auth/logout
   http.post('/api/v1/auth/logout', () => {
     sessionStorage.setItem(SESSION_KEY, 'false')

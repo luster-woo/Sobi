@@ -49,6 +49,37 @@ VITE_MOCK_FORCE=dashboard        # 서버는 있는데 응답 모양이 아직 �
 고를 수 있는 값은 `src/mocks/handlers/index.ts` 의 `HANDLERS_BY_DOMAIN` 키다 —
 `auth` `business` `funding` `loan` `market` `notification` `repayment` `support`.
 
+## 구글 로그인
+
+`VITE_GOOGLE_CLIENT_ID` 가 비어 있으면 구글 버튼이 비활성화된다.
+클라이언트 ID 는 공개값이라 커밋해도 된다 — 비밀은 `clientSecret` 이고 서버만 가진다.
+
+```bash
+VITE_GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+VITE_GOOGLE_REDIRECT_URI=http://localhost:5173/oauth/google
+```
+
+⚠️ **리디렉션 URI 는 세 곳이 글자 하나까지 같아야 한다** — 구글 콘솔의 '승인된 리디렉션 URI',
+프론트의 이 값, 서버가 code 를 교환할 때 쓰는 값. 하나만 달라도 구글이
+`redirect_uri_mismatch` 로 막는다. 배포 도메인을 쓰려면 콘솔에도 그 주소를 추가해야 한다.
+
+로그인과 계정 연결이 **같은 콜백 주소**를 쓴다. 무엇을 하러 갔는지는 출발할 때
+sessionStorage 에 기록해 두고(`oauth:intent`) 돌아와서 읽는다.
+
+```
+로그인    버튼 → 구글 동의 → /oauth/google → POST /auth/oauth/google
+계정 연결  마이페이지 버튼 → 구글 동의 → /oauth/google → POST /auth/social/google
+```
+
+> 명세 예시에는 `/oauth/callback` 으로 적혀 있지만 **구글 콘솔에 등록된 값은 `/oauth/google`** 이다.
+> 백엔드는 우리가 보낸 `redirectUri` 를 그대로 구글에 넘기므로 서버 수정은 필요 없다.
+
+그래서 콜백 라우트는 ProtectedRoute·PublicOnlyRoute **어느 가드에도 넣지 않는다.**
+로그인은 비로그인 상태로, 계정 연결은 로그인 상태로 같은 주소에 돌아오기 때문이다.
+
+`state` 는 OAuth CSRF 를 막는 일회용 표식으로, sessionStorage 에 저장했다가 돌아온 값과
+비교하고 버린다.
+
 ## 주요 라이브러리
 
 | 라이브러리            | 용도                            |

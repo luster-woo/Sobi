@@ -1,14 +1,32 @@
 import type { ID, ISODateTime } from '@/shared/types/common'
 
-/** 상태 전이: SUBMITTED → REVIEWING → APPROVED / REJECTED */
+/**
+ * 상태 전이: PREPARING → SUBMITTED → REVIEW → APPROVED / REJECTED
+ *
+ * PREPARING 은 신청 화면에 머무르는 동안이다. 서류를 올리고 금액을 입력하는 동안
+ * 서버에 행이 이미 있어야 서류를 붙일 수 있어서, 신청하기를 누를 때 만들어진다.
+ *
+ * ⚠️ REVIEW 는 ProductStatus 와 맞춘 철자다. 대출 목록 API 가 이미 REVIEW 로
+ *    내려주고 있어서, 같은 개념을 두 철자로 들고 있으면 매핑할 때 어긋난다.
+ *    백엔드가 REVIEWING 으로 확정하면 여기와 statusBadge 만 고치면 된다.
+ */
 export const APPLICATION_STATUS = {
+  PREPARING: 'PREPARING', // 신청 준비중
   SUBMITTED: 'SUBMITTED', // 신청 완료
-  REVIEWING: 'REVIEWING', // 심사 중
+  REVIEW: 'REVIEW', // 심사 중
   APPROVED: 'APPROVED', // 승인
   REJECTED: 'REJECTED', // 반려
 } as const
 
 export type ApplicationStatus = (typeof APPLICATION_STATUS)[keyof typeof APPLICATION_STATUS]
+
+export const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
+  PREPARING: '신청 준비중',
+  SUBMITTED: '신청 완료',
+  REVIEW: '심사 중',
+  APPROVED: '승인',
+  REJECTED: '반려',
+}
 
 /**
  * 🔴 스키마와 명세가 어긋난다. `V1__init.sql` 의 `application` 컬럼은

@@ -2,6 +2,8 @@ import type { HttpHandler } from 'msw'
 
 import { createServerFirstProbes } from '@/mocks/lib/serverFirst'
 
+import { accountHandlers } from './account'
+import { applicationHandlers } from './application'
 import { authHandlers } from './auth'
 import { businessHandlers } from './business'
 import { fundingHandlers } from './funding'
@@ -13,6 +15,8 @@ import { supportHandlers } from './support'
 
 /** 새 도메인이 생기면 `handlers/{도메인}.ts` 를 만들고 여기에 추가한다 */
 const HANDLERS_BY_DOMAIN = {
+  account: accountHandlers,
+  application: applicationHandlers,
   auth: authHandlers,
   business: businessHandlers,
   funding: fundingHandlers,

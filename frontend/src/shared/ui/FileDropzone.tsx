@@ -1,12 +1,11 @@
 import { type DragEvent, type ReactNode, useRef, useState } from 'react'
 
 import { cn } from '@/shared/utils/cn'
-
-const DEFAULT_ACCEPT = ['.pdf', '.png', '.jpg', '.jpeg']
-const DEFAULT_MAX_SIZE_MB = 10
-
-/** ERD 의 application_document.original_filename 이 VARCHAR(50) 이다 */
-const MAX_FILENAME_LENGTH = 50
+import {
+  DEFAULT_UPLOAD_ACCEPT,
+  DEFAULT_UPLOAD_MAX_SIZE_MB,
+  validateUploadFile,
+} from '@/shared/utils/uploadFile'
 
 interface FileDropzoneProps {
   /** 검사를 통과한 파일. 서류 하나에 파일 하나라 여러 개를 받지 않는다 */
@@ -22,26 +21,21 @@ interface FileDropzoneProps {
   className?: string
 }
 
-function getExtension(fileName: string): string {
-  const dot = fileName.lastIndexOf('.')
-  return dot < 0 ? '' : fileName.slice(dot).toLowerCase()
-}
-
 /**
  * 드래그&드롭 + 클릭으로 파일 하나를 받는 영역.
  *
  * 검증 상태를 모릅니다. 파일을 받아 넘기는 것까지만 하고, 검증 중·통과·실패 표시는
  * DocumentUploadItem 이 담당합니다.
  *
- * 확장자·용량·파일명 길이를 프론트에서 먼저 검사합니다. 서버 왕복을 줄이려는 것도
- * 있지만, 파일명 길이는 DB 컬럼 제한(50자)이라 넘기면 저장 단계에서 깨집니다.
+ * 파일 검사는 shared/utils/uploadFile 에 있습니다. 드롭 영역이 아닌 자리(작성 서류의
+ * '작성본 올리기' 버튼)도 같은 검사를 써야 해서 밖으로 뺐습니다.
  *
  * button 으로 만든 이유: div + onClick 이면 키보드로 파일을 고를 수 없습니다.
  */
 export default function FileDropzone({
   onSelect,
-  accept = DEFAULT_ACCEPT,
-  maxSizeMb = DEFAULT_MAX_SIZE_MB,
+  accept = DEFAULT_UPLOAD_ACCEPT,
+  maxSizeMb = DEFAULT_UPLOAD_MAX_SIZE_MB,
   disabled = false,
   variant = 'dashed',
   onError,
@@ -51,23 +45,10 @@ export default function FileDropzone({
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
 
-  const validate = (file: File): string | null => {
-    if (!accept.includes(getExtension(file.name))) {
-      return `${accept.join(' · ')} 파일만 올릴 수 있어요`
-    }
-    if (file.size > maxSizeMb * 1024 * 1024) {
-      return `${maxSizeMb}MB 이하 파일만 올릴 수 있어요`
-    }
-    if (file.name.length > MAX_FILENAME_LENGTH) {
-      return `파일 이름을 ${MAX_FILENAME_LENGTH}자 이하로 줄여주세요`
-    }
-    return null
-  }
-
   const handleFile = (file: File | undefined) => {
     if (!file) return
 
-    const error = validate(file)
+    const error = validateUploadFile(file, { accept, maxSizeMb })
     if (error) {
       onError?.(error)
       return

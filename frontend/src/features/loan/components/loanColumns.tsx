@@ -50,8 +50,8 @@ export const loanColumns: Column<LoanListItem>[] = [
           loan.status === PRODUCT_STATUS.IMPOSSIBLE ? 'text-text-muted' : 'text-text',
         )}
       >
-        {/* 관심 목록이 소수점 한 자리로 맞춰 읽는다. 3 과 3.5 가 섞이면 자릿수가 흔들린다 */}
-        연 {loan.interestRate.toFixed(1)}%
+        {/* 관심 목록이 소수점 한 자리로 맞춰 읽는다. 3 과 3.5 가 섞이면 자릿수가 흔들린다 */}연{' '}
+        {loan.interestRate.toFixed(1)}%
       </span>
     ),
   },
@@ -95,10 +95,7 @@ export const loanColumns: Column<LoanListItem>[] = [
     align: 'center',
     render: (loan) => (
       <span
-        className={cn(
-          'flex justify-center',
-          loan.isBookmark ? 'text-text' : 'text-text-disabled',
-        )}
+        className={cn('flex justify-center', loan.isBookmark ? 'text-text' : 'text-text-disabled')}
       >
         <BookmarkIcon filled={loan.isBookmark} />
       </span>

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { useSupportProgramDetail } from '@/features/support-program/hooks/useSupportProgramDetail'
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
@@ -62,11 +62,8 @@ export default function SupportProgramDetailModal({
   const { data, isLoading, isError } = useSupportProgramDetail(supportProgramId)
 
   // ⚠️ 대출 상세와 같다. `/bookmark` 가 붙으면 useMutation 으로 바꾼다
-  const [bookmarked, setBookmarked] = useState(false)
-
-  useEffect(() => {
-    if (data) setBookmarked(data.isBookmark)
-  }, [data])
+  const [override, setOverride] = useState<boolean | null>(null)
+  const bookmarked = override ?? data?.isBookmark ?? false
 
   return (
     <Modal
@@ -76,12 +73,14 @@ export default function SupportProgramDetailModal({
       onClose={onClose}
       title={data?.pblancNm ?? '지원사업'}
       description={data?.bsnsSumryCn ?? undefined}
-      headerRight={data && <ProductStatusBadge status={data.status} labels={SUPPORT_STATUS_LABEL} />}
+      headerRight={
+        data && <ProductStatusBadge status={data.status} labels={SUPPORT_STATUS_LABEL} />
+      }
       headerAction={
         data && (
           <BookmarkButton
             bookmarked={bookmarked}
-            onToggle={() => setBookmarked((previous) => !previous)}
+            onToggle={() => setOverride(!bookmarked)}
             label={data.pblancNm}
           />
         )

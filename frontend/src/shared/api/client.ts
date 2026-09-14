@@ -1,9 +1,9 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 
 import { API_BASE_URL, endpoints, NO_REISSUE_PATHS } from '@/shared/api/endpoints'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
-import type { TokenResponse } from '@/shared/types'
+import type { ApiResponse, TokenResponse } from '@/shared/types'
 
 /** 응답이 이 시간을 넘기면 끊는다. 사용자가 무한 로딩을 보는 것보다 낫다 */
 const TIMEOUT_MS = 10_000
@@ -40,6 +40,30 @@ api.interceptors.request.use((config) => {
 
   return config
 })
+
+/**
+ * 공통 응답 봉투인지 판별한다.
+ *
+ * `data` 키만 보면 안 된다. payload 자체가 `data` 필드를 가지면 한 겹 더 벗겨진다.
+ */
+function isEnvelope(body: unknown): body is ApiResponse<unknown> {
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    'data' in body &&
+    'statusCode' in body &&
+    'timestamp' in body
+  )
+}
+
+/** 봉투를 벗겨 `data` 안쪽만 남긴다. 봉투가 아니면(204·파일 등) 그대로 둔다 */
+function unwrapEnvelope(response: AxiosResponse): AxiosResponse {
+  if (isEnvelope(response.data)) response.data = response.data.data
+  return response
+}
+
+// 재발급 응답도 봉투다. 안 벗기면 accessToken 을 undefined 로 읽어 세션 복구가 조용히 실패한다
+reissueClient.interceptors.response.use(unwrapEnvelope)
 
 /**
  * 진행 중인 재발급 요청.
@@ -93,31 +117,29 @@ function notifyUnrecoverable(error: AxiosError) {
   }
 }
 
-api.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError) => {
-    const config = error.config as RetriableConfig | undefined
-    const isReissuable =
-      error.response?.status === 401 &&
-      config !== undefined &&
-      !config._retried &&
-      !NO_REISSUE_PATHS.includes(config.url ?? '')
+// 에러는 안 벗긴다. message 와 error.code 를 둘 다 써야 해서 errors.ts 가 봉투째 읽는다
+api.interceptors.response.use(unwrapEnvelope, async (error: AxiosError) => {
+  const config = error.config as RetriableConfig | undefined
+  const isReissuable =
+    error.response?.status === 401 &&
+    config !== undefined &&
+    !config._retried &&
+    !NO_REISSUE_PATHS.includes(config.url ?? '')
 
-    if (!isReissuable) {
-      notifyUnrecoverable(error)
-      return Promise.reject(error)
-    }
+  if (!isReissuable) {
+    notifyUnrecoverable(error)
+    return Promise.reject(error)
+  }
 
-    config._retried = true
+  config._retried = true
 
-    try {
-      const accessToken = await reissueAccessToken()
-      config.headers.Authorization = `Bearer ${accessToken}`
-      return await api(config)
-    } catch (reissueError) {
-      // 재발급까지 실패하면 세션을 되살릴 방법이 없다. 라우팅은 보호 라우트가 판단한다
-      useAuthStore.getState().clearSession()
-      return Promise.reject(reissueError)
-    }
-  },
-)
+  try {
+    const accessToken = await reissueAccessToken()
+    config.headers.Authorization = `Bearer ${accessToken}`
+    return await api(config)
+  } catch (reissueError) {
+    // 재발급까지 실패하면 세션을 되살릴 방법이 없다. 라우팅은 보호 라우트가 판단한다
+    useAuthStore.getState().clearSession()
+    return Promise.reject(reissueError)
+  }
+})

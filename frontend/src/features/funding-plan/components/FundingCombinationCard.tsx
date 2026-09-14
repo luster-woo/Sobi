@@ -14,7 +14,7 @@ interface FundingCombinationCardProps {
 
 function Summary({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="border-border-subtle border-b border-r p-3.5 last:border-r-0">
+    <div className="border-border-subtle border-r border-b p-3.5 last:border-r-0">
       <p className="text-text-muted text-[11.5px]">{label}</p>
       <p className="text-text mt-1 text-[19px] font-bold tracking-tight tabular-nums">
         {value}
@@ -87,8 +87,8 @@ export default function FundingCombinationCard({
 
           {excess > 0 && (
             <p className="text-text-secondary text-[11.5px] leading-relaxed">
-              필요 금액보다 {formatMoneyShort(excess)} 더 조달돼요. 상품마다 최소 신청 금액이
-              있어 딱 맞추기 어려운 경우예요.
+              필요 금액보다 {formatMoneyShort(excess)} 더 조달돼요. 상품마다 최소 신청 금액이 있어
+              딱 맞추기 어려운 경우예요.
             </p>
           )}
         </div>
@@ -96,11 +96,7 @@ export default function FundingCombinationCard({
         <div className="border-border-subtle lg:border-l">
           <div className="grid grid-cols-2">
             <Summary label="총 조달액" value={total.value} unit={total.unit} />
-            <Summary
-              label="평균 금리"
-              value={`연 ${combination.averageInterestRate}`}
-              unit="%"
-            />
+            <Summary label="평균 금리" value={`연 ${combination.averageInterestRate}`} unit="%" />
             <Summary label="월 상환액" value={monthly.value} unit={monthly.unit} />
             <Summary label="총 이자" value={interest.value} unit={interest.unit} />
           </div>

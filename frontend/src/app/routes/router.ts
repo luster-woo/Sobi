@@ -59,6 +59,24 @@ export const router = createBrowserRouter([
         ],
       },
       {
+        /*
+         * 구글이 인가 코드를 붙여 돌려보내는 자리. 잠깐 스피너만 보인다.
+         *
+         * 가드 밖에 둔다. 로그인(비로그인 상태)과 마이페이지의 계정 연결(로그인 상태)이
+         * 같은 주소로 돌아오기 때문이다. PublicOnlyRoute 아래 두면 연결하고 돌아온
+         * 사용자가 대시보드로 튕겨 코드를 처리하지 못한다.
+         */
+        Component: AuthLayout,
+        children: [
+          {
+            path: ROUTES.OAUTH_CALLBACK,
+            lazy: async () => ({
+              Component: (await import('@/pages/OAuthCallbackPage')).OAuthCallbackPage,
+            }),
+          },
+        ],
+      },
+      {
         Component: ProtectedRoute,
         children: [
           {

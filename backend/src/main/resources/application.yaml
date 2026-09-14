@@ -68,3 +68,7 @@ ssafy:
     api-key: ${SSAFY_FINANCE_API_KEY}
     institution-code: "00100"
     fintech-app-no: "001"
+
+loan:
+  product-sync:
+    enabled: ${LOAN_PRODUCT_SYNC_ENABLED:true}   # 부팅 시 미등록 대출 상품을 금융망에 등록

@@ -5,19 +5,28 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.core import db
 from app.rag.embedding import koe5
 from app.rag.router import router as rag_router
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+# 라이브러리 내부 로그는 경고만. HF 허브 캐시 확인 요청이 기동 로그를 덮는다.
+for _noisy in ("httpx", "httpcore", "urllib3", "sentence_transformers", "transformers"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # KoE5를 기동 시 미리 적재한다. 첫 요청이 2분 걸리는 것을 막는다.
+    await db.open_pool()
     koe5.get_model()
     logger.info("기동 완료")
     yield
+    await db.close_pool()
 
 
 app = FastAPI(title="지원사업 AI 서버", lifespan=lifespan)
@@ -25,5 +34,9 @@ app.include_router(rag_router)
 
 
 @app.get("/health")
-def health():
-    return {"status": "ok", "model_loaded": koe5.is_loaded()}
+async def health():
+    return {
+        "status": "ok",
+        "model_loaded": koe5.is_loaded(),
+        "db": await db.ping(),
+    }

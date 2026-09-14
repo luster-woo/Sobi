@@ -42,8 +42,23 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+**Windows에서는 반드시 `python run_dev.py` 로 띄우세요.**
+`uvicorn app.main:app` 으로 직접 띄우면 DB 연결이 실패합니다.
+uvicorn이 고르는 이벤트 루프를 psycopg가 지원하지 않아서인데,
+`run_dev.py` 가 호환되는 루프로 바꿔줍니다. 리눅스·배포는 무관합니다.
+
 첫 기동 때 KoE5 모델 2.2GB를 내려받습니다(5~10분). 이후로는 캐시를 씁니다.
 확인은 <http://localhost:8000/docs> 에서.
+
+### 환경변수
+
+저장소 루트 `.env` 하나만 씁니다 (`ai/.env` 없음).
+
+| 키 | 용도 |
+|---|---|
+| `POSTGRES_HOST` `PORT` `DB` `USER` `PASSWORD` | DB 접속 |
+| `GMS_API_KEY` `GMS_BASE_URL` | LLM 호출 |
+| `BIZINFO_API_KEY` | 기업마당 공고 수집 (배치 전용) |
 
 ## 엔드포인트
 

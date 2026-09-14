@@ -62,3 +62,6 @@ def embed_passages(
     if any(not t for t in cleaned):
         raise ValueError("embed_passages: 빈 청크 포함")
     return _encode([f"passage: {t}" for t in cleaned], batch_size=batch_size)
+
+def is_loaded() -> bool:
+    return _model is not None

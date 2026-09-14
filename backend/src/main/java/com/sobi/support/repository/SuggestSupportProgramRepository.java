@@ -21,4 +21,7 @@ public interface SuggestSupportProgramRepository extends JpaRepository<SuggestSu
     findAllWithSupportProgramByBusinessId(
             @Param("businessId") Long businessId
     );
+
+
+    SuggestSupportProgram findByBusinessIdAndSupportProgram_Id(Long businessId, Long supportProgramId);
 }

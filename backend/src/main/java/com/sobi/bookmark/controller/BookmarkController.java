@@ -1,6 +1,7 @@
 package com.sobi.bookmark.controller;
 
 
+import com.sobi.bookmark.dto.BookmarkListResponse;
 import com.sobi.bookmark.entity.Bookmark;
 import com.sobi.bookmark.service.BookmarkService;
 import com.sobi.global.response.ApiResponse;
@@ -27,7 +28,6 @@ public class BookmarkController {
 
         bookmarkService.addBookmark(userId, programId, type);
 
-
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(
@@ -39,5 +39,45 @@ public class BookmarkController {
 
     }
 
+    @DeleteMapping("/{programId}")
+    public ResponseEntity<ApiResponse<Void>> removeBookmark(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long programId,
+            @RequestParam String type,
+            HttpServletRequest request
+    ) {
 
+        bookmarkService.removeBookmark(userId, programId, type);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "관심목록 삭제에 성공했습니다.",
+                        request
+                ));
+
+
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<BookmarkListResponse>> getBookmark(
+            @AuthenticationPrincipal Long userId,
+            HttpServletRequest request
+    ){
+
+
+
+        BookmarkListResponse response = bookmarkService.getBookmarks(userId);
+
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "관심목록 삭제에 성공했습니다.",
+                        response,
+                        request
+                ));
+    }
 }

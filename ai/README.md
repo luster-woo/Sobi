@@ -64,10 +64,36 @@ uvicorn이 고르는 이벤트 루프를 psycopg가 지원하지 않아서인데
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET | `/health` | 상태 + 모델 적재 여부 |
-| POST | `/rag/embed` | 텍스트 임베딩. `{"texts": [...], "kind": "query"\|"passage"}` → 1024차원 |
+| GET | `/health` | 상태 + 모델·DB 연결 여부 |
+| POST | `/rag/embed` | 텍스트 임베딩 (디버그용) |
+| POST | `/rag/search` | 정형 필터 + 벡터 검색. 공고 최대 10건 |
+| POST | `/rag/recommend` | 검색 후 LLM 자격 검증까지 |
 
-`/rag/search`, `/rag/recommend` 는 작업 중입니다.
+`/rag/search`·`/rag/recommend` 요청 본문:
+
+```json
+{
+  "region": "경북",
+  "address": "경상북도 안동시 경동로 456",
+  "business_code": "CS100005",
+  "employee_count": 2,
+  "open_date": "2024-06-03",
+  "annual_revenue": 180000000
+}
+```
+
+`/rag/recommend` 응답의 `status` 는 `eligible` · `ineligible` · `unknown` 셋 중 하나입니다.
+`unknown` 은 대표자 연령이나 체납 여부처럼 사업자 정보만으로 확인할 수 없는
+필수 조건이 있다는 뜻입니다.
+
+## 동작 확인용 데이터
+
+`scripts/seed_manual.py` 가 공고 5건을 수동으로 넣습니다. 적재 파이프라인(티켓 E)
+완성 전까지 쓰는 임시 데이터로, 골든셋 P05(경북 안동 제과점) 기준으로 골랐습니다.
+
+```powershell
+python scripts/seed_manual.py
+```
 
 ## 임베딩 모델
 

@@ -17,7 +17,12 @@ export const endpoints = {
     signUp: '/auth/signup',
     /** refreshToken 쿠키로 accessToken 재발급. 응답에 expiresIn 이 없다 */
     refresh: '/auth/refresh',
+    /** query `email`. 응답의 isDuplicate 가 true 면 **이미 쓰는 이메일**이다 */
     emailCheck: '/auth/email/check',
+    /** 인증번호 발송. 1분 쿨다운이 있고 걸리면 429 AUTH_002 */
+    emailSend: '/auth/email/send',
+    /** 가입용 인증번호 검증. 이걸 통과해야 signup 이 된다 */
+    emailVerify: '/auth/email/verify',
     /** 소셜 로그인·회원가입. 응답은 `/auth/login` 과 같은 모양 */
     oauth: (provider: string) => `/auth/oauth/${provider}`,
     /** 로컬 → 소셜 전환. **인증 필요** */

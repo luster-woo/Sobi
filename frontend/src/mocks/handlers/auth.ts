@@ -38,20 +38,63 @@ const PREENTREPRENEUR_USER: SessionUser = {
   role: USER_ROLE.PREENTREPRENEUR,
 }
 
+interface MockAccount {
+  password: string
+  user: SessionUser
+}
+
 /**
  * 목 계정.
  *
  * 비밀번호는 두 계정 모두 `sogong1234!` 다. `validatePassword` 규칙(영문·숫자·특수문자
  * 8자 이상)을 통과하는 값으로 골랐다 — 화면 검증에 먼저 걸리면 로그인 실패를 볼 수 없다.
+ *
+ * 가입으로 만든 계정도 여기에 들어간다. 상수로만 두면 가입 직후 로그인이 실패해서
+ * 가입 → 로그인 → 온보딩 흐름을 이어서 확인할 수 없다.
+ *
+ * sessionStorage 에 얹어 새로고침을 견디게 한다 — 가입하고 로그인 화면으로 넘어간 뒤
+ * 새로고침하면 계정이 사라지는 일을 막는다. 탭을 닫으면 초기화된다.
  */
-const MOCK_ACCOUNTS: Record<string, { password: string; user: SessionUser }> = {
+const ACCOUNTS_KEY = 'msw:accounts'
+
+const SEED_ACCOUNTS: Record<string, MockAccount> = {
   'owner@sogong.com': { password: 'sogong1234!', user: ENTREPRENEUR_USER },
   'pre@sogong.com': { password: 'sogong1234!', user: PREENTREPRENEUR_USER },
 }
 
+function loadAccounts(): Record<string, MockAccount> {
+  try {
+    const saved = sessionStorage.getItem(ACCOUNTS_KEY)
+    return saved ? { ...SEED_ACCOUNTS, ...(JSON.parse(saved) as Record<string, MockAccount>) } : SEED_ACCOUNTS
+  } catch {
+    return SEED_ACCOUNTS
+  }
+}
+
+function findAccount(email: string): MockAccount | undefined {
+  return loadAccounts()[email]
+}
+
+/**
+ * 가입한 계정을 더한다.
+ *
+ * role 은 null 이다. 백엔드도 가입 시점에는 role 을 넣지 않고 `POST /business` 로
+ * 업체를 등록해야 ENTREPRENEUR 가 된다 — 그래서 가입 직후 로그인하면 온보딩으로 간다.
+ */
+function addAccount(email: string, password: string, name: string) {
+  const accounts = loadAccounts()
+
+  accounts[email] = {
+    password,
+    user: { userId: Date.now(), email, name, role: null },
+  }
+
+  sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
+}
+
 function currentUser(): SessionUser | null {
   const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
-  return email ? (MOCK_ACCOUNTS[email]?.user ?? null) : null
+  return email ? (findAccount(email)?.user ?? null) : null
 }
 
 /**
@@ -79,29 +122,142 @@ function createMockAccessToken(user: SessionUser): string {
 }
 
 /**
+ * 가입 흐름에서 쓰는 고정 인증번호.
+ *
+ * 서버는 6자리 난수를 만들어 메일로 보낸다. 목에는 메일이 없으니 값을 고정하고
+ * 발송할 때 콘솔에 찍는다.
+ */
+const MOCK_VERIFICATION_CODE = '123456'
+
+/** 1분 쿨다운. 서버 `emailCodeRepository.isCoolingDown` 을 흉내 낸다 */
+const COOL_DOWN_MS = 60_000
+const coolDownUntil = new Map<string, number>()
+
+function isCoolingDown(email: string) {
+  return Date.now() < (coolDownUntil.get(email) ?? 0)
+}
+
+function startCoolDown(email: string) {
+  coolDownUntil.set(email, Date.now() + COOL_DOWN_MS)
+}
+
+/**
+ * 인증을 마친 이메일. 서버도 검증 성공과 가입을 분리해서 이 상태를 따로 들고 있다.
+ * 이게 없으면 가입할 때 AUTH_006 이다.
+ */
+const verifiedEmails = new Set<string>()
+
+const markVerified = (email: string) => verifiedEmails.add(email)
+const isVerified = (email: string) => verifiedEmails.has(email)
+const clearVerified = (email: string) => verifiedEmails.delete(email)
+
+/**
  * 인증 / 계정 (auth) 목 핸들러. 메시지·에러코드는 실제 백엔드 값을 그대로 쓴다.
  *
- * ⚠️ 남은 계약 불일치는 각자 자기 티켓에서 고친다.
- *    - 로그인 응답: `{ accessToken, refreshToken }` → `{ accessToken, tokenType, expiresIn, user }`
- *      (refreshToken 은 실제로는 httpOnly 쿠키라 바디에 없다) — S15P21D101-348
- *    - 이메일 중복확인: `{ available }` → `{ isDuplicate }`, **의미가 반대**다 — S15P21D101-354
+ * ⚠️ 남은 계약 불일치
+ *    - 로그인 응답이 `refreshToken` 을 바디로 준다. 실제로는 httpOnly 쿠키다
  *    - `/user/me` 는 백엔드 미구현이라 목이 유일한 구현이다 — S15P21D101-377
+ *
+ * 가입 흐름은 목에서도 순서를 지켜야 통과한다.
+ *    중복 확인 → 발송(쿨다운) → 검증(123456) → 가입
  */
 export const authHandlers = [
   // GET /api/v1/auth/email/check?email=
   http.get('/api/v1/auth/email/check', ({ request }) => {
     const email = new URL(request.url).searchParams.get('email')
 
-    return ok({ available: email !== null && !(email in MOCK_ACCOUNTS) }, '이메일 중복 확인 성공', {
-      path: '/api/v1/auth/email/check',
-    })
+    // isDuplicate 는 existsByEmail 결과 그대로다 — true 면 가입할 수 없다
+    return ok(
+      { isDuplicate: email !== null && findAccount(email) !== undefined },
+      '이메일 중복 확인 성공',
+      { path: '/api/v1/auth/email/check' },
+    )
+  }),
+
+  /*
+   * POST /api/v1/auth/email/send
+   *
+   * 서버는 1분 쿨다운을 두고 걸리면 429 를 던진다. 목도 같은 규칙으로 흉내 내야
+   * 재발송 버튼이 실제로 막히는지 확인할 수 있다.
+   */
+  http.post('/api/v1/auth/email/send', async ({ request }) => {
+    const { email } = (await request.json()) as { email?: string }
+    const path = '/api/v1/auth/email/send'
+
+    if (!email) return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
+
+    if (isCoolingDown(email)) {
+      return fail(429, 'AUTH_002', '잠시 후 다시 시도해주세요.', path)
+    }
+
+    startCoolDown(email)
+    console.info(`[MSW] ${email} 인증번호: ${MOCK_VERIFICATION_CODE}`)
+
+    return ok(null, '인증번호 발송 성공', { path })
+  }),
+
+  /*
+   * POST /api/v1/auth/email/verify
+   *
+   * ⚠️ 실패가 200 + verified:false 가 아니라 **400** 이다.
+   *    만료는 AUTH_003, 불일치는 AUTH_004.
+   */
+  http.post('/api/v1/auth/email/verify', async ({ request }) => {
+    const { email, verificationCode } = (await request.json()) as {
+      email?: string
+      verificationCode?: string
+    }
+    const path = '/api/v1/auth/email/verify'
+
+    if (!email || !verificationCode) {
+      return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
+    }
+
+    if (verificationCode !== MOCK_VERIFICATION_CODE) {
+      return fail(400, 'AUTH_004', '인증번호가 일치하지 않습니다', path)
+    }
+
+    markVerified(email)
+    return ok({ verified: true }, '이메일 인증 성공', { path })
+  }),
+
+  /*
+   * POST /api/v1/auth/signup
+   *
+   * 응답에 토큰이 없다. 서버가 인증 완료 여부를 따로 들고 있다가 확인한다.
+   */
+  http.post('/api/v1/auth/signup', async ({ request }) => {
+    const { email, password, name } = (await request.json()) as {
+      email?: string
+      password?: string
+      name?: string
+    }
+    const path = '/api/v1/auth/signup'
+
+    if (!email || !password || !name) {
+      return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
+    }
+
+    if (findAccount(email)) {
+      return fail(409, 'AUTH_005', '이미 사용 중인 이메일입니다.', path)
+    }
+
+    if (!isVerified(email)) {
+      return fail(400, 'AUTH_006', '이메일 인증이 완료되지 않았습니다.', path)
+    }
+
+    // 가입한 계정으로 바로 로그인할 수 있어야 흐름이 이어진다
+    addAccount(email, password, name)
+
+    clearVerified(email)
+    return ok(null, '회원가입 성공', { path })
   }),
 
   // POST /api/v1/auth/login
   http.post('/api/v1/auth/login', async ({ request }) => {
     const { email, password } = (await request.json()) as LoginRequest
 
-    const account = MOCK_ACCOUNTS[email]
+    const account = findAccount(email)
 
     // 어느 쪽이 틀렸는지 알려주지 않는다. 가입된 이메일을 알아낼 수 있다
     if (!account || account.password !== password) {

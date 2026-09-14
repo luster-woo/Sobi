@@ -1,9 +1,14 @@
 import type { ReactNode } from 'react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 
+import { useCreateApplication } from '@/features/application/hooks/useApplication'
+import { APPLICATION_SOURCE } from '@/features/application/model/types'
 import { useLoanDetail } from '@/features/loan/hooks/useLoanDetail'
 import type { ProductStatus } from '@/shared/constants/productStatus'
 import { LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
+import { routeTo } from '@/shared/constants/routes'
+import { useUiStore } from '@/shared/lib/store/useUiStore'
 import BookmarkButton from '@/shared/ui/BookmarkButton'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
@@ -23,8 +28,12 @@ import { formatMoneyShort } from '@/shared/utils/formatters'
  *
  * 신청 완료 시점부터는 신청·서류 제출 화면에 다시 들어갈 수 없다.
  *
- * ⚠️ 189·202 화면이 아직 없어서 버튼이 눌리지 않는다. 라우트가 생기면 onClick 을 넣고
- *    disabled 를 지우면 된다. IMPOSSIBLE 은 그 뒤에도 계속 비활성이다.
+ * POSSIBLE·WRITING 은 연결됐다. 둘 다 신청 생성을 부르면 되는데, 서버가 준비중인
+ * 건이 있으면 새로 만들지 않고 그걸 돌려주기 때문이다.
+ *
+ * ⚠️ SUBMITTED 이상은 아직 비활성이다. 그 상품의 신청 건으로 가야 하는데
+ *    상세 응답에 applicationId 가 없어 어느 건인지 알 수 없다. 백엔드에 요청해 둔 상태다.
+ *    IMPOSSIBLE 은 그 뒤에도 계속 비활성이다.
  */
 const FOOTER_LABEL: Record<ProductStatus, string> = {
   POSSIBLE: '신청하기',
@@ -58,6 +67,29 @@ interface LoanDetailModalProps {
  */
 export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProps) {
   const { data, isLoading, isError } = useLoanDetail(loanId)
+  const navigate = useNavigate()
+  const showToast = useUiStore((state) => state.showToast)
+
+  /*
+   * ⚠️ features 끼리 불러오는 건 원래 피해야 한다. 여기서 예외를 둔 이유는
+   * 이 모달을 여는 곳이 셋(목록 라우트·대시보드 카드·관심 목록)이라 프롭으로 내리면
+   * 같은 import 가 셋으로 늘기 때문이다.
+   *
+   * 194 에서 지원사업도 같은 동작이 필요해지면 그때 shared 로 올리는 게 맞다.
+   */
+  const createApplication = useCreateApplication()
+
+  const canApply = data?.status === 'POSSIBLE' || data?.status === 'WRITING'
+
+  const handleApply = () => {
+    createApplication.mutate(
+      { type: APPLICATION_SOURCE.LOAN, programId: loanId },
+      {
+        onSuccess: (application) => navigate(routeTo.loanApply(application.applicationId)),
+        onError: () => showToast('신청을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+      },
+    )
+  }
 
   /*
    * ⚠️ 즐겨찾기를 화면 안에서만 기억한다. `POST`/`DELETE /bookmark/{programId}` 가
@@ -93,7 +125,12 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
       }
       footer={
         data && (
-          <Button className="w-full" disabled>
+          <Button
+            className="w-full"
+            disabled={!canApply}
+            loading={createApplication.isPending}
+            onClick={handleApply}
+          >
             {FOOTER_LABEL[data.status]}
           </Button>
         )

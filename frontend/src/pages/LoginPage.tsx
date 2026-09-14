@@ -4,6 +4,7 @@ import { Link, type Location, useLocation, useNavigate } from 'react-router'
 import GoogleAuthButton from '@/features/auth/components/GoogleAuthButton'
 import OrDivider from '@/features/auth/components/OrDivider'
 import { useLogin } from '@/features/auth/hooks/useLogin'
+import { ERROR_CODE, getErrorCode, getErrorMessage } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
 import { VALIDATION_MESSAGE } from '@/shared/constants/validation'
 import Button from '@/shared/ui/Button'
@@ -46,7 +47,18 @@ export function LoginPage() {
       { email, password },
       {
         onSuccess: () => navigate(from, { replace: true }),
-        onError: () => setSignInError('이메일 또는 비밀번호가 올바르지 않습니다.'),
+        onError: (error) => {
+          /*
+           * 401 이 두 가지로 온다. AUTH_009(비밀번호 틀림)만 폼 에러로 붙이고,
+           * 나머지(네트워크·500 등)는 서버 문구를 그대로 보여준다.
+           */
+          const message =
+            getErrorCode(error) === ERROR_CODE.LOGIN_FAILED
+              ? '이메일 또는 비밀번호가 올바르지 않습니다.'
+              : getErrorMessage(error)
+
+          setSignInError(message)
+        },
       },
     )
   }

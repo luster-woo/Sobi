@@ -55,8 +55,13 @@ public enum ErrorCode {
     FINANCE_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_001", "금융망 API 호출에 실패했습니다."),
 
     // funding 관련
-    TARGET_AMOUNT_ERROR(HttpStatus.BAD_REQUEST, "FUNDING_001", "목표 금액은 0보다 커야합니다.");
+    TARGET_AMOUNT_ERROR(HttpStatus.BAD_REQUEST, "FUNDING_001", "목표 금액은 0보다 커야합니다."),
 
+    // bookmark 관련
+    LOAN_NOT_FOUND(HttpStatus.NOT_FOUND, "BOOKMARK_001", "해당 id의 대출상품을 찾을 수 없습니다."),
+    SUPPROT_NOT_FOUND(HttpStatus.NOT_FOUND, "BOOKMARK_002", "해당 id의 지원사업을 찾을 수 없습니다."),
+    BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "BOOKMARK_003", "미이 관심목록에 등록되어있는 상품/사업입니다."),
+    TYPE_BAD_REQUEST(HttpStatus.BAD_REQUEST, "BOOKMARK_004", "타입 입력이 잘못되었습니다.");
 
 
     private final HttpStatus status;

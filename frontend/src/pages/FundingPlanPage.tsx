@@ -54,10 +54,7 @@ export function FundingPlanPage() {
       {isLoading && <Skeleton height={220} className="rounded-md" />}
 
       {isError && (
-        <EmptyState
-          title="조합을 찾지 못했어요"
-          description="금액을 바꿔서 다시 시도해보세요."
-        />
+        <EmptyState title="조합을 찾지 못했어요" description="금액을 바꿔서 다시 시도해보세요." />
       )}
 
       {combinations && combinations.length === 0 && (

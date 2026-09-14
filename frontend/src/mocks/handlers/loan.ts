@@ -1,8 +1,8 @@
-import { http, HttpResponse } from 'msw'
+import { http } from 'msw'
 
 import type { LoanDetail, LoanListData, LoanListItem } from '@/features/loan/model/types'
+import { fail, ok } from '@/mocks/lib/envelope'
 import type { ProductStatus } from '@/shared/constants/productStatus'
-import type { ApiResponse } from '@/shared/types'
 
 const BANKS = ['싸피은행', '기업은행', '대구은행', '소상공인시장진흥공단', '중소벤처기업진흥공단']
 const STATUSES: ProductStatus[] = [
@@ -82,13 +82,9 @@ const mockLoans: LoanListItem[] = [
 ]
 
 /**
- * 대출 (loan) 목 핸들러.
+ * 대출 (loan) 목 핸들러. 백엔드 미구현이라 이 목이 유일한 구현이다.
  *
- * 실제 응답 형태(봉투 + page 객체)를 그대로 흉내냅니다. 그래야 서버로 바꿀 때
- * 화면과 훅을 안 고칩니다.
- *
- * ⚠️ sort 값 형식이 명세에 없어 'interestRate,asc' 같은 Spring 형식으로 가정했습니다.
- *    확정되면 이 파일만 고치면 됩니다.
+ * ⚠️ sort 형식은 'interestRate,asc' (Spring) 으로 가정. 확정되면 이 파일만 고친다.
  */
 export const loanHandlers = [
   // GET /api/v1/loan
@@ -125,12 +121,8 @@ export const loanHandlers = [
     const totalElements = filtered.length
     const totalPages = Math.ceil(totalElements / size)
 
-    const body: ApiResponse<LoanListData> = {
-      statusCode: 200,
-      timestamp: new Date().toISOString(),
-      path: '/api/v1/loan',
-      message: '대출 목록 조회 성공',
-      data: {
+    return ok<LoanListData>(
+      {
         loans: filtered.slice(page * size, page * size + size),
         page: {
           number: page,
@@ -141,10 +133,9 @@ export const loanHandlers = [
           last: page >= totalPages - 1,
         },
       },
-      error: null,
-    }
-
-    return HttpResponse.json(body)
+      '대출 목록 조회 성공',
+      { path: '/api/v1/loan' },
+    )
   }),
 
   // GET /api/v1/loan/:loanId
@@ -153,20 +144,13 @@ export const loanHandlers = [
     const found = mockLoans.find((loan) => loan.loanId === loanId)
 
     if (!found) {
-      return HttpResponse.json({ message: '상품을 찾을 수 없습니다' }, { status: 404 })
+      // 대출 도메인은 백엔드 미구현이라 전용 에러 코드가 없다. 확정되면 교체
+      return fail(404, 'COMMON_001', '상품을 찾을 수 없습니다.', `/api/v1/loan/${loanId}`)
     }
 
-    /*
-     * 목록에 없는 필드는 여기서 만든다. 목록 응답에는 최대 한도만 오고 최소 한도·상환
-     * 기간·업력·대상·등급은 상세에만 있다. loanId 로 값을 흔들어 화면에서 상품마다
-     * 다르게 보이게 했다.
-     */
-    const detail: ApiResponse<LoanDetail> = {
-      statusCode: 200,
-      timestamp: new Date().toISOString(),
-      path: `/api/v1/loan/${loanId}`,
-      message: '대출 상품 상세 조회 성공',
-      data: {
+    // 최소 한도·기간·업력·등급은 상세에만 있다. loanId 로 값을 흔들어 상품마다 다르게 보이게 했다
+    return ok<LoanDetail>(
+      {
         accountName: found.accountName,
         description: `업력 ${6 + (loanId % 3) * 6}개월 이상 소상공인 대상 · 대리대출(시중은행 취급)로 실행돼요.`,
         status: found.status,
@@ -179,9 +163,8 @@ export const loanHandlers = [
         target: '소상공인',
         rating: ['A', 'B', 'C'][loanId % 3],
       },
-      error: null,
-    }
-
-    return HttpResponse.json(detail)
+      '대출 상품 상세 조회 성공',
+      { path: `/api/v1/loan/${loanId}` },
+    )
   }),
 ]

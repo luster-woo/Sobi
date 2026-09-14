@@ -1,7 +1,7 @@
-import { http, HttpResponse } from 'msw'
+import { http } from 'msw'
 
 import type { RawLoanProduct, RawRepaymentDetail } from '@/features/loan-repayment/model/types'
-import type { ApiResponse } from '@/shared/types'
+import { fail, ok } from '@/mocks/lib/envelope'
 
 /**
  * 상환 관리 목.
@@ -120,42 +120,30 @@ const paidOff = new Set<string>()
 
 export const repaymentHandlers = [
   http.post('/api/v1/repayment/finan/list', () =>
-    HttpResponse.json({
-      statusCode: 200,
-      timestamp: '2026-09-11T10:00:00',
-      path: '/api/v1/repayment/finan/list',
-      message: '내 대출 상품 가입 목록 조회에 성공하였습니다.',
-      data: { loanProductList: PRODUCTS.filter((p) => !paidOff.has(p.accountNo)) },
-      error: null,
-    } satisfies ApiResponse<{ loanProductList: RawLoanProduct[] }>),
+    ok<{ loanProductList: RawLoanProduct[] }>(
+      { loanProductList: PRODUCTS.filter((p) => !paidOff.has(p.accountNo)) },
+      '내 대출 상품 가입 목록 조회에 성공하였습니다.',
+      { path: '/api/v1/repayment/finan/list' },
+    ),
   ),
 
   http.post('/api/v1/repayment/finan/records', async ({ request }) => {
     const { accountNo } = (await request.json()) as { accountNo: string }
     const found = paidOff.has(accountNo) ? undefined : DETAILS[accountNo]
 
+    // 금융망 조회 실패는 EXTERNAL_001 이다. 화면은 재시도 UI 를 띄운다
     if (!found) {
-      return HttpResponse.json(
-        {
-          statusCode: 400,
-          timestamp: '2026-09-11T10:00:00',
-          path: '/api/v1/repayment/finan/records',
-          message: '유효하지 않은 요청입니다.',
-          data: null,
-          error: 'INVALID_REQUEST',
-        },
-        { status: 400 },
+      return fail(
+        500,
+        'EXTERNAL_001',
+        '금융망 API 호출에 실패했습니다.',
+        '/api/v1/repayment/finan/records',
       )
     }
 
-    return HttpResponse.json({
-      statusCode: 200,
-      timestamp: '2026-09-11T10:00:00',
+    return ok<RawRepaymentDetail>(found, '내 대출 상환 내역 조회에 성공하였습니다.', {
       path: '/api/v1/repayment/finan/records',
-      message: '내 대출 상환 내역 조회에 성공하였습니다.',
-      data: found,
-      error: null,
-    } satisfies ApiResponse<RawRepaymentDetail>)
+    })
   }),
 
   http.post('/api/v1/repayment/finan/loanBalanceInFull', async ({ request }) => {
@@ -163,13 +151,8 @@ export const repaymentHandlers = [
     // 금융망이 계좌를 지우는 것을 흉내 낸다. 이후 list 에서 빠지고 records 는 400 이다
     paidOff.add(accountNo)
 
-    return HttpResponse.json({
-      statusCode: 200,
-      timestamp: '2026-09-11T10:00:00',
+    return ok(null, '해당 대출 상품 일시납 상환에 성공했습니다.', {
       path: '/api/v1/repayment/finan/loanBalanceInFull',
-      message: '해당 대출 상품 일시납 상환에 성공했습니다.',
-      data: null,
-      error: null,
-    } satisfies ApiResponse<null>)
+    })
   }),
 ]

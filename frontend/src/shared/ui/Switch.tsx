@@ -18,13 +18,7 @@ interface SwitchProps {
  * 확인 버튼 없이 누르는 즉시 반영되는 자리에만 쓴다. 폼 안에서 저장 버튼을 눌러야
  * 적용되는 값이라면 Checkbox 가 맞다.
  */
-export default function Switch({
-  checked,
-  onChange,
-  label,
-  disabled,
-  className,
-}: SwitchProps) {
+export default function Switch({ checked, onChange, label, disabled, className }: SwitchProps) {
   return (
     <button
       type="button"

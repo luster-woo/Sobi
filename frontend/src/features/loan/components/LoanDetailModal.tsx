@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { useLoanDetail } from '@/features/loan/hooks/useLoanDetail'
 import type { ProductStatus } from '@/shared/constants/productStatus'
@@ -63,14 +63,14 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
    * ⚠️ 즐겨찾기를 화면 안에서만 기억한다. `POST`/`DELETE /bookmark/{programId}` 가
    *    붙으면 이 state 를 지우고 useMutation + invalidateQueries 로 바꾼다.
    *
-   * 서버 값(data.isBookmark)을 그대로 읽지 않는 이유: 토글 API 가 없어 눌러도 응답이
-   * 바뀌지 않는다. 눌리는 느낌이 없으면 버튼이 고장난 것으로 보인다.
+   * 서버 값을 그대로 읽지 않는 이유: 토글 API 가 없어 눌러도 응답이 바뀌지 않는다.
+   * 눌리는 느낌이 없으면 버튼이 고장난 것으로 보인다.
+   *
+   * 누르기 전에는 서버 값, 누른 뒤에는 override 가 이긴다. effect 로 동기화하면
+   * react-hooks/set-state-in-effect 에 걸리고 렌더가 한 번 더 돈다.
    */
-  const [bookmarked, setBookmarked] = useState(false)
-
-  useEffect(() => {
-    if (data) setBookmarked(data.isBookmark)
-  }, [data])
+  const [override, setOverride] = useState<boolean | null>(null)
+  const bookmarked = override ?? data?.isBookmark ?? false
 
   return (
     <Modal
@@ -86,7 +86,7 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
         data && (
           <BookmarkButton
             bookmarked={bookmarked}
-            onToggle={() => setBookmarked((previous) => !previous)}
+            onToggle={() => setOverride(!bookmarked)}
             label={data.accountName}
           />
         )

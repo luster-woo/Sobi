@@ -5,15 +5,11 @@ import type {
 } from '@/features/funding-plan/model/types'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
-import type { ApiResponse } from '@/shared/types'
 
 /** 조합 추천. 조회인데 POST 다 — 조건을 body 로 받는다 */
 export async function getFundingRecommendations(params: FundingRecommendParams) {
-  const { data } = await api.post<ApiResponse<FundingRecommendData>>(
-    endpoints.funding.recommend,
-    params,
-  )
-  return data.data.recommendedCombinations
+  const { data } = await api.post<FundingRecommendData>(endpoints.funding.recommend, params)
+  return data.recommendedCombinations
 }
 
 /**
@@ -25,5 +21,5 @@ export async function getFundingRecommendations(params: FundingRecommendParams) 
  *    '이 조합으로 진행' 버튼을 열면 된다.
  */
 export async function applyFundingBatch(items: FundingBatchItem[]) {
-  await api.post<ApiResponse<null>>(endpoints.funding.batch, { item: items })
+  await api.post<null>(endpoints.funding.batch, { item: items })
 }

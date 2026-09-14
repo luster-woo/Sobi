@@ -1,18 +1,16 @@
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
-import type { LoginRequest } from '@/shared/types'
+import type { LoginRequest, LoginResponse } from '@/shared/types'
 
 /**
- * ⚠️ 응답 형태가 명세와 다르다. 명세는 봉투 안에
- *    `{ accessToken, tokenType, expiresIn, user }` 를 주는데 지금 MSW 핸들러는
- *    `{ accessToken, refreshToken }` 을 그대로 준다. 계약 정렬 때 이 함수만 고치면
- *    화면과 훅은 그대로 간다.
+ * 이메일 로그인.
+ *
+ * 응답에 사용자 정보(네 필드)가 같이 온다. 그래서 로그인 직후 `/user/me` 를 부르지
+ * 않는다 — 그 엔드포인트는 백엔드에 아직 없다.
+ *
+ * refreshToken 은 바디에 없다. 서버가 httpOnly 쿠키로 내려준다.
  */
-interface LoginResult {
-  accessToken: string
-}
-
 export async function login(body: LoginRequest) {
-  const { data } = await api.post<LoginResult>(endpoints.auth.login, body)
+  const { data } = await api.post<LoginResponse>(endpoints.auth.login, body)
   return data
 }

@@ -129,6 +129,19 @@ export const router = createBrowserRouter([
                 ],
               },
               {
+                // 대출·지원사업이 같은 페이지를 쓴다. 경로만 둘이다
+                path: ROUTES.LOAN_APPLY,
+                lazy: async () => ({
+                  Component: (await import('@/pages/ApplicationApplyPage')).ApplicationApplyPage,
+                }),
+              },
+              {
+                path: ROUTES.SUPPORT_PROGRAM_APPLY,
+                lazy: async () => ({
+                  Component: (await import('@/pages/ApplicationApplyPage')).ApplicationApplyPage,
+                }),
+              },
+              {
                 path: ROUTES.LOAN_REPAYMENTS,
                 lazy: async () => ({
                   Component: (await import('@/pages/LoanRepaymentPage')).LoanRepaymentPage,

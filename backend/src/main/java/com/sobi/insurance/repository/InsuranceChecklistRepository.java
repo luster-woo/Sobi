@@ -32,7 +32,7 @@ public interface InsuranceChecklistRepository extends JpaRepository<InsuranceChe
             SELECT c FROM InsuranceChecklist c
             JOIN FETCH c.insurance i
             WHERE c.id = :checklistId
-              AND c.business.userId = :userId
+              AND c.business.user.id = :userId
             """)
     Optional<InsuranceChecklist> findByIdAndUserId(@Param("checklistId") Long checklistId,
                                                    @Param("userId") Long userId);

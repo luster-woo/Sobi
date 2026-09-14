@@ -4,15 +4,14 @@ export type ISODateTime = string // 'YYYY-MM-DDTHH:mm:ss'
 export type YearMonth = string // 'YYYY-MM'
 
 /**
- * 공통 응답 봉투. 모든 엔드포인트가 이 형태로 감싸서 준다.
+ * 공통 응답 봉투. 모든 엔드포인트가 이 형태로 준다.
  *
- * 성공이면 error 가 null 이고 data 에 실제 응답이 들어온다.
- * 실패면 error 에 내용이 담기고 message 에 사람이 읽을 문구가 온다.
+ * **성공 응답의 봉투는 `client.ts` 인터셉터가 벗긴다.** api 함수는 알맹이 타입만 쓴다 —
+ * `api.get<LoanListData>(...)`. `ApiResponse<T>` 를 제네릭에 넣거나 `data.data` 로 꺼내지 않는다.
  *
- * ⚠️ 아직 client.ts 응답 인터셉터에서 벗기지 않는다. 지금 목 핸들러(auth · business ·
- *    notification)가 봉투 없이 응답해서, 인터셉터를 켜면 그쪽이 전부 깨진다.
- *    각 api 함수에서 `data.data` 로 꺼내 쓰는 중이고, 목을 모두 봉투 형태로 바꾸는
- *    작업과 함께 인터셉터로 옮기는 것이 맞다.
+ * 직접 쓰는 곳은 `client.ts`(언랩)와 `mocks/lib/envelope.ts`(목 생성) 둘뿐이다.
+ *
+ * ⚠️ 실패 응답은 안 벗긴다. `errors.ts` 가 봉투째 읽는다.
  */
 export interface ApiResponse<T> {
   statusCode: number
@@ -42,14 +41,12 @@ export interface ApiError {
 }
 
 /**
- * 에러 응답 바디.
+ * 필드 단위 검증 실패.
+ *
+ * ⚠️ 현재 백엔드는 이걸 내려주지 않는다. `GlobalExceptionHandler` 가 검증 실패를
+ *    COMMON_001 하나로 뭉친다. 서버가 필드 목록을 주기 시작하면 `errors.ts` 의
+ *    `getFieldErrors` 가 바로 받도록 타입만 남겨둔다.
  */
-export interface ApiErrorBody {
-  message: string
-  code?: string
-  errors?: FieldError[]
-}
-
 export interface FieldError {
   field: string
   message: string

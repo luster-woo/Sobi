@@ -171,11 +171,7 @@ export default function Table<T>({
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className={cn(
-                      'text-body2',
-                      cellPadding,
-                      alignClass[column.align ?? 'left'],
-                    )}
+                    className={cn('text-body2', cellPadding, alignClass[column.align ?? 'left'])}
                   >
                     {column.render(row)}
                   </td>

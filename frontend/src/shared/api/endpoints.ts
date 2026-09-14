@@ -47,6 +47,29 @@ export const endpoints = {
   },
 
   /**
+   * 신청. 생성은 쿼리로 대상을 받고, 나머지는 applicationId 로 가리킨다.
+   *
+   * 명세에는 경로 변수가 {programId} 로 적혀 있지만 예시 응답의 path 가
+   * /application/12 이고 그 12 가 applicationId 다. 확정시 변경할 것.
+   */
+  /** 마이데이터로 불러온 입출금 계좌. 서버가 COMMON 타입만 걸러서 준다 */
+  account: {
+    list: '/account/list',
+  },
+
+  application: {
+    create: '/application',
+    detail: (applicationId: number) => `/application/${applicationId}`,
+    cancel: (applicationId: number) => `/application/${applicationId}`,
+    /** 최종 신청. body 에 applicationId·applyAmount·accountNo */
+    submit: '/application/finan',
+    /** 서류 업로드. multipart. 작성 서류도 같은 곳으로 올리고 검증만 안 한다 */
+    uploadDocument: '/document',
+    /** 작성 서류 초안 생성. 비동기로 돌고 상세 조회로 결과를 받는다 */
+    requestDraft: '/document/draft',
+  },
+
+  /**
    * 자금 조합. 목표 금액을 채우는 상품 조합을 서버가 추천한다.
    * 조회인데 POST 인 건 요청 body 로 조건을 받기 때문이다.
    */

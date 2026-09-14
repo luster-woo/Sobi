@@ -35,10 +35,11 @@ export const ROUTES = {
   /**
    * 신청·서류 제출. '/loans/:loanId' 와는 깊이가 달라 겹치지 않는다.
    *
-   * 지원사업도 같은 화면을 쓰지만 경로는 194 에서 따로 추가한다.
-   * 목록으로 돌아갈 곳이 달라서 경로를 나누는 게 맞다.
+   * 대출과 지원사업이 같은 화면을 쓰는데 경로를 둘로 둔다 — 응답이 오기 전에도
+   * '목록으로' 링크를 그리려면 어디서 왔는지 알아야 한다.
    */
   LOAN_APPLY: '/loans/apply/:applicationId',
+  SUPPORT_PROGRAM_APPLY: '/support-programs/apply/:applicationId',
 
   SUPPORT_PROGRAMS: '/support-programs',
   SUPPORT_PROGRAM_DETAIL: '/support-programs/:supportProgramId',
@@ -61,4 +62,5 @@ export const routeTo = {
   loanDetail: (loanId: number) => `/loans/${loanId}`,
   supportProgramDetail: (supportProgramId: number) => `/support-programs/${supportProgramId}`,
   loanApply: (applicationId: number) => `/loans/apply/${applicationId}`,
+  supportProgramApply: (applicationId: number) => `/support-programs/apply/${applicationId}`,
 } as const

@@ -18,12 +18,7 @@ interface SocialLinkModalProps {
  * 계정 이메일을 보여주는 이유: 서버가 같은 이메일의 구글 계정만 받는다. 동의 화면에서
  * 다른 계정을 고르면 거절당하는데, 그걸 누르기 전에 알려주면 헛걸음이 줄어든다.
  */
-export default function SocialLinkModal({
-  open,
-  onClose,
-  onConfirm,
-  email,
-}: SocialLinkModalProps) {
+export default function SocialLinkModal({ open, onClose, onConfirm, email }: SocialLinkModalProps) {
   return (
     <Modal
       open={open}

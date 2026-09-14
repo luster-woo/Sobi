@@ -1,6 +1,11 @@
 import { useMutation } from '@tanstack/react-query'
 
-import { checkEmailAvailable, sendEmailCode, signUp, verifyEmailCode } from '@/features/auth/api/signup'
+import {
+  checkEmailAvailable,
+  sendEmailCode,
+  signUp,
+  verifyEmailCode,
+} from '@/features/auth/api/signup'
 import type { EmailVerifyRequest, SignUpRequest } from '@/shared/types'
 
 /**

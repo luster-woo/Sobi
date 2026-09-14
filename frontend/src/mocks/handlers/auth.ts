@@ -65,7 +65,9 @@ const SEED_ACCOUNTS: Record<string, MockAccount> = {
 function loadAccounts(): Record<string, MockAccount> {
   try {
     const saved = sessionStorage.getItem(ACCOUNTS_KEY)
-    return saved ? { ...SEED_ACCOUNTS, ...(JSON.parse(saved) as Record<string, MockAccount>) } : SEED_ACCOUNTS
+    return saved
+      ? { ...SEED_ACCOUNTS, ...(JSON.parse(saved) as Record<string, MockAccount>) }
+      : SEED_ACCOUNTS
   } catch {
     return SEED_ACCOUNTS
   }
@@ -89,6 +91,16 @@ function addAccount(email: string, password: string, name: string) {
     user: { userId: Date.now(), email, name, role: null },
   }
 
+  sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
+}
+
+/** 비밀번호 재설정. 시드 계정도 덮어쓸 수 있게 저장본에 기록한다 */
+function updatePassword(email: string, password: string) {
+  const accounts = loadAccounts()
+  const account = accounts[email]
+  if (!account) return
+
+  accounts[email] = { ...account, password }
   sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
 }
 
@@ -150,6 +162,15 @@ const verifiedEmails = new Set<string>()
 const markVerified = (email: string) => verifiedEmails.add(email)
 const isVerified = (email: string) => verifiedEmails.has(email)
 const clearVerified = (email: string) => verifiedEmails.delete(email)
+
+/**
+ * 이미 쓴 resetToken. 서버가 1회용으로 지우는 것을 흉내 낸다.
+ *
+ * 토큰이 어느 계정 것인지도 기억한다 — 재설정 후 새 비밀번호로 로그인되는지까지
+ * 확인하려면 계정을 찾아야 한다.
+ */
+const resetTokenOwner = new Map<string, string>()
+const usedResetTokens = new Set<string>()
 
 /**
  * 인증 / 계정 (auth) 목 핸들러. 메시지·에러코드는 실제 백엔드 값을 그대로 쓴다.
@@ -260,11 +281,55 @@ export const authHandlers = [
       return fail(400, 'AUTH_004', '인증번호가 일치하지 않습니다', path)
     }
 
-    return ok(
-      { verified: true, resetToken: `mock-reset-${String(Date.now())}` },
-      '이메일 인증번호 검증 성공',
-      { path },
-    )
+    const resetToken = `mock-reset-${String(Date.now())}`
+    resetTokenOwner.set(resetToken, email)
+
+    return ok({ verified: true, resetToken }, '이메일 인증번호 검증 성공', { path })
+  }),
+
+  /*
+   * POST /api/v1/auth/password/reset
+   *
+   * resetToken 은 **1회용**이다. 서버가 쓰고 나서 지우므로 같은 값으로 두 번 부르면
+   * AUTH_011 이다. 목도 쓴 토큰을 기억해 같은 동작을 흉내 낸다.
+   *
+   * 성공하면 서버가 기존 refreshToken 을 전부 지운다 — 다른 기기도 로그아웃된다.
+   */
+  http.post('/api/v1/auth/password/reset', async ({ request }) => {
+    const { resetToken, newPassword } = (await request.json()) as {
+      resetToken?: string
+      newPassword?: string
+    }
+    const path = '/api/v1/auth/password/reset'
+
+    if (!resetToken || !newPassword) {
+      return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
+    }
+
+    if (newPassword.length < 8 || newPassword.length > 20) {
+      return fail(400, 'COMMON_001', '입력값 중에 기준을 만족하지 않은 입력값이 있습니다.', path)
+    }
+
+    const owner = resetTokenOwner.get(resetToken)
+
+    if (!owner || usedResetTokens.has(resetToken)) {
+      return fail(
+        400,
+        'AUTH_011',
+        '유효하지 않거나 만료된 요청입니다. 이메일 인증을 다시 진행해주세요.',
+        path,
+      )
+    }
+
+    usedResetTokens.add(resetToken)
+    // 실제로 바꿔야 새 비밀번호로 로그인되는지까지 확인할 수 있다
+    updatePassword(owner, newPassword)
+
+    // 세션을 끊는 것까지 흉내 낸다. 로그인 중이었다면 새로고침 시 풀린다
+    sessionStorage.setItem(SESSION_KEY, 'false')
+    sessionStorage.removeItem(SESSION_EMAIL_KEY)
+
+    return ok(null, '비밀번호 변경이 완료되었습니다.', { path })
   }),
 
   /*
@@ -423,12 +488,7 @@ export const authHandlers = [
      * 없으니 code 에 'mismatch' 가 들어오면 그 케이스로 친다 — 화면 확인용이다.
      */
     if (code.includes('mismatch')) {
-      return fail(
-        400,
-        'AUTH_016',
-        '계정 이메일과 일치하는 구글 계정만 연결할 수 있습니다.',
-        path,
-      )
+      return fail(400, 'AUTH_016', '계정 이메일과 일치하는 구글 계정만 연결할 수 있습니다.', path)
     }
 
     return ok(

@@ -25,6 +25,10 @@ export type AuthProvider = (typeof AUTH_PROVIDER)[keyof typeof AUTH_PROVIDER]
 /**
  * `user` 테이블. password 컬럼은 응답에 포함되지 않아 제외했다.
  *
+ * ⚠️ 세션(`useAuthStore`)이 담는 건 이게 아니라 `SessionUser` 다. 로그인 응답은
+ *    `userId`·`email`·`name`·`role` 네 개만 준다. 이 타입은 `GET /user/me` 가
+ *    생기면 쓴다 (BE-02).
+ *
  * ERD 상 deleted_at 으로 소프트 삭제하지만, 탈퇴한 유저는 조회 대상이 아니라
  * 프론트로 내려올 일이 없어 타입에 넣지 않았다.
  */

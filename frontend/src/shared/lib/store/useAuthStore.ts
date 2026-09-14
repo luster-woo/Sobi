@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-import type { User } from '@/shared/types'
+import type { SessionUser } from '@/shared/types'
 
 /**
  * 세션 복구 단계.
@@ -14,14 +14,15 @@ export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 interface AuthStore {
   status: AuthStatus
   accessToken: string | null
-  user: User | null
+  /** 로그인 응답이 주는 네 필드뿐이다. 나머지는 마이페이지가 따로 조회한다 */
+  user: SessionUser | null
 
   /** 로그인·세션 복구 성공 시 */
-  setSession: (accessToken: string, user: User) => void
+  setSession: (accessToken: string, user: SessionUser) => void
   /** 토큰 재발급 성공 시. user 는 그대로 두고 토큰만 교체한다 */
   setAccessToken: (accessToken: string) => void
   /** 프로필 수정 후 서버 응답으로 갱신할 때 */
-  setUser: (user: User) => void
+  setUser: (user: SessionUser) => void
   /** 로그아웃, 재발급 실패, 복구 실패 모두 여기로 모인다 */
   clearSession: () => void
 }

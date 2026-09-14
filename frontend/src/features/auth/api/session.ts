@@ -1,6 +1,6 @@
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
-import type { TokenResponse, User } from '@/shared/types'
+import type { SessionUser, TokenResponse } from '@/shared/types'
 
 /**
  * refreshToken 쿠키로 accessToken 재발급.
@@ -16,9 +16,9 @@ export async function reissue() {
   return data
 }
 
-/** ⚠️ 백엔드 `GET /user/me` 미구현. 지금은 MSW 만 응답한다 (S15P21D101-377) */
+/** ⚠️ 백엔드 `GET /user/me` 미구현. 지금은 MSW 만 응답한다 (BE-02) */
 export async function getMe() {
-  const { data } = await api.get<User>(endpoints.user.me)
+  const { data } = await api.get<SessionUser>(endpoints.user.me)
   return data
 }
 

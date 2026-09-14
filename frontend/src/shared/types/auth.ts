@@ -1,4 +1,4 @@
-import type { AuthProvider, User } from '@/shared/types/user'
+import type { AuthProvider, UserRole } from '@/shared/types/user'
 
 /**
  * 인증 요청·응답.
@@ -36,9 +36,36 @@ export interface TokenResponse {
   expiresIn?: number
 }
 
+/**
+ * 로그인 응답에 실려오는 사용자 정보. **네 필드뿐이다.**
+ *
+ * `shared/types/user.ts` 의 `User`(테이블 전체)와 다르다. 신용등급·가입 경로·알림 설정
+ * 같은 나머지는 `GET /user/me` 가 주기로 되어 있는데 백엔드에 아직 없다.
+ *
+ * 화면이 세션에서 실제로 읽는 값은 `role` 과 `name` 뿐이라 이 네 개로 충분하다.
+ * 키가 `id` 가 아니라 **`userId`** 다.
+ */
+export interface SessionUser {
+  userId: number
+  email: string
+  name: string
+  role: UserRole
+}
+
 export interface LoginResponse extends TokenResponse {
   expiresIn: number
-  user: User
+  /** 항상 'Bearer' */
+  tokenType: string
+  user: SessionUser
+  /** 소셜 최초 가입일 때만 온다. 온보딩으로 보낼지 판단한다 */
+  isNewUser?: boolean
+}
+
+/** 로컬 계정을 소셜로 전환한 결과 */
+export interface SocialLinkResponse {
+  userId: number
+  email: string
+  provider: string
 }
 
 export interface EmailCheckResponse {

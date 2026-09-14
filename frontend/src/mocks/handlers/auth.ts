@@ -1,12 +1,8 @@
 import { http } from 'msw'
 
 import { fail, ok } from '@/mocks/lib/envelope'
-import { AUTH_PROVIDER, type User, USER_ROLE } from '@/shared/types'
-
-interface LoginRequest {
-  email: string
-  password: string
-}
+import type { LoginRequest, SessionUser } from '@/shared/types'
+import { USER_ROLE } from '@/shared/types'
 
 /**
  * 목 세션.
@@ -27,31 +23,19 @@ function hasSession() {
   return sessionStorage.getItem(SESSION_KEY) === 'true'
 }
 
-const ENTREPRENEUR_USER: User = {
-  id: 1,
+/** 실제 로그인 응답이 주는 네 필드뿐이다 */
+const ENTREPRENEUR_USER: SessionUser = {
+  userId: 1,
   email: 'owner@sogong.com',
   name: '김소상',
   role: USER_ROLE.ENTREPRENEUR,
-  creditRating: 'AA',
-  provider: AUTH_PROVIDER.LOCAL,
-  providerId: null,
-  notification: true,
-  createdAt: '2026-03-02T09:12:00',
-  updatedAt: null,
 }
 
-const PREENTREPRENEUR_USER: User = {
-  id: 2,
+const PREENTREPRENEUR_USER: SessionUser = {
+  userId: 2,
   email: 'pre@sogong.com',
   name: '박예비',
   role: USER_ROLE.PREENTREPRENEUR,
-  // 마이데이터 연동 전이라 신용등급이 없다
-  creditRating: null,
-  provider: AUTH_PROVIDER.LOCAL,
-  providerId: null,
-  notification: true,
-  createdAt: '2026-08-14T11:40:00',
-  updatedAt: null,
 }
 
 /**
@@ -60,14 +44,38 @@ const PREENTREPRENEUR_USER: User = {
  * 비밀번호는 두 계정 모두 `sogong1234!` 다. `validatePassword` 규칙(영문·숫자·특수문자
  * 8자 이상)을 통과하는 값으로 골랐다 — 화면 검증에 먼저 걸리면 로그인 실패를 볼 수 없다.
  */
-const MOCK_ACCOUNTS: Record<string, { password: string; user: User }> = {
+const MOCK_ACCOUNTS: Record<string, { password: string; user: SessionUser }> = {
   'owner@sogong.com': { password: 'sogong1234!', user: ENTREPRENEUR_USER },
   'pre@sogong.com': { password: 'sogong1234!', user: PREENTREPRENEUR_USER },
 }
 
-function currentUser(): User | null {
+function currentUser(): SessionUser | null {
   const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
   return email ? (MOCK_ACCOUNTS[email]?.user ?? null) : null
+}
+
+/**
+ * 백엔드 `JwtProvider` 와 같은 claim 을 담은 가짜 JWT.
+ *
+ * 세션 복구 폴백이 토큰을 디코드하므로 `sub`·`email`·`role` 이 실제로 들어 있어야
+ * 목 환경에서도 그 경로를 검증할 수 있다. 서명은 검증하지 않는다.
+ */
+function createMockAccessToken(user: SessionUser): string {
+  const encode = (value: object) =>
+    btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(value))))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
+
+  const header = encode({ alg: 'HS256', typ: 'JWT' })
+  const payload = encode({
+    sub: String(user.userId),
+    email: user.email,
+    role: user.role,
+    exp: Math.floor(Date.now() / 1000) + 1800,
+  })
+
+  return `${header}.${payload}.mock-signature`
 }
 
 /**
@@ -108,8 +116,18 @@ export const authHandlers = [
     sessionStorage.setItem(SESSION_KEY, 'true')
     sessionStorage.setItem(SESSION_EMAIL_KEY, email)
 
+    /*
+     * refreshToken 은 바디에 넣지 않는다 — 실제로는 httpOnly 쿠키다.
+     * accessToken 은 세션 복구 폴백(`shared/lib/accessToken.ts`)이 디코드할 수 있게
+     * 진짜 JWT 모양으로 만든다. 서명은 아무 값이나 넣는다. 검증은 서버 몫이다.
+     */
     return ok(
-      { accessToken: 'mock-access-token', refreshToken: 'mock-refresh-token' },
+      {
+        accessToken: createMockAccessToken(account.user),
+        tokenType: 'Bearer',
+        expiresIn: 1800,
+        user: account.user,
+      },
       '로그인 성공',
       { path: '/api/v1/auth/login' },
     )
@@ -117,12 +135,14 @@ export const authHandlers = [
 
   // POST /api/v1/auth/refresh
   http.post('/api/v1/auth/refresh', () => {
-    if (!hasSession()) {
+    const user = hasSession() ? currentUser() : null
+
+    if (!user) {
       return fail(401, 'AUTH_008', '만료된 토큰입니다.', '/api/v1/auth/refresh')
     }
 
     // 실제 응답에는 expiresIn 이 없다. 목도 맞춰둔다
-    return ok({ accessToken: 'mock-access-token' }, '액세스 토큰 재발급 성공', {
+    return ok({ accessToken: createMockAccessToken(user) }, '액세스 토큰 재발급 성공', {
       path: '/api/v1/auth/refresh',
     })
   }),

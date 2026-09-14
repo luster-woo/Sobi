@@ -15,30 +15,35 @@ import { bypass, http, type HttpHandler } from 'msw'
 const implemented = new Map<string, boolean>()
 
 /**
- * 실서버 응답을 쓸 수 있으면 그대로 돌려주고, 아직 없는 엔드포인트면 null.
+ * 실서버 응답을 쓸 수 있으면 그대로 돌려주고, 못 쓰면 null.
  *
- * "없다" 의 판정이 까다롭다. 404 가 두 가지 뜻으로 오기 때문이다.
- *   - 스프링에 매핑이 없어서 나는 404       → 미구현. 목이 받아야 한다
- *   - 업무 로직이 내는 404 (BUSINESS_O04 등) → 구현됨. 그대로 써야 한다
+ * 같은 상태 코드가 두 가지 뜻으로 온다.
+ *   404  스프링 매핑 없음(미구현)  vs  업무 404(BUSINESS_O04 등)
+ *   502  Vite 프록시가 8080 에 못 붙음  vs  백엔드가 진짜 낸 502
+ *   500  프록시·게이트웨이 오류      vs  백엔드 COMMON_002
  *
- * 둘은 본문으로 가른다. 우리 공통 봉투(`statusCode`·`timestamp`)가 있으면 업무 404 다.
- * 401·400·500 은 전부 "구현됨" 으로 본다 — 서버가 응답했다는 뜻이라서다.
+ * 전부 본문으로 가른다. 백엔드가 낸 응답이면 공통 봉투(`statusCode`·`timestamp`)가
+ * 있고, 프록시·게이트웨이가 낸 것이면 없다. 봉투가 없으면 목이 받는다.
+ *
+ * 200·400·401 은 확인할 것도 없이 백엔드가 응답한 것이다.
  */
+const AMBIGUOUS_STATUS = new Set([404, 405, 500, 501, 502, 503, 504])
+
 async function callRealServer(request: Request): Promise<Response | null> {
   try {
     const response = await fetch(bypass(request.clone()))
 
-    if (response.status !== 404 && response.status !== 405) return response
+    if (!AMBIGUOUS_STATUS.has(response.status)) return response
 
     const body: unknown = await response
       .clone()
       .json()
       .catch(() => null)
 
-    const isBusinessError =
+    const fromBackend =
       typeof body === 'object' && body !== null && 'statusCode' in body && 'timestamp' in body
 
-    return isBusinessError ? response : null
+    return fromBackend ? response : null
   } catch {
     // 서버가 안 떠 있거나 프록시가 못 붙는다
     return null
@@ -78,7 +83,7 @@ export function createServerFirstProbes(handlers: HttpHandler[]): HttpHandler[] 
 
       if (response === null) {
         if (!implemented.has(key)) {
-          console.info(`[MSW] ${key} — 백엔드 미구현, 목으로 응답합니다`)
+          console.info(`[MSW] ${key} — 백엔드 응답 없음(미구현·미기동), 목으로 응답합니다`)
           implemented.set(key, false)
         }
         // undefined 를 주면 MSW 가 다음 핸들러(목)로 넘긴다

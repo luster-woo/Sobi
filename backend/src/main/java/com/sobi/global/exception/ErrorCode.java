@@ -46,6 +46,11 @@ public enum ErrorCode {
     MARKET_BUSINESS_NOT_FOUND(HttpStatus.NOT_FOUND, "MARKET_002", "존재하지 않는 업종입니다."),
     MARKET_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "MARKET_003", "해당 상권에 집계된 업종 데이터가 없습니다."),
 
+    // 의무보험 관련
+    INSURANCE_CHECKLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "INSURANCE_001", "존재하지 않는 의무보험 항목입니다."),
+    INSURANCE_STATUS_NOT_CHANGEABLE(HttpStatus.BAD_REQUEST, "INSURANCE_002", "확인이 필요한 항목만 상태를 변경할 수 있습니다."),
+    INSURANCE_STATUS_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "INSURANCE_003", "가입 필요 또는 가입 제외로만 변경할 수 있습니다."),
+
     // 외부 API
     FINANCE_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_001", "금융망 API 호출에 실패했습니다."),
 

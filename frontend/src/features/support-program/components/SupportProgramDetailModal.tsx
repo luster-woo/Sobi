@@ -1,10 +1,15 @@
 import type { ReactNode } from 'react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 
+import { useCreateApplication } from '@/features/application/hooks/useApplication'
+import { APPLICATION_SOURCE } from '@/features/application/model/types'
 import { useSupportProgramDetail } from '@/features/support-program/hooks/useSupportProgramDetail'
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
 import type { ProductStatus } from '@/shared/constants/productStatus'
 import { SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
+import { routeTo } from '@/shared/constants/routes'
+import { useUiStore } from '@/shared/lib/store/useUiStore'
 import BookmarkButton from '@/shared/ui/BookmarkButton'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
@@ -22,8 +27,12 @@ import { formatMoneyShort } from '@/shared/utils/formatters'
  *   APPROVED    지급 내역 보기       → 202 (대출은 '보유중' 이라 문구가 다르다)
  *   IMPOSSIBLE  신청 자격이 안 돼요  → 갈 곳이 없다
  *
- * ⚠️ 194·202 화면이 아직 없어서 버튼이 눌리지 않는다. 라우트가 생기면 onClick 을 넣고
- *    disabled 를 지우면 된다. IMPOSSIBLE 은 그 뒤에도 계속 비활성이다.
+ * POSSIBLE·WRITING 은 연결됐다. 둘 다 신청 생성을 부르면 되는데, 서버가 준비중인
+ * 건이 있으면 새로 만들지 않고 그걸 돌려주기 때문이다.
+ *
+ * ⚠️ SUBMITTED 이상은 아직 비활성이다. 그 공고의 신청 건으로 가야 하는데 상세 응답에
+ *    applicationId 가 없어 어느 건인지 알 수 없다. 백엔드에 요청해 둔 상태다.
+ *    IMPOSSIBLE 은 그 뒤에도 계속 비활성이다.
  */
 const FOOTER_LABEL: Record<ProductStatus, string> = {
   POSSIBLE: '신청하기',
@@ -60,6 +69,28 @@ export default function SupportProgramDetailModal({
   onClose,
 }: SupportProgramDetailModalProps) {
   const { data, isLoading, isError } = useSupportProgramDetail(supportProgramId)
+  const navigate = useNavigate()
+  const showToast = useUiStore((state) => state.showToast)
+
+  /*
+   * ⚠️ features 끼리 부르는 건 원래 피해야 한다. 대출 상세 모달과 같은 예외다 —
+   *    모달을 여는 곳이 여럿이라 프롭으로 내리면 같은 import 가 그만큼 늘어난다.
+   *    조합을 pages 층으로 올리는 게 정석인데 별도 티켓으로 뻐다.
+   */
+  const createApplication = useCreateApplication()
+
+  const canApply = data?.status === 'POSSIBLE' || data?.status === 'WRITING'
+
+  const handleApply = () => {
+    createApplication.mutate(
+      { type: APPLICATION_SOURCE.SUPPORT_PROGRAM, programId: supportProgramId },
+      {
+        onSuccess: (application) =>
+          navigate(routeTo.supportProgramApply(application.applicationId)),
+        onError: () => showToast('신청을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+      },
+    )
+  }
 
   // ⚠️ 대출 상세와 같다. `/bookmark` 가 붙으면 useMutation 으로 바꾼다
   const [override, setOverride] = useState<boolean | null>(null)
@@ -87,7 +118,12 @@ export default function SupportProgramDetailModal({
       }
       footer={
         data && (
-          <Button className="w-full" disabled>
+          <Button
+            className="w-full"
+            disabled={!canApply}
+            loading={createApplication.isPending}
+            onClick={handleApply}
+          >
             {FOOTER_LABEL[data.status]}
           </Button>
         )

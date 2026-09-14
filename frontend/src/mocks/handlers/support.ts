@@ -1,5 +1,6 @@
 import { http } from 'msw'
 
+import type { ApplicationProduct } from '@/features/application/model/types'
 import type {
   SupportProgramDetail,
   SupportProgramListData,
@@ -64,6 +65,31 @@ function makeProgram(index: number): SupportProgramListItem {
 }
 
 const mockPrograms: SupportProgramListItem[] = Array.from({ length: 26 }, (_, i) => makeProgram(i))
+
+/**
+ * 신청 화면 상단에 쓸 상품 요약. 신청 목(handlers/application.ts)이 가져간다.
+ *
+ * 두 목이 따로 데이터를 들면 목록에서 고른 공고와 신청 화면의 상품이 어긋난다.
+ *
+ * type 별로 값이 있고 없다.
+ *   SUPPORT  무상 지원금 — 금리 0, 금액 범위 있음
+ *   LOAN     융자 — 금리와 금액 범위 둘 다 있음
+ *   ETC      그 외 — 금리도 금액도 없음
+ */
+export function findSupportProductSummary(supportProgramId: number): ApplicationProduct | null {
+  const found = mockPrograms.find((program) => program.supportProgramId === supportProgramId)
+  if (!found) return null
+
+  return {
+    name: found.pblancNm,
+    organization: found.jrsdInsttNm,
+    // 지원금은 0(무상), 금리 개념이 없는 공고는 null 이다
+    interestRate: found.type === 'LOAN' ? found.interestRate : found.type === 'SUPPORT' ? 0 : null,
+    minAmount: found.type === 'ETC' ? null : found.minBalance,
+    maxAmount: found.type === 'ETC' ? null : found.maxBalance,
+    deadline: found.endDate,
+  }
+}
 
 /**
  * 지원사업 (support) 목 핸들러.

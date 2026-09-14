@@ -41,12 +41,20 @@ export default function ApplicationSubmitForm({
   onSubmit,
 }: ApplicationSubmitFormProps) {
   const isLoan = detail.loanId !== null
-  const { minLoanBalance, maxLoanBalance } = detail.product
-  const range = `${formatMoneyShort(minLoanBalance)} ~ ${formatMoneyShort(maxLoanBalance)}`
+  const { minAmount, maxAmount } = detail.product
+
+  /*
+   * 금액 범위가 없으면 검증할 기준이 없다. 대출은 항상 범위가 오지만 지원사업을
+   * 같은 타입으로 받아서 null 이 가능하다. 그럴 땐 범위 문구와 검사를 건너뛴다.
+   */
+  const hasRange = minAmount !== null && maxAmount !== null
+  const range = hasRange
+    ? `${formatMoneyShort(minAmount)} ~ ${formatMoneyShort(maxAmount)}`
+    : undefined
 
   const amountNumber = amount ? Number(amount) : null
   const amountError =
-    amountNumber !== null && (amountNumber < minLoanBalance || amountNumber > maxLoanBalance)
+    hasRange && amountNumber !== null && (amountNumber < minAmount || amountNumber > maxAmount)
       ? `${range} 사이로 입력해 주세요`
       : undefined
 

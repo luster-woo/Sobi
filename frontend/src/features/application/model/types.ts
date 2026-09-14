@@ -84,14 +84,31 @@ export type ApplicationDocument =
       draftUrl: string | null
     })
 
-/** 화면 상단 요약. 상세 API 를 또 부르지 않으려고 신청 응답에 같이 받는다 */
+/**
+ * 화면 상단 요약. 상세 API 를 또 부르지 않으려고 신청 응답에 같이 받는다.
+ *
+ * 대출과 지원사업이 한 타입을 쓴다. 지원사업은 금리·금액이 없는 종류(ETC)가 있어서
+ * name 말고는 전부 없을 수 있다. 없으면 안 그린다.
+ */
 export interface ApplicationProduct {
   name: string
-  /** 연 이율(%) */
-  interestRate: number
-  /** 대출만 의미가 있다. 금액 입력 범위 검증에 쓴다 */
-  minLoanBalance: number
-  maxLoanBalance: number
+  /** 기관명. 대출이면 은행, 지원사업이면 주관기관 */
+  organization: string | null
+  /**
+   * 연 이율(%). 0 이면 무상, null 이면 금리 개념이 없는 상품이다.
+   * 0 과 null 을 구분해야 한다 — 0 을 '연 0%' 로 쓰면 이상하고 무상은 알려야 한다.
+   */
+  interestRate: number | null
+  /**
+   * 신청 가능 금액 범위.
+   *
+   * 대출은 이 범위로 입력값을 검증한다. 지원사업은 금액을 입력받지 않아서 표시용이고,
+   * 금액 개념이 없는 공고는 둘 다 null 이다.
+   */
+  minAmount: number | null
+  maxAmount: number | null
+  /** 접수 마감일(YYYY-MM-DD). 대출은 마감이 없어서 null 이다 */
+  deadline: string | null
 }
 
 export interface ApplicationDetail {

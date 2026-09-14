@@ -15,8 +15,9 @@ import type { BadgeVariant } from '@/shared/ui/Badge'
  */
 
 export const APPLICATION_STATUS_VARIANT: Record<ApplicationStatus, BadgeVariant> = {
+  PREPARING: 'outline', // 서류를 채우는 중. 아직 제출 안 함
   SUBMITTED: 'neutral', // 접수됨. 할 일 없음
-  REVIEWING: 'progress', // 기관이 심사 중
+  REVIEW: 'progress', // 기관이 심사 중
   APPROVED: 'success',
   REJECTED: 'danger',
 }

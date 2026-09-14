@@ -23,6 +23,14 @@ ENV VITE_USE_MOCK=$VITE_USE_MOCK
 ARG VITE_MOCK_DOMAINS=
 ENV VITE_MOCK_DOMAINS=$VITE_MOCK_DOMAINS
 
+# 구글 OAuth. 클라이언트 ID 는 공개값이다 (비밀은 clientSecret, 서버만 보유).
+# 리디렉션 URI 는 배포 도메인 기준으로 넘기고 구글 콘솔에도 같이 등록해야 한다.
+ARG VITE_GOOGLE_CLIENT_ID=
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+
+ARG VITE_GOOGLE_REDIRECT_URI=
+ENV VITE_GOOGLE_REDIRECT_URI=$VITE_GOOGLE_REDIRECT_URI
+
 RUN npm run build
 
 # Vite(dist) / CRA(build) 어느 쪽이든 /out 으로 모음

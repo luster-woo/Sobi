@@ -1,4 +1,4 @@
-import type { AuthProvider, UserRole } from '@/shared/types/user'
+import type { UserRole } from '@/shared/types/user'
 
 /**
  * 인증 요청·응답.
@@ -6,8 +6,6 @@ import type { AuthProvider, UserRole } from '@/shared/types/user'
  * 토큰 정책: accessToken 은 응답 바디로 받아 메모리(`shared/lib/store/useAuthStore.ts`)에만 두고,
  * refreshToken 은 서버가 httpOnly + Secure 쿠키로 관리한다. 프론트는 refreshToken
  * 값을 볼 수 없으므로 응답 타입에도 없다.
- *
- * ⚠️ MSW 핸들러가 아직 로그인에서 `refreshToken` 을 바디로 준다. 실제와 다르다 (S15P21D101-348).
  */
 
 export interface LoginRequest {
@@ -49,7 +47,15 @@ export interface SessionUser {
   userId: number
   email: string
   name: string
-  role: UserRole
+  /**
+   * ⚠️ **null 일 수 있다.** 백엔드 `LoginResponse.UserInfo.from()` 이
+   * `user.getRole() != null ? ... : null` 로 넣는다.
+   *
+   * 가입 시점에는 role 이 정해지지 않고 `POST /business` 로 업체를 등록해야
+   * ENTREPRENEUR 가 된다. 즉 **가입 직후 로그인하면 null 이다.**
+   * 대시보드·사이드바가 role 로 갈라지므로 null 을 '아직 안 정해짐' 으로 다뤄야 한다.
+   */
+  role: UserRole | null
 }
 
 export interface LoginResponse extends TokenResponse {
@@ -73,7 +79,13 @@ export interface EmailCheckResponse {
 }
 
 export interface OAuthLoginRequest {
-  provider: AuthProvider
   /** 소셜 제공자 리다이렉트로 받은 인가 코드 */
   code: string
+  /**
+   * 인가 요청에 쓴 리디렉션 URI.
+   *
+   * 서버가 구글에 code 를 교환할 때 **같은 값**을 보내야 해서 함께 넘긴다.
+   * 다르면 구글이 교환을 거부한다.
+   */
+  redirectUri: string
 }

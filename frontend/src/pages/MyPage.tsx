@@ -2,9 +2,11 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 
+import { buildAuthorizeUrl, isGoogleOAuthConfigured } from '@/features/auth/model/googleOAuth'
 import LinkRow from '@/features/mypage/components/LinkRow'
 import PanelHead from '@/features/mypage/components/PanelHead'
 import PasswordChangeModal from '@/features/mypage/components/PasswordChangeModal'
+import SocialLinkModal from '@/features/mypage/components/SocialLinkModal'
 import WithdrawModal from '@/features/mypage/components/WithdrawModal'
 import { MOCK_MYPAGE, MOCK_MYPAGE_PRE_OWNER } from '@/features/mypage/model/mock'
 import { ROUTES } from '@/shared/constants/routes'
@@ -81,8 +83,19 @@ export function MyPage() {
   const data = role === USER_ROLE.PREENTREPRENEUR ? MOCK_MYPAGE_PRE_OWNER : MOCK_MYPAGE
   const { profile, business, myData, accountSummary, shortcut } = data
 
+  /*
+   * 가입 경로는 스토어를 먼저 본다. 소셜 전환에 성공하면 `useSocialLink` 가 여기에
+   * 넣어주므로 돌아오자마자 화면이 '연결됨' 으로 바뀐다.
+   *
+   * ⚠️ 새로고침하면 스토어가 비어 목 값(LOCAL)으로 되돌아간다. 로그인 응답에 가입
+   *    경로가 없어서 복구할 방법이 없다 — `GET /user/me` 가 붙으면 해결된다 (BE-02).
+   */
+  const linkedProvider = useAuthStore((s) => s.provider)
+  const provider = linkedProvider ?? profile.provider
+
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [withdrawOpen, setWithdrawOpen] = useState(false)
+  const [socialLinkOpen, setSocialLinkOpen] = useState(false)
   // ⚠️ PATCH /user/notification 이 붙기 전까지 화면 안에서만 기억한다
   const [notification, setNotification] = useState(data.notification)
 
@@ -97,11 +110,28 @@ export function MyPage() {
             </span>
           </span>
 
-          {/* 소셜 가입은 비밀번호가 없다. 바꿀 것이 없으니 버튼도 없다 */}
-          {profile.provider === AUTH_PROVIDER.LOCAL && (
-            <Button variant="outline" size="sm" onClick={() => setPasswordOpen(true)}>
-              비밀번호 수정
-            </Button>
+          {/*
+           * 로컬 가입은 비밀번호를 바꿀 수 있고 구글로 전환할 수 있다.
+           * 소셜 가입은 둘 다 해당 없다 — 비밀번호가 없고 이미 전환된 상태다.
+           */}
+          {provider === AUTH_PROVIDER.LOCAL ? (
+            <span className="flex shrink-0 items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setPasswordOpen(true)}>
+                비밀번호 수정
+              </Button>
+
+              {/* 되돌릴 수 없어서 모달로 한 번 확인받는다 */}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!isGoogleOAuthConfigured()}
+                onClick={() => setSocialLinkOpen(true)}
+              >
+                Google 계정 연결
+              </Button>
+            </span>
+          ) : (
+            <Badge variant="success">Google 연결됨</Badge>
           )}
         </Panel>
 
@@ -220,6 +250,15 @@ export function MyPage() {
       </div>
 
       <PasswordChangeModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+
+      <SocialLinkModal
+        open={socialLinkOpen}
+        onClose={() => setSocialLinkOpen(false)}
+        email={profile.email}
+        onConfirm={() => {
+          window.location.assign(buildAuthorizeUrl('link'))
+        }}
+      />
 
       <WithdrawModal
         open={withdrawOpen}

@@ -1,5 +1,8 @@
+import { Navigate } from 'react-router'
+
 import OwnerDashboard from '@/features/dashboard/components/OwnerDashboard'
 import PreOwnerDashboard from '@/features/dashboard/components/PreOwnerDashboard'
+import { ROUTES } from '@/shared/constants/routes'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { USER_ROLE } from '@/shared/types'
 
@@ -16,6 +19,14 @@ export function DashboardPage() {
 
   // 세션 복구 중에는 user 가 아직 null
   if (!user) return null
+
+  /*
+   * role 이 null 이면 아직 정해지지 않은 것이다. 백엔드가 가입 시점에 role 을 넣지
+   * 않고 `POST /business` 로 업체를 등록해야 ENTREPRENEUR 가 된다 — 즉 가입 직후
+   * 첫 로그인이 여기 해당한다. 사업자 대시보드를 보여주면 빈 화면이 뜨므로
+   * 온보딩으로 보낸다.
+   */
+  if (user.role === null) return <Navigate to={ROUTES.BUSINESS_VERIFY} replace />
 
   if (user.role === USER_ROLE.PREENTREPRENEUR) return <PreOwnerDashboard />
 

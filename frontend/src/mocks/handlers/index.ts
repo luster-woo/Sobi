@@ -1,3 +1,5 @@
+import { accountHandlers } from './account'
+import { applicationHandlers } from './application'
 import { authHandlers } from './auth'
 import { businessHandlers } from './business'
 import { fundingHandlers } from './funding'
@@ -13,6 +15,8 @@ import { supportHandlers } from './support'
  * 새 도메인이 생기면 `handlers/{도메인}.ts` 를 만들고 아래에 추가하세요.
  */
 export const handlers = [
+  ...accountHandlers,
+  ...applicationHandlers,
   ...authHandlers,
   ...businessHandlers,
   ...fundingHandlers,

@@ -37,6 +37,13 @@ public class Loan {
     )
     private String bankName;
 
+    @Column(
+            name = "bank_code",
+            nullable = false,
+            length = 3
+    )
+    private String bankCode;
+
     @Column(length = 255)
     private String description;
 
@@ -85,4 +92,9 @@ public class Loan {
             nullable = false
     )
     private Integer firmAge;
+
+    // 금융망에 등록된 상품 고유번호 연결 (LoanProductSyncService 에서만 호출)
+    public void registerFinanceProduct(String accountTypeUniqueNo) {
+        this.accountTypeUniqueNo = accountTypeUniqueNo;
+    }
 }

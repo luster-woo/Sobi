@@ -4,10 +4,15 @@ import { useNavigate } from 'react-router'
 import AuthCodeField from '@/features/auth/components/AuthCodeField'
 import PasswordStrengthMeter from '@/features/auth/components/PasswordStrengthMeter'
 import { useCountdown } from '@/features/auth/hooks/useCountdown'
-import { useSendResetCode, useVerifyResetCode } from '@/features/auth/hooks/usePasswordReset'
+import {
+  useResetPassword,
+  useSendResetCode,
+  useVerifyResetCode,
+} from '@/features/auth/hooks/usePasswordReset'
 import { ERROR_CODE, getErrorCode, getErrorMessage } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
 import { VALIDATION_MESSAGE } from '@/shared/constants/validation'
+import { useUiStore } from '@/shared/lib/store/useUiStore'
 import Button from '@/shared/ui/Button'
 import Input from '@/shared/ui/Input'
 import {
@@ -52,8 +57,11 @@ export function PasswordResetPage() {
 
   const { remaining, running, start, stop } = useCountdown()
 
+  const showToast = useUiStore((s) => s.showToast)
+
   const { mutate: sendCode, isPending: sending } = useSendResetCode()
   const { mutate: verifyCode, isPending: verifying } = useVerifyResetCode()
+  const { mutate: submitReset, isPending: submitting } = useResetPassword()
 
   const verified = resetToken !== null
 
@@ -162,9 +170,44 @@ export function PasswordResetPage() {
     setErrors(next)
     if (Object.values(next).some(Boolean)) return
 
-    // TODO(138): POST /auth/password/reset { resetToken, newPassword: password }
-    //   성공 토스트 후 로그인 화면으로 보낸다
-    navigate(ROUTES.LOGIN)
+    // 위 검증에 code 가 포함돼 여기 오면 resetToken 이 반드시 있다
+    if (resetToken === null) return
+
+    submitReset(
+      { resetToken, newPassword: password },
+      {
+        /*
+         * 서버가 기존 세션을 전부 끊는다. 다른 기기에 로그인돼 있었다면 거기서도
+         * 로그아웃되므로 "다시 로그인" 을 문구에 넣는다.
+         */
+        onSuccess: () => {
+          showToast('비밀번호를 변경했어요. 새 비밀번호로 로그인해 주세요.')
+          navigate(ROUTES.LOGIN, { replace: true })
+        },
+        onError: (error) => {
+          /*
+           * resetToken 이 만료됐거나 이미 쓴 경우. 서버가 1회용으로 지우기 때문에
+           * 같은 토큰으로는 재시도가 안 된다 — 인증 단계부터 다시 해야 한다.
+           */
+          if (getErrorCode(error) === ERROR_CODE.RESET_TOKEN_INVALID) {
+            setResetToken(null)
+            setCode('')
+            setCodeSent(false)
+            stop()
+            setError('email', VALIDATION_MESSAGE.resetSessionExpired)
+            return
+          }
+
+          // 비밀번호 규칙 위반 등은 입력 칸에 붙인다
+          if (getErrorCode(error) === ERROR_CODE.INVALID_INPUT_VALUE) {
+            setError('password', getErrorMessage(error))
+            return
+          }
+
+          showToast(getErrorMessage(error), 'danger')
+        },
+      },
+    )
   }
 
   return (
@@ -275,7 +318,7 @@ export function PasswordResetPage() {
           }
         />
 
-        <Button type="submit" className="mt-6 w-full">
+        <Button type="submit" loading={submitting} className="mt-6 w-full">
           비밀번호 변경
         </Button>
       </form>

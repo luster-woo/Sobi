@@ -1,8 +1,8 @@
 import { useMutation } from '@tanstack/react-query'
 
-import { sendResetCode, verifyResetCode } from '@/features/auth/api/passwordReset'
+import { resetPassword, sendResetCode, verifyResetCode } from '@/features/auth/api/passwordReset'
 import { checkEmailAvailable } from '@/features/auth/api/signup'
-import type { EmailVerifyRequest } from '@/shared/types'
+import type { EmailVerifyRequest, PasswordResetRequest } from '@/shared/types'
 
 /**
  * 가입 여부 확인 후 인증번호 발송.
@@ -32,5 +32,17 @@ export function useSendResetCode() {
 export function useVerifyResetCode() {
   return useMutation({
     mutationFn: (body: EmailVerifyRequest) => verifyResetCode(body),
+  })
+}
+
+/**
+ * 비밀번호 재설정.
+ *
+ * 세션을 건드리지 않는다. 비로그인 화면이라 정리할 세션이 없고, 서버가 기존 세션을
+ * 이미 끊는다.
+ */
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (body: PasswordResetRequest) => resetPassword(body),
   })
 }

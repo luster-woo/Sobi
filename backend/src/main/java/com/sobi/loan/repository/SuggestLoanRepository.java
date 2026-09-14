@@ -2,6 +2,7 @@ package com.sobi.loan.repository;
 
 
 
+import com.sobi.loan.entity.Loan;
 import com.sobi.loan.entity.SuggestLoan;
 import com.sobi.loan.entity.SuggestLoanId;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,4 +22,6 @@ public interface SuggestLoanRepository extends JpaRepository<SuggestLoan, Sugges
     List<SuggestLoan> findAllWithLoanByBusinessId(
             @Param("businessId") Long businessId
     );
+
+    SuggestLoan findByBusinessIdAndLoan_Id(Long businessId, Long loanId);
 }

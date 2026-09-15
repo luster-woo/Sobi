@@ -13,4 +13,7 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
 
     // 금융망에 아직 등록되지 않은 상품
     List<Loan> findAllByAccountTypeUniqueNoIsNull();
+
+    // 금융망에 등록되어 신청 가능한 상품
+    List<Loan> findAllByAccountTypeUniqueNoIsNotNull();
 }

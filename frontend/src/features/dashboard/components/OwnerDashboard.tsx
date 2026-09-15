@@ -21,12 +21,12 @@ import { MOCK_OWNER_DASHBOARD } from '@/features/dashboard/model/mock'
  * 오른쪽 열은 320px 고정이고 lg 미만에서 아래로 내려간다. 좁은 화면에서 두 열을
  * 유지하면 카드 스트립이 한 장도 다 안 보인다.
  *
- * ⚠️ 값은 전부 목이다(model/mock.ts). `GET /dashboard` 가 붙으면 이 컴포넌트에서
+ * ⚠️ 의무보험을 뺀 나머지는 아직 목이다(model/mock.ts). `GET /dashboard` 가 붙으면
  *    MOCK_OWNER_DASHBOARD 를 useQuery 결과로 바꾸고, 로딩·에러 처리를 여기 넣는다.
+ *    의무보험은 자기 엔드포인트(`GET /insurance`)가 따로 있어 패널이 직접 받아온다.
  */
 export default function OwnerDashboard() {
-  const { judgement, loans, supportPrograms, repayment, insurances, snapshot } =
-    MOCK_OWNER_DASHBOARD
+  const { judgement, loans, supportPrograms, repayment, snapshot } = MOCK_OWNER_DASHBOARD
 
   return (
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -39,7 +39,8 @@ export default function OwnerDashboard() {
       <div className="flex flex-col gap-3.5">
         {/* 대출이 없으면 상환할 것도 없다 */}
         {repayment && <RepaymentMiniPanel repayment={repayment} />}
-        <InsuranceMiniPanel insurances={insurances} />
+        {/* 의무보험만 자기 API 를 쓴다. 나머지는 GET /dashboard 하나로 올 값들이다 */}
+        <InsuranceMiniPanel />
         <BusinessSnapshotPanel snapshot={snapshot} />
       </div>
     </div>

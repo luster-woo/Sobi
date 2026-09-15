@@ -121,18 +121,17 @@ export interface RepaymentSummary {
 }
 
 /**
- * 의무보험 체크리스트 한 줄. `GET /insurance` 의 `insuranceList` 항목 모양이다.
+ * 의무보험 체크리스트 한 줄. `GET /insurance` 의 `insurances` 항목에서 화면이 쓰는 것만 추렸다.
  *
  * ⚠️ id 가 `insurance.id` 가 아니라 `insurance_checklist.id` 다. 앞은 보험 종류이고
  *    뒤는 '이 업체의 이 보험' 이라 값이 다르다. 상세·상태 변경도 이 id 를 쓴다.
  *
- * ⚠️ 명세의 목록 응답은 status 가 한글('가입 완료')인데 상태 변경 요청 본문과
- *    `V1__init.sql` 의 CHECK 제약은 영문(COMPLETED·NEEDS_VERIFICATION·REQUIRED·
- *    EXEMPT)이다. 영문이 맞다고 보고 영문으로 둔다 — 백엔드 확인 필요.
+ * 명세에는 목록 키가 `insuranceList`, 이름 필드가 `insuranceName`, status 가 한글로
+ * 적혀 있지만 구현은 `insurances` · `name` · 영문 enum 이다. 구현을 따른다.
  */
 export interface DashboardInsurance {
   insuranceChecklistId: ID
-  insuranceName: string
+  name: string
   status: InsuranceStatus
 }
 
@@ -190,14 +189,16 @@ export interface StoreCondition {
   dong: string
 }
 
+/**
+ * 의무보험은 여기 없다. 대시보드 응답에 얹지 않고 `GET /insurance` 를 따로 부른다 —
+ * 상태를 바꾸면 그 목록만 다시 받으면 되고, 대시보드 전체를 무효화할 이유가 없다.
+ */
 export interface OwnerDashboardData {
   judgement: JudgementSummary
   loans: StripSummary<DashboardLoan>
   supportPrograms: StripSummary<DashboardSupportProgram>
   /** 대출이 없으면 null — 상환 패널을 그리지 않는다 */
   repayment: RepaymentSummary | null
-  /** 업종에 걸린 의무보험이 없으면 빈 배열 */
-  insurances: DashboardInsurance[]
   snapshot: BusinessSnapshot
 }
 

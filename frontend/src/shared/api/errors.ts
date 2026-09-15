@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-import type { ApiResponse, FieldError } from '@/shared/types'
+import type { ApiResponse } from '@/shared/types'
 
 export const DEFAULT_ERROR_MESSAGE = '요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.'
 const NETWORK_ERROR_MESSAGE = '네트워크 연결을 확인해주세요.'
@@ -70,6 +70,8 @@ export const ERROR_CODE = {
   BOOKMARK_SUPPORT_NOT_FOUND: 'BOOKMARK_002',
   BOOKMARK_ALREADY_EXISTS: 'BOOKMARK_003',
   BOOKMARK_TYPE_INVALID: 'BOOKMARK_004',
+  /** 담지 않은 것을 해제하려 함. 404 */
+  BOOKMARK_NOT_FOUND: 'BOOKMARK_005',
 
   /* 외부 연동 */
   EXTERNAL_API_FAILED: 'EXTERNAL_001',
@@ -116,15 +118,4 @@ export function getErrorMessage(error: unknown, overrides?: Record<number, strin
   if (status === undefined && axios.isAxiosError(error)) return NETWORK_ERROR_MESSAGE
 
   return getErrorBody(error)?.message ?? DEFAULT_ERROR_MESSAGE
-}
-
-/**
- * 필드 단위 검증 실패.
- *
- * ⚠️ 백엔드가 안 준다 — 검증 실패를 COMMON_001 하나로 뭉쳐서 항상 빈 배열이다.
- *    필드별 안내는 `shared/utils/validators.ts` 로 화면에서 막는다.
- */
-export function getFieldErrors(error: unknown): FieldError[] {
-  const { errors } = (getErrorBody(error) ?? {}) as { errors?: FieldError[] }
-  return Array.isArray(errors) ? errors : []
 }

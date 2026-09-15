@@ -1,5 +1,6 @@
 import type {
   ApplicationDetail,
+  ApplicationListData,
   CreateApplicationParams,
   SubmitApplicationBody,
   UploadDocumentParams,
@@ -66,4 +67,10 @@ export async function uploadDocument({ applicationDocumentId, file }: UploadDocu
   )
 
   await api.post<null>(endpoints.application.uploadDocument, formData)
+}
+
+/** 내 신청 목록. 상태 필터는 화면에서 거른다 — 건수가 많지 않고 탭 전환이 즉시 반응해야 한다 */
+export async function getApplications() {
+  const { data } = await api.get<ApplicationListData>(endpoints.application.list)
+  return data.applications
 }

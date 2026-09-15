@@ -61,6 +61,7 @@ export const queryKeys = {
     all: ['application'] as const,
     /** 신청 건마다 캐시가 갈린다. 검증 상태 폴링도 이 키로 무효화한다 */
     detail: (applicationId: number) => ['application', 'detail', applicationId] as const,
+    list: ['application', 'list'] as const,
   },
 
   repayment: {

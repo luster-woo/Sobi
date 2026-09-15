@@ -84,6 +84,8 @@ export const endpoints = {
     uploadDocument: '/document',
     /** 작성 서류 초안 생성. 비동기로 돌고 상세 조회로 결과를 받는다 */
     requestDraft: '/document/draft',
+    /** 내 신청 목록. 신청 현황 화면이 쓴다 */
+    list: '/application',
   },
 
   /**

@@ -4,7 +4,7 @@ import { isAxiosError } from 'axios'
 import { getBusinessSummary } from '@/features/business/api/summary'
 import { queryKeys } from '@/shared/api/queryKeys'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
-import { USER_ROLE } from '@/shared/types'
+import { isPreOwner } from '@/shared/types'
 
 /** 업체 정보는 자주 바뀌지 않는다. 화면을 옮길 때마다 다시 부르지 않게 길게 잡는다 */
 const STALE_TIME_MS = 5 * 60 * 1000
@@ -26,7 +26,7 @@ export function useBusinessSummary() {
   return useQuery({
     queryKey: queryKeys.business.meSummary,
     queryFn: getBusinessSummary,
-    enabled: status === 'authenticated' && role === USER_ROLE.ENTREPRENEUR,
+    enabled: status === 'authenticated' && !isPreOwner(role ?? null),
     staleTime: STALE_TIME_MS,
     retry: (failureCount, error) => {
       if (isAxiosError(error) && error.response?.status === 404) return false

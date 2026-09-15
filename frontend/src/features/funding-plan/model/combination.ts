@@ -1,11 +1,12 @@
 import type { FundingItem } from '@/features/funding-plan/model/types'
+import { FUNDING_TYPE } from '@/features/funding-plan/model/types'
 
 /**
- * 금리 0 은 무상 지원금이다. type 으로는 가를 수 없다 —
- * SUPPORT 중에도 융자성(이자 있는) 상품이 섞여 있다.
+ * 갚지 않아도 되는 돈인지.
+ * 서버가 fundingType 주는걸로 판별
  */
 export function isGrant(item: FundingItem): boolean {
-  return item.interestRate === 0
+  return item.fundingType === FUNDING_TYPE.GRANT
 }
 
 /** '무상' 또는 '연 3.4%' */

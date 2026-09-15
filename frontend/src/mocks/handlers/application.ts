@@ -302,6 +302,26 @@ function seedTracked(
 
 const applications = new Map<number, MockApplication>([
   [12, seedApplication()],
+  /*
+   * 준비중 두 번째 건. 12번은 서류를 올리다 만 상태고, 이쪽은 서류가 다 끝났는데
+   * 최종 신청만 안 한 상태다. 둘 다 PREPARING 이라 '준비 중' 탭에서 같이 보인다.
+   *
+   * 지원사업으로 둔 이유는 '이어서 작성' 이 도메인마다 다른 경로로 가기 때문이다.
+   * 12번(대출)만 있으면 /support-programs/apply 쪽을 한 번도 안 지난다.
+   */
+  [
+    107,
+    seedTracked(
+      107,
+      { loanId: null, supportProgramId: 5 },
+      'PREPARING',
+      '2026-09-14T16:45:00',
+      null,
+      {
+        applyAmount: null,
+      },
+    ),
+  ],
   // 시안의 네 건 + 스텝퍼 중간 단계를 볼 수 있는 두 건
   [
     101,
@@ -524,14 +544,14 @@ export const applicationHandlers = [
   /**
    * 내 신청 목록.
    *
-   * 준비중(PREPARING)은 뺀다. 아직 제출하지 않은 건은 '신청 현황' 이 아니고,
-   * 사용자는 상품 목록에서 '이어서 작성하기' 로 다시 들어간다.
+   * 준비중(PREPARING)도 준다. 예전에는 뺐는데, 그러면 서류를 올리다 중단한 신청서로
+   * 돌아갈 길이 없었다. 자금 조합이 한 번에 여러 건을 만들기 시작하면 갈 곳 없는
+   * 신청서가 더 늘어난다.
    *
    * 최신 신청이 위로 온다.
    */
   http.get('/api/v1/application', () => {
     const applications_ = [...applications.values()]
-      .filter((app) => app.status !== 'PREPARING')
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map(toListItem)
 

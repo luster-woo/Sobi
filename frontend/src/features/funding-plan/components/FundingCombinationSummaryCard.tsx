@@ -27,7 +27,7 @@ export default function FundingCombinationSummaryCard({
   const hidden = combination.items.length - shown.length
 
   const composition = shown
-    .map((item) => `${item.name} ${formatMoneyShort(item.supportAmount)}`)
+    .map((item) => `${item.name} ${formatMoneyShort(item.allocatedAmount)}`)
     .join(' + ')
 
   return (
@@ -46,10 +46,11 @@ export default function FundingCombinationSummaryCard({
           {hidden > 0 && ` 외 ${hidden}건`}
         </p>
 
+        {/* 대표 카드·비교표와 같은 세 값을 쓴다. 카드마다 다른 지표를 보여주면 비교가 안 된다 */}
         <p className="text-text-secondary border-border-subtle border-t pt-2.5 text-[11.5px] tabular-nums">
           평균 연 {combination.averageInterestRate}% · 월 상환{' '}
-          {formatMoneyShort(combination.monthlyRepaymentAmount)} · 총 이자{' '}
-          {formatMoneyShort(combination.totalInterest)}
+          {formatMoneyShort(combination.monthlyRepaymentAmount)} · 총 상환{' '}
+          {formatMoneyShort(combination.totalRepaymentAmount)}
         </p>
       </div>
     </Panel>

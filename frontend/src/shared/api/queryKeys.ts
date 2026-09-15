@@ -25,6 +25,19 @@ export const queryKeys = {
     meSummary: ['business', 'me', 'summary'] as const,
   },
 
+  /**
+   * 의무보험 체크리스트. 업종에 걸린 항목이라 페이징·필터가 없어 목록 키에 파라미터가 없다.
+   *
+   * 상태를 바꾸면 목록과 상세가 같이 틀어지므로 `all` 로 한 번에 무효화한다.
+   */
+  insurance: {
+    all: ['insurance'] as const,
+    list: ['insurance', 'list'] as const,
+    /** ⚠️ 경로 변수와 같다 — insurance.id 가 아니라 insurance_checklist.id */
+    detail: (insuranceChecklistId: number) =>
+      ['insurance', 'detail', insuranceChecklistId] as const,
+  },
+
   notification: {
     all: ['notification'] as const,
     /** 상단바 벨의 미확인 개수. 알림을 읽으면 여기를 무효화한다 */

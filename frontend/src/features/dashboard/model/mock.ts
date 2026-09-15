@@ -209,25 +209,6 @@ export const MOCK_OWNER_DASHBOARD: OwnerDashboardData = {
     advice: null,
   },
 
-  insurances: [
-    {
-      insuranceChecklistId: 21,
-      insuranceName: '화재배상책임보험',
-      status: INSURANCE_STATUS.COMPLETED,
-    },
-    {
-      insuranceChecklistId: 22,
-      insuranceName: '가스사고배상책임보험',
-      status: INSURANCE_STATUS.REQUIRED,
-    },
-    {
-      // 마이데이터로 가입 여부를 판단하지 못한 항목. 사용자가 직접 골라야 한다
-      insuranceChecklistId: 23,
-      insuranceName: '승강기 사고배상책임보험',
-      status: INSURANCE_STATUS.NEEDS_VERIFICATION,
-    },
-  ],
-
   snapshot: {
     updatedAt: daysFromNow(0),
     monthlySales: 32_400_000,
@@ -355,16 +336,19 @@ export const MOCK_PRE_OWNER_DASHBOARD: PreOwnerDashboardData = {
   /*
    * 고른 업종(백반·한정식)에 걸리는 항목이다. 개업 전이라 가입 여부를 판정할 수 없어
    * 전부 NEEDS_VERIFICATION 이고, 화면에서는 상태 대신 '참고' 로 보여준다.
+   *
+   * 사업자와 달리 이쪽은 계속 목이다. `GET /insurance` 는 `business_info` 를 거쳐 조회해서
+   * 업체가 없으면 404 고, 예비 창업자의 희망 업종을 저장할 테이블도 아직 없다.
    */
   insurances: [
     {
       insuranceChecklistId: 21,
-      insuranceName: '화재배상책임보험',
+      name: '화재배상책임보험',
       status: INSURANCE_STATUS.NEEDS_VERIFICATION,
     },
     {
       insuranceChecklistId: 22,
-      insuranceName: '가스사고배상책임보험',
+      name: '가스사고배상책임보험',
       status: INSURANCE_STATUS.NEEDS_VERIFICATION,
     },
   ],

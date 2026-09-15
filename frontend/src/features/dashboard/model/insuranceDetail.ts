@@ -1,18 +1,14 @@
 import type { ID } from '@/shared/types'
 
 /**
- * `GET /insurance/{insuranceChecklistId}` 응답 모양.
+ * 안내 창 본문.
  *
- * 필드 셋이 `insurance` 테이블 컬럼 그대로다(shared/types/insurance.ts).
+ * 사업자는 `GET /insurance/{insuranceChecklistId}` 로 받아오므로 이 파일을 타지 않는다.
+ * **예비 창업자 전용으로만 남아 있다** — 그쪽은 `business_info` 가 없어 그 엔드포인트가
+ * 404 고, 희망 업종을 저장할 테이블도 아직 없어 서버가 줄 수 있는 게 없다.
+ *
  * info 는 VARCHAR(255) 라 한 문단이고 condition 은 TEXT 라 길이 제한이 없다 —
  * 그래서 화면에서 둘을 다르게 그린다(설명은 본문, 조건은 줄바꿈 유지).
- *
- * ⚠️ 응답에 status 가 없다. 모달에서 상태 배지를 그리고 '가입 필요/제외' 버튼을
- *    보여줄지 판단하려면 필요해서, 지금은 목록에서 들고 들어간다. 딥링크로 모달만
- *    여는 경우가 생기면 응답에 status 를 넣어달라고 요청해야 한다.
- *
- * ⚠️ 명세 응답의 키가 `insuracneChecklistId` 로 적혀 있다(insurance 오타).
- *    구현이 그대로 나가면 프론트도 오타를 따라가야 하므로 먼저 고쳐달라고 할 것.
  */
 export interface InsuranceDetailData {
   insuranceChecklistId: ID
@@ -24,8 +20,7 @@ export interface InsuranceDetailData {
 }
 
 /**
- * ⚠️ 하드코딩이다. `GET /insurance/{insuranceChecklistId}` 가 붙으면 이 파일을 지우고
- *    응답을 그대로 그린다. 키는 목의 insuranceChecklistId 와 맞춰 두었다.
+ * 키는 `MOCK_PRE_OWNER_DASHBOARD.insurances` 의 insuranceChecklistId 와 맞춰 두었다.
  *
  * 보장 한도·과태료는 법령에 있는 값을 옮긴 것이지만 개정될 수 있다. 모달 하단에
  * 확인 안내를 붙여 두었다.

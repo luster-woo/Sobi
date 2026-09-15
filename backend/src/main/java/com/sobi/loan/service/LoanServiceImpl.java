@@ -1,5 +1,7 @@
 package com.sobi.loan.service;
 
+import com.sobi.application.entity.Application;
+import com.sobi.application.repository.ApplicationRepository;
 import com.sobi.bookmark.repository.BookmarkRepository;
 import com.sobi.business.entity.BusinessInfo;
 import com.sobi.business.repository.BusinessReporitory;
@@ -14,10 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +27,7 @@ public class LoanServiceImpl implements LoanService {
     private final UserRepository userRepository;
     private final BusinessReporitory businessReporitory;
     private final BookmarkRepository bookmarkRepository;
+    private final ApplicationRepository applicationRepository;
     private final LoanEligibilityChecker eligibilityChecker;
 
     /**
@@ -40,14 +40,18 @@ public class LoanServiceImpl implements LoanService {
         User user = findUser(userId);
         BusinessInfo business = businessReporitory.findByUserId(userId);
 
-        // 상품마다 즐겨찾기 조회를 하지 않도록 한 번에 가져온다
+        // 상품마다 즐겨찾기·신청 조회를 하지 않도록 한 번에 가져온다
         Set<Long> bookmarkedLoanIds = new HashSet<>(bookmarkRepository.findLoanIdsByUserId(userId));
+        Map<Long, Application> latestApplications = findLatestLoanApplications(userId);
 
-        // 1. 신청 가능한 전체 상품을 판정(가능/불가능)
+        // 1. 신청 가능한 전체 상품의 상태 결정 (조건 판정 + 최근 신청)
         List<LoanSummaryResponse> all = loanRepository.findAllByAccountTypeUniqueNoIsNotNull().stream()
                 .map(loan -> LoanSummaryResponse.of(
                         loan,
-                        eligibilityChecker.check(loan, user.getCreditRating(), business).getEligibility(),
+                        resolveStatus(
+                                eligibilityChecker.check(loan, user.getCreditRating(), business),
+                                latestApplications.get(loan.getId())
+                        ),
                         bookmarkedLoanIds.contains(loan.getId())
                 ))
                 .toList();
@@ -76,10 +80,38 @@ public class LoanServiceImpl implements LoanService {
                 .filter(found -> found.getAccountTypeUniqueNo() != null)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOAN_NOT_FOUND));
 
+        EligibilityResult eligibilityResult = eligibilityChecker.check(loan, user.getCreditRating(), business);
+        Application latestApplication =
+                applicationRepository.findFirstByUser_IdAndLoan_IdOrderByIdDesc(userId, loanId).orElse(null);
+
+        LoanStatus status = resolveStatus(eligibilityResult, latestApplication);
+
         return LoanDetailResponse.of(
                 loan,
-                eligibilityChecker.check(loan, user.getCreditRating(), business),
+                eligibilityResult,
+                status,
+                // 진행 중인 신청이 있을 때만 [이어서 작성] 등으로 이동할 신청 id 를 내려준다
+                status.isFromApplication() ? latestApplication.getId() : null,
                 bookmarkRepository.existsByUser_IdAndLoan_Id(userId, loanId)
+        );
+    }
+
+    // 최신순으로 받아 상품별 첫 번째(가장 최근) 신청만 남긴다
+    private Map<Long, Application> findLatestLoanApplications(Long userId) {
+
+        Map<Long, Application> latestApplications = new HashMap<>();
+
+        for (Application application : applicationRepository.findAllByUser_IdAndLoanIsNotNullOrderByIdDesc(userId)) {
+            latestApplications.putIfAbsent(application.getLoan().getId(), application);
+        }
+        return latestApplications;
+    }
+
+    // 최근 신청이 없거나 반려면 조건 판정, 그 외에는 신청 상태
+    private LoanStatus resolveStatus(EligibilityResult eligibilityResult, Application latestApplication) {
+        return LoanStatus.of(
+                eligibilityResult.getEligibility(),
+                latestApplication == null ? null : latestApplication.getStatus()
         );
     }
 
@@ -110,8 +142,8 @@ public class LoanServiceImpl implements LoanService {
             return false;
         }
 
-        // 판정 결과: 가능 / 불가
-        if (condition.getEligibility() != null && loan.getEligibility() != condition.getEligibility()) {
+        // 상태: 가능 / 불가 / 작성중 / 신청완료 / 심사중 / 승인 / 지급 완료
+        if (condition.getStatus() != null && loan.getStatus() != condition.getStatus()) {
             return false;
         }
 
@@ -119,7 +151,7 @@ public class LoanServiceImpl implements LoanService {
         return !condition.isBookmarked() || loan.isBookmarked();
     }
 
-    // 1차 정렬이 같으면 다른 기준으로 한 번 더 정렬
+    // 1차 정렬이 같으면 다른 기준으로 한 번 더 정렬해 순서를 고정한다
     private Comparator<LoanSummaryResponse> comparator(LoanSortType sort) {
 
         Comparator<LoanSummaryResponse> byRate =
@@ -131,7 +163,7 @@ public class LoanServiceImpl implements LoanService {
         if (sort == LoanSortType.MAX_BALANCE) {
             return byMaxBalanceDesc.thenComparing(byRate);
         }
-        // 기본: 금리 낮은 순 (금리가 같으면 한도 높은 순)
+        // 기본: 금리 낮은 순 (금리가 같으면 한도 높은 순). sort 파라미터가 null 이어도 여기로 온다
         return byRate.thenComparing(byMaxBalanceDesc);
     }
 }

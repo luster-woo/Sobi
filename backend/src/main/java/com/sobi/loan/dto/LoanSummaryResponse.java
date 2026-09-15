@@ -15,17 +15,17 @@ public class LoanSummaryResponse {
     private final String bankName;
     private final Double interestRate;
     private final Long maxLoanBalance;
-    private final LoanEligibility eligibility;
+    private final LoanStatus status;
     private final boolean bookmarked;
 
-    public static LoanSummaryResponse of(Loan loan, LoanEligibility eligibility, boolean bookmarked) {
+    public static LoanSummaryResponse of(Loan loan, LoanStatus status, boolean bookmarked) {
         return new LoanSummaryResponse(
                 loan.getId(),
                 loan.getAccountName(),
                 loan.getBankName(),
                 loan.getInterestRate(),
                 loan.getMaxLoanBalance(),
-                eligibility,
+                status,
                 bookmarked
         );
     }

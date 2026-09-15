@@ -42,6 +42,11 @@ export const endpoints = {
   business: {
     /** 국세청 진위확인. body 는 `{ brn, name, openDate }` — 대표자명 필드가 `name` 이다 */
     verify: '/business/verify',
+    /**
+     * 업체 등록. body 는 `{ brn }` 하나뿐이고 나머지는 서버가 `verify` 에서 채운다.
+     * 성공하면 서버가 role 을 ENTREPRENEUR 로 바꾼다 — 새 토큰을 받아야 반영된다.
+     */
+    register: '/business',
     /** 사이드바 하단 카드에 쓰는 내 업체 정보. 미등록이면 404 BUSINESS_O04 */
     me: '/business/me',
   },

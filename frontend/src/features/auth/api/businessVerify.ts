@@ -37,3 +37,18 @@ export async function verifyBusiness(body: BizVerifyRequest) {
   const { data } = await api.post<BizVerifyData>(endpoints.business.verify, body)
   return data
 }
+
+/**
+ * 업체 등록. 진위확인을 통과한 사업자등록번호로만 부른다.
+ *
+ * 응답은 비어 있다(`data: null`). 서버는 `verify` 행을 그대로 베껴 `business_info` 를
+ * 만들고 role 을 ENTREPRENEUR 로 바꾸는데, 그 결과를 돌려주지 않아서 호출한 쪽이
+ * 토큰을 다시 받아야 바뀐 role 을 알 수 있다.
+ *
+ * 실패는 404 BUSINESS_001(번호 없음) · 404 BUSINESS_003(업종 코드 없음) · 404 U001.
+ * 같은 번호로 두 번 부르면 `business_info.brn` 유니크 제약에 걸려 500 이다 —
+ * 서버에 중복 검사가 없어서 코드로 구분할 방법이 없다.
+ */
+export async function registerBusiness(brn: string) {
+  await api.post(endpoints.business.register, { brn })
+}

@@ -11,7 +11,7 @@ import { useLoanProducts, useRepaymentDetail } from '@/features/loan-repayment/h
 import { getRepaymentProgress } from '@/features/loan-repayment/model/progress'
 import { ROUTES } from '@/shared/constants/routes'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
-import { USER_ROLE } from '@/shared/types'
+import { isPreOwner } from '@/shared/types'
 import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
 import Skeleton from '@/shared/ui/Skeleton'
@@ -31,7 +31,7 @@ import Skeleton from '@/shared/ui/Skeleton'
 export function LoanRepaymentPage() {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
-  const isPreOwner = user?.role === USER_ROLE.PREENTREPRENEUR
+  const preOwner = isPreOwner(user?.role ?? null)
 
   /*
    * 예비창업자는 이 화면을 쓸 수 없다. 상환할 대출은 사업자로 실행한 것이고, 금융망
@@ -41,7 +41,7 @@ export function LoanRepaymentPage() {
    * 사이드바에는 메뉴가 그대로 보인다. role 마다 메뉴를 감추면 "내 화면에는 왜 없지"
    * 를 알 수 없어서, 들어와서 이유를 읽는 편이 낫다.
    */
-  const { data: products, isLoading, isError } = useLoanProducts({ enabled: !isPreOwner })
+  const { data: products, isLoading, isError } = useLoanProducts({ enabled: !preOwner })
   const [pickedAccountNo, setPickedAccountNo] = useState<string | null>(null)
 
   /*
@@ -59,7 +59,7 @@ export function LoanRepaymentPage() {
     isError: isDetailError,
   } = useRepaymentDetail(selected?.accountNo)
 
-  if (isPreOwner) {
+  if (preOwner) {
     return (
       <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
         <h1 className="text-h1">상환 관리</h1>

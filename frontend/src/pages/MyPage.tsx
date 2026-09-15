@@ -11,7 +11,7 @@ import WithdrawModal from '@/features/mypage/components/WithdrawModal'
 import { MOCK_MYPAGE, MOCK_MYPAGE_PRE_OWNER } from '@/features/mypage/model/mock'
 import { ROUTES } from '@/shared/constants/routes'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
-import { AUTH_PROVIDER, USER_ROLE } from '@/shared/types'
+import { AUTH_PROVIDER, isPreOwner } from '@/shared/types'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import Panel from '@/shared/ui/Panel'
@@ -80,7 +80,7 @@ export function MyPage() {
    *    주고 화면은 business 가 null 인지만 보면 된다.
    */
   const role = useAuthStore((s) => s.user?.role)
-  const data = role === USER_ROLE.PREENTREPRENEUR ? MOCK_MYPAGE_PRE_OWNER : MOCK_MYPAGE
+  const data = isPreOwner(role ?? null) ? MOCK_MYPAGE_PRE_OWNER : MOCK_MYPAGE
   const { profile, business, myData, accountSummary, shortcut } = data
 
   /*

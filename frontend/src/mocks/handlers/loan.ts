@@ -181,26 +181,45 @@ export const loanHandlers = [
     const found = mockLoans.find((loan) => loan.loanId === loanId)
 
     if (!found) {
-      // 대출 도메인은 백엔드 미구현이라 전용 에러 코드가 없다. 확정되면 교체
-      return fail(404, 'COMMON_001', '상품을 찾을 수 없습니다.', `/api/v1/loan/${loanId}`)
+      // 금융망에 등록되지 않은 상품도 서버가 같은 코드로 처리한다
+      return fail(404, 'LOAN_NOT_FOUND', '상품을 찾을 수 없습니다.', `/api/v1/loan/${loanId}`)
     }
+
+    const ratingName = ['A', 'B', 'C'][loanId % 3]
+    const firmAge = 1 + (loanId % 3)
 
     // 최소 한도·기간·업력·등급은 상세에만 있다. loanId 로 값을 흔들어 상품마다 다르게 보이게 했다
     return ok<LoanDetail>(
       {
+        loanId,
         accountName: found.accountName,
-        description: `업력 ${6 + (loanId % 3) * 6}개월 이상 소상공인 대상 · 대리대출(시중은행 취급)로 실행돼요.`,
-        status: found.status,
-        isBookmark: found.bookmarked,
+        bankName: found.bankName,
+        description: `업력 ${firmAge}년 이상 소상공인 대상 · 대리대출(시중은행 취급)로 실행돼요.`,
         interestRate: found.interestRate,
         minLoanBalance: minBalanceOf(found.maxLoanBalance),
         maxLoanBalance: found.maxLoanBalance,
-        period: 18 + (loanId % 4) * 6,
-        firmAge: 6 + (loanId % 3) * 6,
-        // loanId 로 흔들어 조건 있는 상품과 없는 상품을 섮는다
-        requiresStart: loanId % 2 === 0,
-        requiresEmployee: loanId % 3 === 0,
-        rating: ['A', 'B', 'C'][loanId % 3],
+        // 금융망 대출은 일 단위다. 매일 한 회차씩 갚는다
+        period: 180 + (loanId % 4) * 90,
+        repaymentMethod: '원리금균등상환',
+        conditions: {
+          ratingName,
+          // loanId 로 흔들어 조건 있는 상품과 없는 상품을 섞는다
+          requiresStart: loanId % 2 === 0,
+          requiresEmployee: loanId % 3 === 0,
+          firmAge,
+        },
+        status: found.status,
+        // 신청에서 온 상태일 때만 신청 id 가 있다. 목에서는 loanId 를 그대로 쓴다
+        applicationId: found.status === 'ELIGIBLE' || found.status === 'INELIGIBLE' ? null : loanId,
+        // 불가 상품에만 사유를 채운다. 문구 형식은 명세의 예시를 따른다
+        ineligibleReasons:
+          found.status === 'INELIGIBLE'
+            ? [
+                `신용등급 ${ratingName} 이상 필요 (현재 D)`,
+                `업력 ${firmAge}년 이상 필요 (현재 1년)`,
+              ]
+            : [],
+        bookmarked: found.bookmarked,
       },
       '대출 상품 상세 조회 성공',
       { path: `/api/v1/loan/${loanId}` },

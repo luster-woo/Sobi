@@ -68,27 +68,15 @@ export interface LoanListParams {
   sort?: LoanSort
 }
 
-/**
- * 대출 상품 상세.
- *
- * LoanListItem 을 상속하지 않는다. 상세 응답에는 loanId 가 없고(경로 파라미터로 넘긴
- * 값이라 다시 오지 않는다) bankName 도 없다. 서버 응답을 그대로 옮기는 타입이라
- * 억지로 묶으면 없는 필드를 있다고 믿게 된다.
- */
-export interface LoanDetail {
-  accountName: string
-  /** DB 컬럼이 nullable 이다. 없으면 모달에서 설명 줄을 생략한다 */
-  description: string | null
-  status: ProductStatus
-  isBookmark: boolean
-  /** 연 이율(%) */
-  interestRate: number
-  minLoanBalance: number
-  maxLoanBalance: number
-  /** 상환 기간(개월) */
-  period: number
-  /** 가입 가능 최소 업력(개월) */
-  firmAge: number
+/** 대출 신청 조건. 서버가 conditions 객체로 묶어서 준다 */
+export interface LoanConditions {
+  /**
+   * 최소 가입 가능 신용등급명. 'B' 같은 값.
+   *
+   * ⚠️ nullable 여부가 확인되지 않았다. 불가 사유 문구에 '등급이 없으면 (현재 등급 없음)'
+   *    이라는 갈래가 있는데, 그건 사용자 등급이지 상품 요구 등급이 아니다.
+   */
+  ratingName: string
   /**
    * 사업 개시 후여야 신청할 수 있는지 (loan.is_start)
    *
@@ -98,11 +86,45 @@ export interface LoanDetail {
   requiresStart: boolean
   /** 근로자 1명 이상이어야 하는지 (loan.employee_num) */
   requiresEmployee: boolean
+  /** 최소 업력(년). 목록 시절 '개월' 로 가정했는데 서버 주석이 '년' 이다 */
+  firmAge: number
+}
+
+/**
+ * 대출 상품 상세.
+ *
+ * LoanListItem 을 상속하지 않는다. 겹치는 필드가 많지만 상세에만 있는 것(conditions ·
+ * applicationId · ineligibleReasons)과 목록에만 있는 것이 갈려서, 억지로 묶으면
+ * 어느 쪽에 무엇이 오는지 읽히지 않는다.
+ */
+export interface LoanDetail {
+  loanId: number
+  accountName: string
+  bankName: string
+  /** DB 컬럼이 nullable 이다. 없으면 모달에서 설명 줄을 생략한다 */
+  description: string | null
+  /** 연 이율(%) */
+  interestRate: number
+  minLoanBalance: number
+  maxLoanBalance: number
+  /** 대출 기간(일). 금융망이 매일 한 회차씩 상환해서 회차 수와 같다 */
+  period: number
+  /** '원리금균등상환'. 금융망 대출은 이 방식 하나뿐이라 서버가 상수로 박아 보낸다 */
+  repaymentMethod: string
+  conditions: LoanConditions
+  status: ProductStatus
   /**
-   * 최소 가입 가능 신용등급명. 'B' 같은 값
-   *
-   * ⚠️ 서버는 이 셋을 conditions 객체 안에 묶어서 준다(LoanConditionResponse).
-   *    응답 모양 정렬은 연동 티켓에서 한번에 한다.
+   * 진행 중인 신청 id. 상태가 신청에서 온 값일 때만 온다(PREPARING~PAID).
+   * ELIGIBLE·INELIGIBLE 이면 null — 아직 신청한 적이 없다는 뜻이다.
    */
-  rating: string
+  applicationId: number | null
+  /**
+   * 신청할 수 없는 이유. 완성된 문장으로 온다.
+   *   '신용등급 C 이상 필요 (현재 D)' · '업력 3년 이상 필요 (현재 1년)'
+   *
+   * 자격이 되면 빈 배열이다. 서버가 상태와 무관하게 항상 내려준다 — 서류를 준비하는
+   * 동안 신용등급이 떨어질 수 있어서, 작성 중인데 사유가 차 있는 경우가 생긴다.
+   */
+  ineligibleReasons: string[]
+  bookmarked: boolean
 }

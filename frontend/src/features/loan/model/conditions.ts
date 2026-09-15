@@ -1,4 +1,4 @@
-import type { LoanDetail } from '@/features/loan/model/types'
+import type { LoanConditions } from '@/features/loan/model/types'
 
 /**
  * 신청 자격 요건을 한 줄로.
@@ -15,7 +15,7 @@ import type { LoanDetail } from '@/features/loan/model/types'
  * '별도 조건 없음' 을 빈 문자열로 두지 않는 이유: 줄이 사라지면 조건을 확인하지
  * 못한 것인지 조건이 없는 것인지 구분되지 않는다.
  */
-export function describeConditions({ requiresStart, requiresEmployee }: LoanDetail): string {
+export function describeConditions({ requiresStart, requiresEmployee }: LoanConditions): string {
   const parts: string[] = []
 
   if (requiresStart) parts.push('사업 개시 후')

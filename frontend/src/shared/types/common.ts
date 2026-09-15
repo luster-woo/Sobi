@@ -41,18 +41,6 @@ export interface ApiError {
 }
 
 /**
- * 필드 단위 검증 실패.
- *
- * ⚠️ 현재 백엔드는 이걸 내려주지 않는다. `GlobalExceptionHandler` 가 검증 실패를
- *    COMMON_001 하나로 뭉친다. 서버가 필드 목록을 주기 시작하면 `errors.ts` 의
- *    `getFieldErrors` 가 바로 받도록 타입만 남겨둔다.
- */
-export interface FieldError {
-  field: string
-  message: string
-}
-
-/**
  * 페이징 정보. Spring Boot 3.3+ PagedModel 직렬화 형태다.
  *
  * ⚠️ number 는 0-base 다. 화면과 URL 은 1-base 로 쓰므로

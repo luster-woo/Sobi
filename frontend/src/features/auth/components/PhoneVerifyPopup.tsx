@@ -109,6 +109,13 @@ interface PhoneVerifyPopupProps {
   onClose: () => void
   /** 인증이 끝났을 때. 다음 화면으로 보내는 건 부르는 쪽이 정한다 */
   onVerified: () => void
+  /**
+   * 부르는 쪽이 `onVerified` 에서 서버 요청을 하고 있는 중.
+   *
+   * 이 팝업 자체는 서버에 아무것도 보내지 않지만, '인증 완료' 뒤에 업체 등록이
+   * 붙으면서 응답을 기다리는 동안 버튼이 멀쩡해 보이면 두 번 눌리게 된다.
+   */
+  submitting?: boolean
 }
 
 function CarrierTile({
@@ -205,7 +212,11 @@ function StepIndicator({ current }: { current: number }) {
  * ⚠️ 인증 결과를 어디에도 저장하지 않는다. 부모가 조건부 렌더로 띄우므로 닫으면
  *    컴포넌트가 언마운트되고 입력값이 전부 사라진다 — 다시 열면 1단계부터 시작한다.
  */
-export default function PhoneVerifyPopup({ onClose, onVerified }: PhoneVerifyPopupProps) {
+export default function PhoneVerifyPopup({
+  onClose,
+  onVerified,
+  submitting = false,
+}: PhoneVerifyPopupProps) {
   const rrnFrontId = useId()
   const phoneFieldId = useId()
   const rrnBackRef = useRef<HTMLInputElement>(null)
@@ -272,7 +283,12 @@ export default function PhoneVerifyPopup({ onClose, onVerified }: PhoneVerifyPop
   const footer = (
     <div className="flex w-full gap-2.5">
       {step > 0 && (
-        <Button variant="outline" onClick={() => setStep(step - 1)} className="w-[112px] shrink-0">
+        <Button
+          variant="outline"
+          disabled={submitting}
+          onClick={() => setStep(step - 1)}
+          className="w-[112px] shrink-0"
+        >
           이전
         </Button>
       )}
@@ -291,7 +307,7 @@ export default function PhoneVerifyPopup({ onClose, onVerified }: PhoneVerifyPop
 
       {step === 2 &&
         (codeSent ? (
-          <Button onClick={handleConfirm} className="flex-1">
+          <Button loading={submitting} onClick={handleConfirm} className="flex-1">
             인증 완료
           </Button>
         ) : (

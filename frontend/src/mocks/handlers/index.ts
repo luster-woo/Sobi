@@ -7,6 +7,7 @@ import { applicationHandlers } from './application'
 import { authHandlers } from './auth'
 import { businessHandlers } from './business'
 import { fundingHandlers } from './funding'
+import { insuranceHandlers } from './insurance'
 import { loanHandlers } from './loan'
 import { marketHandlers } from './market'
 import { notificationHandlers } from './notification'
@@ -20,6 +21,7 @@ const HANDLERS_BY_DOMAIN = {
   auth: authHandlers,
   business: businessHandlers,
   funding: fundingHandlers,
+  insurance: insuranceHandlers,
   loan: loanHandlers,
   market: marketHandlers,
   notification: notificationHandlers,

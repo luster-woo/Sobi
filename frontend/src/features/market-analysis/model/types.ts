@@ -5,13 +5,16 @@
  * props 로 받게 하려는 것이다 — 한 덩어리로 두면 패널마다 MarketAnalysis 전체를 받아
  * 안에서 파고들고, 응답이 바뀔 때 패널 전부가 같이 흔들린다.
  *
- * ⚠️ 매출 관련 필드가 nullable 이다. 원본 데이터에서 매출 컬럼이 빈 행이 53% 라
- *    조회는 200 으로 성공하고 매출 블록만 null 로 온다. 절반 가까이가 이 경우라
- *    예외가 아니라 기본 경로로 취급해야 한다.
+ * ⚠️ null 이 오는 경우가 두 갈래다.
  *
- *    어느 필드까지 null 인지는 백엔드 확인 대기 중이다. 지금은 "매출이 들어간 필드는
- *    전부 null 일 수 있다" 로 가정해 넓게 잡았다. 확정되면 좁히면 되고, 반대로
- *    좁게 잡았다가 null 이 오면 화면이 터진다.
+ *    1) 매출 미집계 업종 — 원본에서 매출 컬럼이 빈 행이 53% 다. 조회는 200 으로
+ *       성공하고 매출 블록(revenueStructure · seoulRank · revenue*)만 null 로 온다.
+ *
+ *    2) 분모가 0 인 비율 — 서버의 ratio() 가 분모 0 이면 null 을 준다
+ *       (MarketServiceImpl). 그 동에 해당 업종 점포가 0 곳이거나 매출 합계가 0 이면
+ *       비율·점포당 지표가 전부 null 이다. 나눗셈 결과인 필드는 전부 여기 해당한다.
+ *
+ *    곳·명·원 단위(점포 수, 유동인구, 금액 합계)는 원본 값이라 null 이 아니다.
  */
 
 /** 조회 파라미터 */
@@ -58,8 +61,8 @@ export interface StoreCountBenchmark {
 }
 
 export interface FootTrafficGender {
-  maleRatio: number
-  femaleRatio: number
+  maleRatio: number | null
+  femaleRatio: number | null
 }
 
 export interface RevenueBenchmark {
@@ -73,8 +76,8 @@ export interface MarketSummary {
   storeCount: number
   storeCountBenchmark: StoreCountBenchmark
   dailyFootTraffic: number
-  /** 점포 한 곳이 하루에 마주치는 유동인구 */
-  footTrafficPerStoreDaily: number
+  /** 점포 한 곳이 하루에 마주치는 유동인구. 점포가 0 곳이면 null */
+  footTrafficPerStoreDaily: number | null
   footTrafficGender: FootTrafficGender
   /** 점포당 월 매출(원) */
   revenuePerStoreMonthly: number | null
@@ -94,26 +97,29 @@ export interface NeighborMarket {
   dongName: string
   storeCount: number
   dailyFootTraffic: number
-  footTrafficPerStoreDaily: number
+  footTrafficPerStoreDaily: number | null
   revenuePerStoreMonthly: number | null
-  /** 연 폐업률(%) */
-  annualCloseRate: number
+  /** 연 폐업률(%). 그 동에 점포가 0 곳이면 null */
+  annualCloseRate: number | null
 }
 
 export interface RevenueByDayType {
-  weekdayRatio: number
-  weekendRatio: number
+  weekdayRatio: number | null
+  weekendRatio: number | null
   weekdayRevenueMonthly: number
   weekendRevenueMonthly: number
 }
 
 export interface RevenueByGender {
-  maleRatio: number
-  femaleRatio: number
+  maleRatio: number | null
+  femaleRatio: number | null
   maleRevenueMonthly: number
   femaleRevenueMonthly: number
-  /** 성별이 확인된 매출 비중(%). 100 이 아니면 미상이 섞여 있다는 뜻 */
-  coverageRatio: number
+  /**
+   * 성별이 확인된 매출 비중(%). 100 이 아니면 미상이 섞여 있다는 뜻.
+   * 매출 합계가 0 이면 null
+   */
+  coverageRatio: number | null
 }
 
 export interface RevenueStructure {
@@ -125,8 +131,11 @@ export interface BusinessMixItem {
   code: string
   name: string
   storeCount: number
-  /** 전체 점포 대비 비율(%). 합이 100 이 안 되므로 '기타' 는 프론트가 계산한다 */
-  sharePercent: number
+  /**
+   * 전체 점포 대비 비율(%). 합이 100 이 안 되므로 '기타' 는 프론트가 계산한다.
+   * 동 전체 점포가 0 곳이면 null
+   */
+  sharePercent: number | null
 }
 
 export interface BusinessMix {
@@ -147,9 +156,10 @@ export interface StoreChurn {
   closed: number
   /** opened - closed. 음수면 줄어드는 상권이다 */
   net: number
-  annualCloseRate: number
-  annualOpenRate: number
-  seoulAvgCloseRate: number
+  /** 세 비율 모두 점포 수가 분모라 0 곳이면 null */
+  annualCloseRate: number | null
+  annualOpenRate: number | null
+  seoulAvgCloseRate: number | null
 }
 
 export interface MarketAnalysis {

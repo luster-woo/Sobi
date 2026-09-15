@@ -67,8 +67,20 @@ export interface LoanDetail {
   period: number
   /** 가입 가능 최소 업력(개월) */
   firmAge: number
-  /** 지원 대상. '소상공인' 같은 문구 */
-  target: string
-  /** 최소 가입 가능 신용등급명. 'B' 같은 값 */
+  /**
+   * 사업 개시 후여야 신청할 수 있는지 (loan.is_start)
+   *
+   * 시안에는 '대상: 소상공인' 줄이 있었는데 그런 컬럼이 loan 테이블에 없다.
+   * 서버가 주는 실제 자격 요건으로 그 자리를 채운다.
+   */
+  requiresStart: boolean
+  /** 근로자 1명 이상이어야 하는지 (loan.employee_num) */
+  requiresEmployee: boolean
+  /**
+   * 최소 가입 가능 신용등급명. 'B' 같은 값
+   *
+   * ⚠️ 서버는 이 셋을 conditions 객체 안에 묶어서 준다(LoanConditionResponse).
+   *    응답 모양 정렬은 연동 티켓에서 한번에 한다.
+   */
   rating: string
 }

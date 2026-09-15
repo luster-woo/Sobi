@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { useBusinessSummary } from '@/features/business/hooks/useBusinessSummary'
 import { ROUTES } from '@/shared/constants/routes'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
-import { USER_ROLE } from '@/shared/types'
+import { isPreOwner } from '@/shared/types'
 import Skeleton from '@/shared/ui/Skeleton'
 
 /** 사이드바 하단 여백. 카드가 안 그려지는 경우까지 포함해 이 컴포넌트가 들고 있다 */
@@ -26,7 +26,7 @@ export function SidebarBusinessCard() {
   const role = useAuthStore((s) => s.user?.role)
   const { data, isPending, isError } = useBusinessSummary()
 
-  if (role !== USER_ROLE.ENTREPRENEUR) return null
+  if (isPreOwner(role ?? null)) return null
 
   if (isPending) {
     return (

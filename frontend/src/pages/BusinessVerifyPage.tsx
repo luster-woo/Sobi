@@ -5,6 +5,7 @@ import type { BizVerifyData } from '@/features/auth/api/businessVerify'
 import BizVerifyResult from '@/features/auth/components/BizVerifyResult'
 import PhoneVerifyPopup from '@/features/auth/components/PhoneVerifyPopup'
 import PreOwnerBranchCard from '@/features/auth/components/PreOwnerBranchCard'
+import { useBusinessRegister } from '@/features/auth/hooks/useBusinessRegister'
 import { useBusinessVerify } from '@/features/auth/hooks/useBusinessVerify'
 import { ERROR_CODE, getErrorCode, getErrorMessage, getErrorStatus } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
@@ -38,6 +39,16 @@ const VERIFY_ERROR = {
 
 type VerifyErrorKind = keyof typeof VERIFY_ERROR
 
+/**
+ * 등록 단계의 500.
+ *
+ * 서버에 중복 검사가 없어 이미 등록된 번호를 또 보내면 `business_info.brn` 유니크
+ * 제약에 걸려 500 이 난다. 진짜 장애와 구분할 코드가 없어서, 이 화면에서 제일 그럴듯한
+ * 원인을 먼저 말해준다.
+ */
+const REGISTER_CONFLICT_MESSAGE =
+  '이미 등록된 사업자등록번호이거나 서버에 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'
+
 /** 하이픈을 떼고 보낸다. `verify.brn` 은 숫자 10자리로만 저장돼 있다 */
 const toDigits = (value: string) => value.replace(/\D/g, '')
 
@@ -47,6 +58,7 @@ export function BusinessVerifyPage() {
   const navigate = useNavigate()
   const showToast = useUiStore((state) => state.showToast)
   const { mutate: verify, isPending } = useBusinessVerify()
+  const { mutate: register, isPending: isRegistering } = useBusinessRegister()
 
   const [brn, setBrn] = useState('')
   const [ownerName, setOwnerName] = useState('')
@@ -136,10 +148,30 @@ export function BusinessVerifyPage() {
 
   const handleStartAsOwner = () => {
     if (verifiedBrn === null) return
-
-    // TODO(139): POST /business { brn: verifiedBrn } → 성공 시 role 이 ENTREPRENEUR 가 된다.
-    //   명세에는 `bsn` 으로 적혀 있지만 실제 `BusinessRequest` 필드는 `brn` 이다
     setIdentityOpen(true)
+  }
+
+  /**
+   * 본인확인을 마친 시점에 업체를 등록한다.
+   *
+   * 버튼을 누를 때 바로 부르지 않는 이유는 순서다. 본인확인을 중간에 닫으면 등록만
+   * 되어 있는 계정이 남고, 같은 번호로 다시 등록하면 유니크 제약에 걸려 500 이 난다.
+   *
+   * 명세에는 `bsn` 으로 적혀 있지만 실제 `BusinessRequest` 필드는 `brn` 이다.
+   */
+  const handleIdentityVerified = () => {
+    if (verifiedBrn === null) return
+
+    register(verifiedBrn, {
+      onSuccess: () => {
+        setIdentityOpen(false)
+        navigate(ROUTES.MYDATA_CONSENT)
+      },
+      onError: (error) => {
+        // 팝업은 열어둔다. 인증번호가 그대로 있어 '인증 완료' 를 다시 누르면 재시도된다
+        showToast(getErrorMessage(error, { 500: REGISTER_CONFLICT_MESSAGE }), 'danger')
+      },
+    })
   }
 
   const handleStartAsPreOwner = () => {
@@ -235,7 +267,8 @@ export function BusinessVerifyPage() {
       {identityOpen && (
         <PhoneVerifyPopup
           onClose={() => setIdentityOpen(false)}
-          onVerified={() => navigate(ROUTES.MYDATA_CONSENT)}
+          onVerified={handleIdentityVerified}
+          submitting={isRegistering}
         />
       )}
     </>

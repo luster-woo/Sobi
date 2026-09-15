@@ -51,9 +51,9 @@ export interface SessionUser {
    * ⚠️ **null 일 수 있다.** 백엔드 `LoginResponse.UserInfo.from()` 이
    * `user.getRole() != null ? ... : null` 로 넣는다.
    *
-   * 가입 시점에는 role 이 정해지지 않고 `POST /business` 로 업체를 등록해야
-   * ENTREPRENEUR 가 된다. 즉 **가입 직후 로그인하면 null 이다.**
-   * 대시보드·사이드바가 role 로 갈라지므로 null 을 '아직 안 정해짐' 으로 다뤄야 한다.
+   * 로컬 가입은 `PREENTREPRENEUR` 로 시작하지만(`AuthServiceImpl.signup`) 구글 신규
+   * 가입은 role 을 넣지 않아 null 로 온다. **null 은 예비 창업자로 본다** — 직접
+   * 비교하지 말고 `isPreOwner()` 를 쓸 것.
    */
   role: UserRole | null
 }
@@ -63,8 +63,13 @@ export interface LoginResponse extends TokenResponse {
   /** 항상 'Bearer' */
   tokenType: string
   user: SessionUser
-  /** 소셜 최초 가입일 때만 온다. 온보딩으로 보낼지 판단한다 */
-  isNewUser?: boolean
+  /**
+   * 소셜 최초 가입이면 true. 온보딩으로 보낼지 판단한다.
+   *
+   * 기존 유저에게도 키는 온다 — 백엔드가 `issueTokens(user, null)` 로 넘겨 **null** 이
+   * 실린다. 이메일 로그인 응답에는 아예 없다. 셋 다 falsy 라 `if (isNewUser)` 로 쓰면 된다.
+   */
+  isNewUser?: boolean | null
 }
 
 /** 로컬 계정을 소셜로 전환한 결과 */

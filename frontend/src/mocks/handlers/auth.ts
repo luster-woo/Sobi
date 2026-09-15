@@ -14,6 +14,10 @@ import { USER_ROLE } from '@/shared/types'
  * 로그인 전 상태여야 한다. 아래 계정으로 실제 로그인하면 보호 라우트가 열린다.
  *
  * 133(인증/온보딩)에서 실제 쿠키 흐름으로 교체한다.
+ *
+ * 업체를 등록하면(`POST /business`) 이 저장본의 role 이 ENTREPRENEUR 로 바뀐다 —
+ * 아래 `promoteToOwner` 를 `handlers/business.ts` 가 부른다. 목에서도 재발급 토큰에
+ * 바뀐 role 이 실려야 사이드바 카드가 뜨는 것까지 확인할 수 있다.
  */
 const SESSION_KEY = 'msw:logged-in'
 /** 어느 계정으로 로그인했는지. `/user/me` 가 이 값으로 유저를 고른다 */
@@ -22,6 +26,9 @@ const SESSION_EMAIL_KEY = 'msw:email'
 function hasSession() {
   return sessionStorage.getItem(SESSION_KEY) === 'true'
 }
+
+/** 다른 도메인 핸들러가 '인증 필요' 를 흉내 낼 때 쓴다 */
+export const hasMockSession = hasSession
 
 /** 실제 로그인 응답이 주는 네 필드뿐이다 */
 const ENTREPRENEUR_USER: SessionUser = {
@@ -57,6 +64,14 @@ interface MockAccount {
  */
 const ACCOUNTS_KEY = 'msw:accounts'
 
+/**
+ * 구글로 들어오는 계정. 목은 code 를 검증할 수 없어 구글 사용자를 하나로 고정한다.
+ *
+ * 온보딩을 처음부터 다시 보려면 콘솔에서 이 계정을 지운다:
+ *   sessionStorage.removeItem('msw:accounts')
+ */
+const GOOGLE_EMAIL = 'google@sogong.com'
+
 const SEED_ACCOUNTS: Record<string, MockAccount> = {
   'owner@sogong.com': { password: 'sogong1234!', user: ENTREPRENEUR_USER },
   'pre@sogong.com': { password: 'sogong1234!', user: PREENTREPRENEUR_USER },
@@ -80,15 +95,38 @@ function findAccount(email: string): MockAccount | undefined {
 /**
  * 가입한 계정을 더한다.
  *
- * role 은 null 이다. 백엔드도 가입 시점에는 role 을 넣지 않고 `POST /business` 로
- * 업체를 등록해야 ENTREPRENEUR 가 된다 — 그래서 가입 직후 로그인하면 온보딩으로 간다.
+ * role 은 `PREENTREPRENEUR` 다. 백엔드 `AuthServiceImpl.signup()` 이 그렇게 넣는다 —
+ * 사업자가 되려면 `POST /business` 로 업체를 등록해야 한다.
  */
 function addAccount(email: string, password: string, name: string) {
   const accounts = loadAccounts()
 
   accounts[email] = {
     password,
-    user: { userId: Date.now(), email, name, role: null },
+    user: { userId: Date.now(), email, name, role: USER_ROLE.PREENTREPRENEUR },
+  }
+
+  sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
+}
+
+/**
+ * 업체 등록 성공 처리. 로그인한 계정의 role 을 ENTREPRENEUR 로 올린다.
+ *
+ * 백엔드 `BusinessServiceImpl.business()` 의 `user.changeRole(ENTREPRENEUR)` 에 해당한다.
+ * 목에서도 이걸 해줘야 뒤이은 `/auth/refresh` 가 바뀐 role 이 담긴 토큰을 준다 —
+ * 안 그러면 등록은 됐는데 사이드바 카드가 안 뜨는 상태를 목에서 재현하게 된다.
+ */
+export function promoteToOwner() {
+  const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
+  if (!email) return
+
+  const accounts = loadAccounts()
+  const account = accounts[email]
+  if (!account) return
+
+  accounts[email] = {
+    ...account,
+    user: { ...account.user, role: USER_ROLE.ENTREPRENEUR },
   }
 
   sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
@@ -443,11 +481,30 @@ export const authHandlers = [
     }
 
     /*
-     * 목은 code 를 검증할 수 없다. 항상 사업자 계정으로 로그인시킨다.
-     * 최초 가입 분기(`isNewUser`)를 보려면 code 에 'new' 를 넣어 호출한다 —
-     * 실제로는 서버가 정한다.
+     * 목은 code 를 검증할 수 없어 구글이 누구인지 알 수 없다. 그래서 구글 계정을
+     * 하나로 고정하고, 그 계정을 처음 보는지로 `isNewUser` 를 가른다 —
+     * 실제 백엔드도 `findByEmail` 이 비면 새로 만들고 `isNewUser: true` 를 준다.
+     *
+     * ⚠️ role 은 **null** 이다. 백엔드 `loginWithGoogle` 이 새 유저를 만들 때
+     *    `.role(...)` 을 넣지 않아 구글 가입자만 null 로 시작한다. 이 값이어야
+     *    온보딩(`/verify`)으로 가는 분기를 목에서도 볼 수 있다.
      */
-    const user = ENTREPRENEUR_USER
+    const existing = findAccount(GOOGLE_EMAIL)
+
+    const user: SessionUser = existing?.user ?? {
+      userId: 3,
+      email: GOOGLE_EMAIL,
+      name: '구글가입',
+      role: null,
+    }
+
+    if (!existing) {
+      // 비밀번호는 빈 문자열이다 — 소셜 계정이라 이메일 로그인이 막혀야 한다
+      const accounts = loadAccounts()
+      accounts[GOOGLE_EMAIL] = { password: '', user }
+      sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
+    }
+
     sessionStorage.setItem(SESSION_KEY, 'true')
     sessionStorage.setItem(SESSION_EMAIL_KEY, user.email)
 
@@ -457,7 +514,8 @@ export const authHandlers = [
         tokenType: 'Bearer',
         expiresIn: 1800,
         user,
-        ...(code.includes('new') ? { isNewUser: true } : {}),
+        // 실제 응답도 기존 유저에게는 null 을 준다
+        isNewUser: existing ? null : true,
       },
       '소셜 로그인 성공',
       { path },

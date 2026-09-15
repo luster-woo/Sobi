@@ -12,6 +12,11 @@ import { fail, ok } from '@/mocks/lib/envelope'
  * 두 상품을 다르게 뒀다.
  *   0044…  전부 성공. 기본 경로
  *   0451…  3회차가 실패. 실패 사유 표시와 진행률 계산(성공만 카운트)을 확인한다
+ *
+ * 값이 없는 자리는 빈 문자열이 아니라 null 로 준다. 백엔드 DTO 가 전부 래퍼 타입이라
+ * 금융망이 필드를 빼면 Jackson 이 null 을 채우고 그대로 JSON null 로 내려온다.
+ * 성공한 회차의 failureReason 이 그 자리인데, 회차 대부분이 성공이라 예외가 아니라
+ * 기본값에 가깝다. 목이 빈 문자열을 주면 normalize 의 null 경로를 한 번도 안 지난다.
  */
 const PRODUCTS: RawLoanProduct[] = [
   {
@@ -70,10 +75,10 @@ function makeRecords(
       paymentBalance: amount,
       repaymentAttemptDate: yyyymmdd,
       repaymentAttemptTime: '083000',
-      // 실패하면 실제 출금이 없었으므로 빈 문자열로 온다고 가정했다
-      repaymentActualDate: failed ? '' : yyyymmdd,
-      repaymentActualTime: failed ? '' : '083012',
-      failureReason: failed ? '출금 계좌 잔액 부족' : '',
+      // 실패하면 실제 출금 자체가 없다
+      repaymentActualDate: failed ? null : yyyymmdd,
+      repaymentActualTime: failed ? null : '083012',
+      failureReason: failed ? '출금 계좌 잔액 부족' : null,
     }
   })
 }

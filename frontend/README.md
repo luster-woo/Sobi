@@ -47,8 +47,8 @@ VITE_MOCK_FORCE=dashboard        # 서버는 있는데 응답 모양이 아직 �
 ```
 
 고를 수 있는 값은 `src/mocks/handlers/index.ts` 의 `HANDLERS_BY_DOMAIN` 키다 —
-`account` `application` `auth` `business` `funding` `loan` `market` `notification`
-`repayment` `support`.
+`account` `application` `auth` `business` `funding` `insurance` `loan` `market`
+`notification` `repayment` `support`.
 
 ## 구글 로그인
 

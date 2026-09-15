@@ -21,7 +21,7 @@ VALUES
     -- 대출 계좌 2개
     (1, '국민은행', '44444444444444', 'LOAN', NULL),
     (1, '하나은행', '55555555555555', 'LOAN', NULL)
-    ON CONFLICT (account_no) DO NOTHING;;
+    ON CONFLICT (account_no) DO NOTHING;
 
 
 -- =========================================

@@ -14,10 +14,17 @@ const BANK_OPTIONS = [
   { value: '대구은행', label: '대구은행' },
 ]
 
-/** ⚠️ sort 값 형식이 명세에 없어 Spring 형식으로 가정했습니다 */
+/**
+ * 정렬 기준.
+ *
+ * 서버가 받는 LoanSortType 은 INTEREST_RATE · MAX_BALANCE 둘뿐이고 방향이 값에
+ * 박혀 있다(금리는 낮은 순, 한도는 높은 순). 그래서 '금리 높은 순' 은 버렸다 —
+ * 대출을 고를 때 금리가 높은 순서로 볼 이유가 없다.
+ *
+ * ⚠️ 값은 아직 Spring 형식이다. 서버 enum 으로 바꾸는 건 연동 티켓에서 한다.
+ */
 const SORT_OPTIONS = [
   { value: 'interestRate,asc', label: '금리 낮은 순' },
-  { value: 'interestRate,desc', label: '금리 높은 순' },
   { value: 'maxLoanBalance,desc', label: '한도 높은 순' },
 ]
 

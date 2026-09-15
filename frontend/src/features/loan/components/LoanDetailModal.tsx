@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router'
 import { useCreateApplication } from '@/features/application/hooks/useApplication'
 import { APPLICATION_SOURCE } from '@/features/application/model/types'
 import { useLoanDetail } from '@/features/loan/hooks/useLoanDetail'
+import { describeConditions } from '@/features/loan/model/conditions'
 import type { ProductStatus } from '@/shared/constants/productStatus'
 import { LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { routeTo } from '@/shared/constants/routes'
@@ -160,7 +161,7 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
           {/* 시안에는 거치기간·상환방식·만기가 있었지만 응답에 period(개월)만 온다 */}
           <Row label="상환">총 {data.period}개월</Row>
           <Row label="업력">{data.firmAge}개월 이상</Row>
-          <Row label="대상">{data.target}</Row>
+          <Row label="조건">{describeConditions(data)}</Row>
           <Row label="신용등급">{data.rating}등급 이상</Row>
           <Row label="실행">승인 시 출금 계좌로 입금 (신청 시 입력)</Row>
         </dl>

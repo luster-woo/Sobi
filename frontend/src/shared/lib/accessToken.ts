@@ -16,7 +16,8 @@ import { USER_ROLE, type UserRole } from '@/shared/types'
 interface AccessTokenClaims {
   sub?: string
   email?: string
-  role?: string
+  /** `user.getRole() != null ? ... : null` 이라 **null 이 실려 온다** */
+  role?: string | null
 }
 
 function decodeBase64Url(segment: string): string | null {
@@ -47,7 +48,7 @@ function parseClaims(token: string): AccessTokenClaims | null {
   }
 }
 
-function toUserRole(value: string | undefined): UserRole | null {
+function toUserRole(value: string | null | undefined): UserRole | null {
   if (value === USER_ROLE.ENTREPRENEUR) return USER_ROLE.ENTREPRENEUR
   if (value === USER_ROLE.PREENTREPRENEUR) return USER_ROLE.PREENTREPRENEUR
   return null

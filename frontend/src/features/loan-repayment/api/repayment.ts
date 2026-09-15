@@ -13,11 +13,12 @@ import { endpoints } from '@/shared/api/endpoints'
  * axios 는 두 번째 인자를 본문으로 쓰므로 빈 객체를 넘긴다.
  */
 export async function getLoanProducts() {
-  const { data } = await api.post<{ loanProductList: RawLoanProduct[] }>(
+  const { data } = await api.post<{ loanProductList: RawLoanProduct[] | null }>(
     endpoints.repayment.list,
     {},
   )
-  return data.loanProductList.map(normalizeLoanProduct)
+  // 대출이 하나도 없으면 배열 자리가 비어 온다
+  return (data.loanProductList ?? []).map(normalizeLoanProduct)
 }
 
 /** 상환 내역 + 완납 비교 */

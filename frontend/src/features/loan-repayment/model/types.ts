@@ -13,6 +13,11 @@ import type { ISODate } from '@/shared/types'
  *
  * ⚠️ 백엔드가 "초안이고 금융망 연결 과정에서 컬럼이 바뀔 수 있다" 고 했다. 바뀌면
  *    Raw* 타입과 normalize 만 고치면 된다.
+ *
+ * 값이 없는 자리는 빈 문자열이 아니라 null 로 온다고 본다. 백엔드 DTO 가 전부
+ * 래퍼 타입(String·List)이라 금융망이 필드를 빼고 주면 Jackson 이 null 을 채우고,
+ * 그대로 JSON null 이 되어 내려온다. 상환 성공 행의 failureReason 처럼 '값이 없는
+ * 게 정상' 인 자리가 있어서 예외가 아니라 일상이다.
  */
 
 // ---------- 서버 응답 그대로 ----------
@@ -45,14 +50,15 @@ export interface RawRepaymentRecord {
   /** 'SUCCESS' 등. ⚠️ 실패 값이 무엇인지 확인 대기 */
   status: string
   paymentBalance: string
-  /** 'YYYYMMDD'. 실패하면 actual 이 빈 문자열일 것으로 보인다 */
-  repaymentAttemptDate: string
+  /** 'YYYYMMDD' */
+  repaymentAttemptDate: string | null
   /** 'HHmmss' */
-  repaymentAttemptTime: string
-  repaymentActualDate: string
-  repaymentActualTime: string
-  /** 실패 사유. 성공이면 빈 문자열 */
-  failureReason: string
+  repaymentAttemptTime: string | null
+  /** 실제로 빠져나간 시각. 실패한 회차에는 없다 */
+  repaymentActualDate: string | null
+  repaymentActualTime: string | null
+  /** 실패 사유. 성공한 회차에는 없다 — 대부분의 행이 여기 해당한다 */
+  failureReason: string | null
 }
 
 export interface RawRepaymentDetail {
@@ -63,8 +69,15 @@ export interface RawRepaymentDetail {
   loanBalance: string
   remainingLoanBalance: string
   withdrawalAccountNo: string
-  repaymentRecords: RawRepaymentRecord[]
-  /** 지금 한 번에 갚을 때 내는 총액 */
+  /** 한 회차도 상환되지 않았으면 빈 배열 대신 null 일 수 있다 */
+  repaymentRecords: RawRepaymentRecord[] | null
+  /**
+   * 지금 한 번에 갚을 때 내는 총액.
+   *
+   * ⚠️ 2026-09-15 현재 서버가 이 자리에 remainingLoanBalance(원금+이자)를 넣어
+   *    보낸다(RepaymentServiceImpl:137). 백엔드 수정 대기 중이라 화면 숫자가
+   *    실제보다 크다. 프론트에서 역산하지 않는다 — 고쳐지면 두 번 틀어진다.
+   */
   totalPayoffAmount: number
   interestSaved: number
 }

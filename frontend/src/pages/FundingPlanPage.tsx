@@ -6,6 +6,9 @@ import FundingCombinationCard from '@/features/funding-plan/components/FundingCo
 import FundingCombinationSummaryCard from '@/features/funding-plan/components/FundingCombinationSummaryCard'
 import FundingComparisonTable from '@/features/funding-plan/components/FundingComparisonTable'
 import { useFundingRecommend } from '@/features/funding-plan/hooks/useFundingRecommend'
+import type { FundingItem } from '@/features/funding-plan/model/types'
+import LoanDetailModal from '@/features/loan/components/LoanDetailModal'
+import SupportProgramDetailModal from '@/features/support-program/components/SupportProgramDetailModal'
 import EmptyState from '@/shared/ui/EmptyState'
 import Skeleton from '@/shared/ui/Skeleton'
 
@@ -19,10 +22,16 @@ import Skeleton from '@/shared/ui/Skeleton'
  *
  * 고른 조합은 주소에 두지 않는다. 서버로 가는 조건이 아니고, 조합 목록이 바뀌면
  * 인덱스가 다른 조합을 가리키게 되어 주소로 공유할 수 있는 값이 아니다.
+ *
+ * 구성 상품 상세는 목록 화면들과 같은 모달을 그대로 쓴다. 조합 응답의 id 가
+ * loan.id · support_program.id 라 바로 넘길 수 있다. 여기 두는 이유는 그 모달이
+ * loan·support-program feature 것이어서다 — funding-plan 안에서 부르면 feature 끼리
+ * 물린다. 관심 목록 화면도 같은 방식이다.
  */
 export function FundingPlanPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [openItem, setOpenItem] = useState<FundingItem | null>(null)
 
   const rawAmount = Number(searchParams.get('amount'))
   const amount = Number.isFinite(rawAmount) && rawAmount > 0 ? rawAmount : undefined
@@ -73,6 +82,7 @@ export function FundingPlanPage() {
           order={selectedIndex + 1}
           // 주소의 금액이 아니라 서버가 실제로 계산에 쓴 금액을 넘긴다
           targetAmount={data.targetAmount}
+          onOpenItem={setOpenItem}
         />
       )}
 
@@ -97,6 +107,18 @@ export function FundingPlanPage() {
           combinations={combinations}
           selectedIndex={selectedIndex}
           onSelect={setSelectedIndex}
+        />
+      )}
+
+      {/* 지원사업은 지원금(GRANT)이든 융자성(LOAN)이든 같은 상세를 쓴다. 출처로만 가른다 */}
+      {openItem?.sourceType === 'LOAN_PRODUCT' && (
+        <LoanDetailModal loanId={openItem.id} onClose={() => setOpenItem(null)} />
+      )}
+
+      {openItem?.sourceType === 'SUPPORT_PROGRAM' && (
+        <SupportProgramDetailModal
+          supportProgramId={openItem.id}
+          onClose={() => setOpenItem(null)}
         />
       )}
     </div>

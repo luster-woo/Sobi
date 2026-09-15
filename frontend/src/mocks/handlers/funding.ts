@@ -1,7 +1,46 @@
 import { http } from 'msw'
 
-import type { FundingRecommendData } from '@/features/funding-plan/model/types'
+import type { FundingItem, FundingRecommendData } from '@/features/funding-plan/model/types'
+import { findLoanProductSummary } from '@/mocks/handlers/loan'
+import { findSupportProductSummary } from '@/mocks/handlers/support'
 import { fail, ok } from '@/mocks/lib/envelope'
+
+/**
+ * 상품 이름을 대출·지원사업 목에서 가져온다.
+ *
+ * 손으로 적어 두면 카드에 뜬 이름과 상세 모달에 뜬 이름이 서로 다르다. 조합 항목을
+ * 눌러 상세를 여는 화면이 생기면서 그 어긋남이 그대로 드러난다.
+ *
+ * 없는 id 를 쓰면 여기서 막힌다 — 이름이 '(목에 없는 상품 N)' 으로 나오므로
+ * 화면을 한 번만 열어봐도 알아챈다.
+ */
+function loanItem(loanId: number, allocatedAmount: number, interestRate: number): FundingItem {
+  return {
+    sourceType: 'LOAN_PRODUCT',
+    fundingType: 'LOAN',
+    id: loanId,
+    name: findLoanProductSummary(loanId)?.name ?? `(목에 없는 상품 ${loanId})`,
+    allocatedAmount,
+    interestRate,
+  }
+}
+
+function supportItem(
+  supportProgramId: number,
+  fundingType: FundingItem['fundingType'],
+  allocatedAmount: number,
+  interestRate: number,
+): FundingItem {
+  return {
+    sourceType: 'SUPPORT_PROGRAM',
+    fundingType,
+    id: supportProgramId,
+    name:
+      findSupportProductSummary(supportProgramId)?.name ?? `(목에 없는 공고 ${supportProgramId})`,
+    allocatedAmount,
+    interestRate,
+  }
+}
 
 /**
  * 자금 조합 목.
@@ -22,31 +61,11 @@ function build(targetAmount: number): FundingRecommendData {
     targetAmount,
     recommendedCombinations: [
       {
+        // 1번 공고는 지원사업 목에서 SUPPORT(무상) 타입이다
         items: [
-          {
-            sourceType: 'SUPPORT_PROGRAM',
-            fundingType: 'GRANT',
-            id: 21,
-            name: '스마트상점 바우처',
-            allocatedAmount: grant,
-            interestRate: 0,
-          },
-          {
-            sourceType: 'LOAN_PRODUCT',
-            fundingType: 'LOAN',
-            id: 2,
-            name: '소진공 일반경영안정자금',
-            allocatedAmount: core,
-            interestRate: 3.4,
-          },
-          {
-            sourceType: 'LOAN_PRODUCT',
-            fundingType: 'LOAN',
-            id: 7,
-            name: '지역신보 보증부 대출',
-            allocatedAmount: rest - core,
-            interestRate: 4.1,
-          },
+          supportItem(1, 'GRANT', grant, 0),
+          loanItem(2, core, 3.4),
+          loanItem(3, rest - core, 4.1),
         ],
         totalFinancingAmount: targetAmount,
         grantAmount: grant,
@@ -57,16 +76,7 @@ function build(targetAmount: number): FundingRecommendData {
         totalRepaymentAmount: rest + 2_560_000,
       },
       {
-        items: [
-          {
-            sourceType: 'LOAN_PRODUCT',
-            fundingType: 'LOAN',
-            id: 2,
-            name: '소진공 일반경영안정자금',
-            allocatedAmount: targetAmount,
-            interestRate: 3.4,
-          },
-        ],
+        items: [loanItem(2, targetAmount, 3.4)],
         totalFinancingAmount: targetAmount,
         grantAmount: 0,
         loanPrincipal: targetAmount,
@@ -78,31 +88,10 @@ function build(targetAmount: number): FundingRecommendData {
       {
         // 목표를 넘기는 조합. 상품 최소 금액 때문에 딱 맞추지 못한 경우
         items: [
-          {
-            sourceType: 'SUPPORT_PROGRAM',
-            fundingType: 'GRANT',
-            id: 21,
-            name: '스마트상점 바우처',
-            allocatedAmount: 5_000_000,
-            interestRate: 0,
-          },
-          {
-            sourceType: 'LOAN_PRODUCT',
-            fundingType: 'LOAN',
-            id: 7,
-            name: '지역신보 보증부 대출',
-            allocatedAmount: 35_000_000,
-            interestRate: 4.1,
-          },
-          {
-            // 지원사업인데 이자를 내는 융자성 상품. fundingType 이 LOAN 이다
-            sourceType: 'SUPPORT_PROGRAM',
-            fundingType: 'LOAN',
-            id: 13,
-            name: '스마트화 전환 보증재단 자금',
-            allocatedAmount: 20_000_000,
-            interestRate: 2.8,
-          },
+          supportItem(1, 'GRANT', 5_000_000, 0),
+          loanItem(3, 35_000_000, 4.1),
+          // 지원사업인데 이자를 내는 융자성 상품. 2번 공고가 목에서 LOAN 타입이다
+          supportItem(2, 'LOAN', 20_000_000, 2.8),
         ],
         totalFinancingAmount: 60_000_000,
         grantAmount: 5_000_000,

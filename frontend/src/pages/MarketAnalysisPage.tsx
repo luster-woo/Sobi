@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type CSSProperties, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 
 import BusinessMixPanel from '@/features/market-analysis/components/BusinessMixPanel'
@@ -15,12 +15,26 @@ import { readConditionFromParams } from '@/features/market-analysis/model/condit
 import { formatDataQuarter } from '@/features/market-analysis/model/format'
 import { ROUTES } from '@/shared/constants/routes'
 import Button from '@/shared/ui/Button'
+import ColumnResizer from '@/shared/ui/ColumnResizer'
 import EmptyState from '@/shared/ui/EmptyState'
 import Skeleton from '@/shared/ui/Skeleton'
 
 /** 표에 넣을 주변 상권 행 수와 업종 구성 항목 수. 화면에 노출하지 않는 고정값이다 */
 const COMPARE_LIMIT = 7
 const MIX_LIMIT = 6
+
+/*
+ * 보조 열 너비(px). 시안값이 292 인데, 업종 구성의 '부동산중개업' 같은 긴 이름이
+ * 잘려서 손잡이로 늘릴 수 있게 했다.
+ *
+ * 최대값은 재지 않고 상수로 둔다. lg(1024px)에서 본문에 최소 560px 은 남겨야
+ * 주변 상권 비교표 여섯 열이 가로 스크롤 없이 들어간다.
+ */
+const ASIDE_WIDTH = 292
+const ASIDE_WIDTH_MIN = 250
+const ASIDE_WIDTH_MAX = 400
+/** 두 열 사이 간격. gap-3.5 와 같아야 손잡이가 경계 한가운데 선다 */
+const COLUMN_GAP = 14
 
 /**
  * 상권 분석 (S15P21D101-182)
@@ -38,6 +52,7 @@ const MIX_LIMIT = 6
  */
 export function MarketAnalysisPage() {
   const [searchParams] = useSearchParams()
+  const [asideWidth, setAsideWidth] = useState(ASIDE_WIDTH)
   const navigate = useNavigate()
   const location = useLocation()
   const dongCode = searchParams.get('dongCode')
@@ -139,8 +154,29 @@ export function MarketAnalysisPage() {
               </Button>
             </div>
 
-            {/* 시안의 .body — 본문과 292px 보조 열. lg 아래에서는 한 줄로 쌓인다 */}
-            <div className="grid gap-3.5 lg:grid-cols-[minmax(0,1fr)_292px]">
+            {/*
+              시안의 .body — 본문과 보조 열. lg 아래에서는 한 줄로 쌓인다.
+
+              너비를 style 로 바로 주지 않고 CSS 변수를 거치는 이유는 lg 아래 때문이다.
+              인라인 스타일은 미디어쿼리를 타지 않아서, grid-template-columns 를 직접
+              넣으면 한 줄로 쌓여야 할 좁은 화면에서도 두 열이 그대로 남는다.
+            */}
+            <div
+              className="relative grid gap-3.5 lg:grid-cols-[minmax(0,1fr)_var(--aside-width)]"
+              style={{ '--aside-width': `${asideWidth}px` } as CSSProperties}
+            >
+              {/* 한 줄로 쌓이는 화면에는 경계가 없어서 손잡이도 없앤다 */}
+              <ColumnResizer
+                width={asideWidth}
+                onChange={setAsideWidth}
+                min={ASIDE_WIDTH_MIN}
+                max={ASIDE_WIDTH_MAX}
+                gap={COLUMN_GAP}
+                anchor="right"
+                label="보조 열 너비"
+                className="max-lg:hidden"
+              />
+
               {/* min-w-0 이 없으면 6열 비교표가 보조 열을 밀어낸다 */}
               <div className="flex min-w-0 flex-col gap-3.5">
                 <MarketSummaryTiles

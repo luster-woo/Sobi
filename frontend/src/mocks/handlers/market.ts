@@ -48,6 +48,16 @@ const 서교동: MarketAnalysis = {
       annualCloseRate: 17.5,
     },
     {
+      // 점포가 0 곳이라 나눗셈이 성립하지 않는 동. 서버가 비율을 null 로 준다
+      dongCode: '11440590',
+      dongName: '성산1동',
+      storeCount: 0,
+      dailyFootTraffic: 31200,
+      footTrafficPerStoreDaily: null,
+      revenuePerStoreMonthly: null,
+      annualCloseRate: null,
+    },
+    {
       dongCode: '11440700',
       dongName: '상암동',
       storeCount: 326,
@@ -157,9 +167,49 @@ const 상암동: MarketAnalysis = {
   seoulRank: null,
 }
 
+/**
+ * 그 동에 해당 업종 점포가 한 곳도 없는 경우.
+ *
+ * 서버의 ratio() 가 분모 0 이면 null 을 준다(MarketServiceImpl). 그래서 매출뿐 아니라
+ * 비율·점포당 지표가 전부 null 이다. 매출만 비는 상암동과 다른 경로라 따로 둔다.
+ */
+const 성산1동: MarketAnalysis = {
+  ...서교동,
+  location: { ...서교동.location, dongCode: '11440590', dongName: '성산1동' },
+  summary: {
+    ...서교동.summary,
+    storeCount: 0,
+    dailyFootTraffic: 31200,
+    footTrafficPerStoreDaily: null,
+    footTrafficGender: { maleRatio: null, femaleRatio: null },
+    revenuePerStoreMonthly: null,
+    revenuePerStoreBenchmark: null,
+  },
+  density: { ...서교동.density, dong: 0 },
+  businessMix: {
+    totalStoreCount: 0,
+    items: 서교동.businessMix.items.map((item) => ({
+      ...item,
+      storeCount: 0,
+      sharePercent: null,
+    })),
+  },
+  revenueStructure: null,
+  seoulRank: null,
+  storeChurn: {
+    opened: 0,
+    closed: 0,
+    net: 0,
+    annualCloseRate: null,
+    annualOpenRate: null,
+    seoulAvgCloseRate: null,
+  },
+}
+
 const BY_DONG: Record<string, MarketAnalysis> = {
   '11440375': 서교동,
   '11440700': 상암동,
+  '11440590': 성산1동,
 }
 
 /**
@@ -183,6 +233,7 @@ const REGION_TREE: RegionTree = {
         { code: '11440700', name: '상암동' },
         { code: '11440640', name: '공덕동' },
         { code: '11440400', name: '연남동' },
+        { code: '11440590', name: '성산1동' },
       ],
     },
     {

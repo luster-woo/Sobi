@@ -9,6 +9,7 @@ import com.sobi.common.entity.MinorCode;
 import com.sobi.common.repository.MinorCodeRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.user.entity.Role;
 import com.sobi.user.entity.User;
 import com.sobi.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +65,8 @@ public class BusinessServiceImpl implements BusinessService {
         // user 객체 조회
 
         User user = userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.NO_USER));
+
+        user.changeRole(Role.ENTREPRENEUR);
 
         // 비즈니스 인포 테이블에 채워넣기
         BusinessInfo businessInfo = BusinessInfo.builder()

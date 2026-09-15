@@ -94,6 +94,11 @@ public class User {
         this.email = "deleted_" + this.id + "_" + this.email;
     }
 
+    // 롤 변경
+    public void changeRole(Role newRole) {
+        this.role = newRole;
+    }
+
     // INSERT 직전 JPA가 자동 호출 -> 가입일 자동 기록
     @PrePersist
     private void prePersist() {

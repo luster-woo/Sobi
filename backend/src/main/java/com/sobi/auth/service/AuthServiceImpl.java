@@ -12,6 +12,7 @@ import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
 import com.sobi.global.external.ssafy.client.member.SsafyMemberClient;
 import com.sobi.user.entity.Provider;
+import com.sobi.user.entity.Role;
 import com.sobi.user.entity.User;
 import com.sobi.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -107,6 +108,7 @@ public class AuthServiceImpl implements AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .provider(Provider.LOCAL)
+                .role(Role.PREENTREPRENEUR)
                 .userKey(userKey)
                 .build();
 

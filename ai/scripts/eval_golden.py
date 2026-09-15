@@ -106,8 +106,10 @@ async def evaluate_llm(profiles: list[dict]) -> None:
     """검색된 공고 중 골든셋에 라벨이 있는 것만 판정 정확도를 본다."""
     correct = total = 0
     confusion: dict[tuple[str, str], int] = {}
+    mistakes: list[str] = []          # ← 여기
 
     for p in profiles:
+        print(f"  {p['id']} 판정 중...", flush=True)
         user = dict(p["user"])
         user["open_date"] = date.fromisoformat(user["open_date"])
 
@@ -118,11 +120,17 @@ async def evaluate_llm(profiles: list[dict]) -> None:
         for r in out["results"]:
             gold = truth.get(r["pblanc_id"])
             if gold is None:
-                continue  # 골든셋에 없는 공고는 정답을 모른다
+                continue
             total += 1
             correct += gold == r["status"]
             key = (gold, r["status"])
             confusion[key] = confusion.get(key, 0) + 1
+            if gold != r["status"]:
+                mistakes.append(
+                    f"  {p['id']} {r['pblanc_id'][-6:]} {gold}→{r['status']}\n"
+                    f"      공고: {r['title'][:50]}\n"
+                    f"      사유: {r['reason'][:100]}"
+                )
 
     if not total:
         print("\n판정 대상 없음")
@@ -131,6 +139,10 @@ async def evaluate_llm(profiles: list[dict]) -> None:
     for (gold, pred), n in sorted(confusion.items()):
         mark = "  " if gold == pred else "X "
         print(f"  {mark}{gold:>11} → {pred:<11} {n}")
+
+    if mistakes:
+        print("\n오판 상세")
+        print("\n".join(mistakes))
 
 
 def main() -> None:

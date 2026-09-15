@@ -6,15 +6,20 @@ import ApplicationStatusTabs from '@/features/application/components/Application
 import { useApplications } from '@/features/application/hooks/useApplication'
 import type { ApplicationFilter } from '@/features/application/model/filter'
 import { filterApplications } from '@/features/application/model/filter'
-import { isSettled } from '@/features/application/model/statusLabel'
 import EmptyState from '@/shared/ui/EmptyState'
 import Skeleton from '@/shared/ui/Skeleton'
 
 /**
  * 신청 현황 (S15P21D101-202)
  *
- * 신청·서류 제출 이후의 진행 상황을 모아 본다. 준비중(PREPARING)인 건은 서버가
- * 빼고 준다 — 아직 제출하지 않은 것은 현황이 아니고, 상품 목록에서 이어서 들어간다.
+ * 신청 한 건이 만들어진 뒤의 모든 상황을 모아 본다. 준비중(PREPARING)도 포함한다.
+ *
+ * 처음에는 제출 이후만 보여주고 준비중은 상품 목록에서 이어가게 했는데, 그러면
+ * 서류를 올리다 중단한 신청서로 돌아갈 길이 없었다. 자금 조합이 한 번에 여러 건을
+ * 만들기 시작하면 갈 곳 없는 신청서가 더 늘어난다.
+ *
+ * 준비중을 진행 중과 같은 탭에 두지 않은 이유는 사용자가 할 일이 달라서다.
+ * 준비중은 내가 서류를 올려야 움직이고, 진행 중은 기관을 기다리는 것뿐이다.
  *
  * 진행 사항 스텝퍼는 174 에서 이 카드 안으로 들어온다.
  */
@@ -41,15 +46,17 @@ export function ApplicationListPage() {
     )
   }
 
-  const ongoing = applications.filter((item) => !isSettled(item.status)).length
-  const settled = applications.length - ongoing
+  /* 탭과 같은 함수로 센다. 규칙이 갈라지면 머리말과 탭의 숫자가 어긋난다 */
+  const preparing = filterApplications(applications, 'PREPARING').length
+  const ongoing = filterApplications(applications, 'ONGOING').length
+  const settled = filterApplications(applications, 'SETTLED').length
   const visible = filterApplications(applications, filter)
 
   return (
     <div className="flex flex-col gap-5">
       <header>
         <p className="text-body2 text-text-secondary">
-          진행 중 {ongoing}건 · 완료 {settled}건
+          준비 중 {preparing}건 · 진행 중 {ongoing}건 · 완료 {settled}건
         </p>
         <h1 className="text-h2 text-text mt-1 font-bold">신청 현황</h1>
       </header>

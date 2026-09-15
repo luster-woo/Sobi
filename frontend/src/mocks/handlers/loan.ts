@@ -189,7 +189,9 @@ export const loanHandlers = [
         maxLoanBalance: found.maxLoanBalance,
         period: 18 + (loanId % 4) * 6,
         firmAge: 6 + (loanId % 3) * 6,
-        target: '소상공인',
+        // loanId 로 흔들어 조건 있는 상품과 없는 상품을 섮는다
+        requiresStart: loanId % 2 === 0,
+        requiresEmployee: loanId % 3 === 0,
         rating: ['A', 'B', 'C'][loanId % 3],
       },
       '대출 상품 상세 조회 성공',

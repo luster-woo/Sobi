@@ -39,8 +39,6 @@ WHERE (sp.end_date IS NULL OR sp.end_date >= CURRENT_DATE)
            OR cond.target_scale = '무관'
            OR cond.target_scale = '중소기업'
            OR (cond.target_scale = '소상공인' AND %(employee_count)s < 5))
-      -- 표준 융자제외업종: 공고와 유저가 둘 다 해당하면 탈락
-      AND NOT (cond.std_exclusion AND %(std_excluded)s)
       -- 연매출 상한
       AND (cond.max_revenue IS NULL OR %(revenue)s IS NULL
            OR %(revenue)s <= cond.max_revenue)
@@ -113,7 +111,6 @@ async def search(
             "vec": vector,
             "region": region,
             "employee_count": employee_count,
-            "std_excluded": std_excluded,
             "revenue": annual_revenue,
             "months": profile.biz_months(open_date),
             "limit": chunk_limit,

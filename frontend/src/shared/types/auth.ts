@@ -51,9 +51,9 @@ export interface SessionUser {
    * ⚠️ **null 일 수 있다.** 백엔드 `LoginResponse.UserInfo.from()` 이
    * `user.getRole() != null ? ... : null` 로 넣는다.
    *
-   * 가입 시점에는 role 이 정해지지 않고 `POST /business` 로 업체를 등록해야
-   * ENTREPRENEUR 가 된다. 즉 **가입 직후 로그인하면 null 이다.**
-   * 대시보드·사이드바가 role 로 갈라지므로 null 을 '아직 안 정해짐' 으로 다뤄야 한다.
+   * 로컬 가입은 `PREENTREPRENEUR` 로 시작하지만(`AuthServiceImpl.signup`) 구글 신규
+   * 가입은 role 을 넣지 않아 null 로 온다. **null 은 예비 창업자로 본다** — 직접
+   * 비교하지 말고 `isPreOwner()` 를 쓸 것.
    */
   role: UserRole | null
 }

@@ -15,6 +15,21 @@ export const USER_ROLE = {
 
 export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE]
 
+/**
+ * 예비 창업자인가. **role 이 null 이어도 예비 창업자로 본다** (팀 결정).
+ *
+ * null 이 생기는 경로는 구글 신규 가입 하나다 — 로컬 가입은 백엔드가
+ * `PREENTREPRENEUR` 를 넣는다(`AuthServiceImpl.signup`). 사업자가 되는 길은
+ * `POST /business` 로 업체를 등록하는 것뿐이고 그때 `ENTREPRENEUR` 로 바뀐다.
+ *
+ * 그래서 판정은 '사업자가 아니면 전부 예비 창업자' 다. 세 군데에서 각자
+ * `role === PREENTREPRENEUR` 로 비교하면 null 이 어디서는 예비 창업자, 어디서는
+ * 미정으로 갈려 화면이 서로 어긋난다.
+ */
+export function isPreOwner(role: UserRole | null): boolean {
+  return role !== USER_ROLE.ENTREPRENEUR
+}
+
 export const AUTH_PROVIDER = {
   LOCAL: 'LOCAL',
   GOOGLE: 'GOOGLE',

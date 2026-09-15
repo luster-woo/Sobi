@@ -1,24 +1,41 @@
 /**
- * 사이드바 하단 카드가 쓰는 업체 요약.
+ * `GET /business/me` 응답. 백엔드 `BusinessInfoResponse` 와 1:1 이다.
  *
- * `shared/types/business.ts` 의 `BusinessInfo` 를 그대로 쓰지 않는 이유는 두 가지다.
- * 하나는 사이드바에 상호·지역·업종명만 필요한데 `BusinessInfo` 는 사업자등록번호·주소
- * 같은 걸 다 들고 있다는 점, 다른 하나는 `businessCodeId` 가 코드 id 라서 화면에
- * 그대로 못 쓴다는 점이다. 업종명을 얻으려고 코드 테이블을 한 번 더 조회하는 대신
- * 서버가 이름까지 내려주는 요약 응답을 받는다.
+ * ⚠️ `name` 은 대표자명이 아니다. 백엔드가 `businessName` 을 한 번 더 넣고 있어서
+ *    (`BusinessInfoResponse.from`) 상호명과 같은 값이 온다. 화면은 `businessName` 만 쓴다.
+ * ⚠️ 사업자등록번호 필드명이 `brn` 이 아니라 `bsn` 이다 — 다른 API 와 다르다.
+ * ⚠️ `region` 필드가 없다. `business_info.region` 컬럼은 있지만 응답에 안 실어서
+ *    지역은 `address` 에서 잘라 쓴다 (`toRegionLabel`).
+ */
+export interface BusinessMeResponse {
+  /** 상호명. 예: '맛있는 한상' */
+  businessName: string
+  /** 사업자등록번호. 하이픈 없는 10자리 */
+  bsn: string
+  /** 백엔드가 `businessName` 을 그대로 넣는다. 쓰지 않는다 */
+  name: string
+  /** 업종 소분류명(`minor_code.name`). 예: '한식음식점' */
+  businessType: string
+  /** 전체 주소. 예: '서울특별시 강남구 테헤란로 123' */
+  address: string
+  /** 'YYYY-MM-DD' */
+  openDate: string
+}
+
+/**
+ * 사이드바 하단 카드가 쓰는 업체 요약. `BusinessMeResponse` 를 화면에 맞게 줄인 값이다.
  *
- * 창업자(OWNER)만 쓴다. 예비 창업자는 `business_info` 자체가 없어 이 요약을 호출하지
- * 않는다 — 사이드바 카드도 그리지 않는다.
+ * 응답을 그대로 넘기지 않는 이유는 `region` 이 응답에 없어서다. 주소를 자르는 규칙이
+ * 컴포넌트마다 흩어지지 않게 api 계층에서 한 번만 변환한다.
  *
- * TODO(백엔드 명세): ERD 의 `business_info` 에는 상호명 컬럼이 없다. 지금은
- * `BusinessVerification.name`(대표자명)과 별개인 상호명이 내려온다고 가정하고 있으니,
- * 명세가 확정되면 이 필드부터 맞춰야 한다.
+ * 창업자(ENTREPRENEUR)만 쓴다. 예비 창업자는 `business_info` 자체가 없어 이 요약을
+ * 호출하지 않는다 — 사이드바 카드도 그리지 않는다.
  */
 export interface BusinessSummary {
-  /** 상호명. 예: '한상차림' */
+  /** 상호명. 예: '맛있는 한상' */
   name: string
-  /** 광역 지역명. 예: '대구' */
+  /** 시·도 약칭 + 시·군·구. 예: '서울 강남구' */
   region: string
-  /** 업종 소분류명. 예: '한식 음식점업' */
+  /** 업종 소분류명. 예: '한식음식점' */
   industryName: string
 }

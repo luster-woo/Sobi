@@ -1,7 +1,7 @@
 import { http } from 'msw'
 
 import type { BizVerifyData } from '@/features/auth/api/businessVerify'
-import type { BusinessSummary } from '@/features/business/model/types'
+import type { BusinessMeResponse } from '@/features/business/model/types'
 import { hasMockSession, promoteToOwner } from '@/mocks/handlers/auth'
 import { fail, ok } from '@/mocks/lib/envelope'
 
@@ -36,10 +36,14 @@ function latestBrn(): string | undefined {
   return registeredBrns().at(-1)
 }
 
-const mockSummary: BusinessSummary = {
-  name: '한상차림',
-  region: '대구',
-  industryName: '한식 음식점업',
+/** 이 세션에서 등록한 업체가 없을 때 내려주는 기본값. 시드의 첫 번째 업체와 같다 */
+const mockBusinessMe: BusinessMeResponse = {
+  businessName: '맛있는 한상',
+  bsn: '1234567890',
+  name: '맛있는 한상',
+  businessType: '한식음식점',
+  address: '서울특별시 강남구 테헤란로 123',
+  openDate: '2022-03-15',
 }
 
 /**
@@ -88,16 +92,19 @@ const VERIFY_SEED: Record<string, BizVerifyData & { name: string }> = {
 }
 
 /**
- * 등록한 업체를 사이드바 카드 모양으로 바꾼다.
+ * 등록한 업체를 `GET /business/me` 응답 모양으로 바꾼다.
  *
- * `region` 은 주소 앞 토큰에서 잘라 쓴다. 실제 응답에도 `region` 필드가 없어서
- * 프론트가 주소에서 뽑아야 하는데(S15P21D101-361), 그 규칙을 미리 맞춰둔다.
+ * 백엔드 `BusinessInfoResponse.from` 을 그대로 흉내 낸다 — `name` 에 대표자명이 아니라
+ * 상호명이 들어가는 것까지. 목만 대표자명을 주면 `name` 을 잘못 쓰는 호출부가 목에서만 맞아 보인다.
  */
-function toSummary(verify: (typeof VERIFY_SEED)[string]): BusinessSummary {
+function toBusinessMe(brn: string, verify: (typeof VERIFY_SEED)[string]): BusinessMeResponse {
   return {
+    businessName: verify.businessName,
+    bsn: brn,
     name: verify.businessName,
-    region: verify.address.split(' ')[0] ?? '',
-    industryName: verify.businessType,
+    businessType: verify.businessType,
+    address: verify.address,
+    openDate: verify.openDate,
   }
 }
 
@@ -202,9 +209,8 @@ export const businessHandlers = [
   /*
    * GET /api/v1/business/me
    *
-   * ⚠️ 응답 필드가 아직 실제와 다르다. 실제는
-   *    `{ businessName, bsn, name, businessType, address, openDate }` 이고
-   *    `address` 가 전체 주소라 지역은 프론트에서 잘라 써야 한다 (S15P21D101-361).
+   * 응답은 백엔드 `BusinessInfoResponse` 그대로다. 지역 필드가 없어서 사이드바의
+   * '서울 강남구' 는 프론트가 `address` 에서 잘라 만든다 (`toRegionLabel`).
    */
   http.get('/api/v1/business/me', () => {
     // 업체 미등록은 404 + BUSINESS_O04 다. 코드의 O 는 숫자 0 이 아니라 영문 대문자 (백엔드 오타)
@@ -214,10 +220,14 @@ export const businessHandlers = [
 
     // 이 세션에서 등록한 업체가 있으면 그걸 보여준다. 등록 직후 사이드바에 방금 넣은
     // 상호가 떠야 등록이 먹혔는지 알 수 있다
-    const registered = VERIFY_SEED[latestBrn() ?? '']
+    const brn = latestBrn()
+    const registered = brn ? VERIFY_SEED[brn] : undefined
 
-    return ok(registered ? toSummary(registered) : mockSummary, '업체 정보 조회 성공', {
-      path: '/api/v1/business/me',
-    })
+    // 메시지는 백엔드 오타 그대로다 — 조회인데 '정보등록에 성공했습니다' 로 온다
+    return ok(
+      brn && registered ? toBusinessMe(brn, registered) : mockBusinessMe,
+      '사업자 번호 기반 정보등록에 성공했습니다.',
+      { path: '/api/v1/business/me' },
+    )
   }),
 ]

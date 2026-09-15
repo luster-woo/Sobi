@@ -63,8 +63,13 @@ export interface LoginResponse extends TokenResponse {
   /** 항상 'Bearer' */
   tokenType: string
   user: SessionUser
-  /** 소셜 최초 가입일 때만 온다. 온보딩으로 보낼지 판단한다 */
-  isNewUser?: boolean
+  /**
+   * 소셜 최초 가입이면 true. 온보딩으로 보낼지 판단한다.
+   *
+   * 기존 유저에게도 키는 온다 — 백엔드가 `issueTokens(user, null)` 로 넘겨 **null** 이
+   * 실린다. 이메일 로그인 응답에는 아예 없다. 셋 다 falsy 라 `if (isNewUser)` 로 쓰면 된다.
+   */
+  isNewUser?: boolean | null
 }
 
 /** 로컬 계정을 소셜로 전환한 결과 */

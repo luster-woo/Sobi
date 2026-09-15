@@ -25,6 +25,13 @@ interface Row {
  *
  * 행을 누르면 그 조합이 위 대표 카드로 올라간다. 표에서 숫자를 비교하고 마음에 드는
  * 것을 눌러 구성을 자세히 보는 흐름이다.
+ *
+ * 총 조달액 대신 총 상환액을 놓는다. 서버가 목표 금액을 정확히 맞춰 배분하므로
+ * 총 조달액은 모든 행이 같은 값이다 — 비교표에서 자리만 차지한다.
+ *
+ * 총 상환액은 서버의 정렬 1순위이기도 하다(FundingRecommendationEngine 의 COMPARATOR).
+ * 그 값을 안 보여주면 사용자는 왜 이 순서인지 알 수 없다. 평균 금리가 더 높은 조합이
+ * 위에 오는 일이 실제로 생긴다.
  */
 export default function FundingComparisonTable({
   combinations,
@@ -49,11 +56,11 @@ export default function FundingComparisonTable({
           .join(' + '),
     },
     {
-      key: 'total',
-      header: '총 조달액',
+      key: 'repayment',
+      header: '총 상환액',
       align: 'right',
       width: '130px',
-      render: (row) => formatMoneyShort(row.combination.totalFinancingAmount),
+      render: (row) => formatMoneyShort(row.combination.totalRepaymentAmount),
     },
     {
       key: 'rate',
@@ -81,9 +88,7 @@ export default function FundingComparisonTable({
   return (
     <Panel
       title="조합 비교"
-      headerRight={
-        <span className="text-text-muted text-[11.5px]">무상 지원금 포함 총 조달액 기준</span>
-      }
+      headerRight={<span className="text-text-muted text-[11.5px]">총 상환액이 적은 순</span>}
     >
       <Table
         caption="자금 조합 비교"

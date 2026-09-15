@@ -1,5 +1,6 @@
 package com.sobi.application.entity;
 
+import com.sobi.account.entity.Account;
 import com.sobi.loan.entity.Loan;
 import com.sobi.support.entity.SupportProgram;
 import com.sobi.user.entity.User;
@@ -31,6 +32,15 @@ public class Application {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "loan_id")
     private Loan loan;
+
+    // 신청 금액. 제출(submit) 시 저장하며 그 전에는 NULL
+    @Column(name = "amount")
+    private Long amount;
+
+    // 출금(대출) / 지급(지원금) 계좌. 제출(submit) 시 저장
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
+    private Account account;
 
     @Column(name = "status", nullable = false, length = 20)
     private String status;

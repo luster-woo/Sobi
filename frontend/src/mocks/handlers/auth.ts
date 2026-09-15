@@ -64,6 +64,14 @@ interface MockAccount {
  */
 const ACCOUNTS_KEY = 'msw:accounts'
 
+/**
+ * 구글로 들어오는 계정. 목은 code 를 검증할 수 없어 구글 사용자를 하나로 고정한다.
+ *
+ * 온보딩을 처음부터 다시 보려면 콘솔에서 이 계정을 지운다:
+ *   sessionStorage.removeItem('msw:accounts')
+ */
+const GOOGLE_EMAIL = 'google@sogong.com'
+
 const SEED_ACCOUNTS: Record<string, MockAccount> = {
   'owner@sogong.com': { password: 'sogong1234!', user: ENTREPRENEUR_USER },
   'pre@sogong.com': { password: 'sogong1234!', user: PREENTREPRENEUR_USER },
@@ -473,11 +481,30 @@ export const authHandlers = [
     }
 
     /*
-     * 목은 code 를 검증할 수 없다. 항상 사업자 계정으로 로그인시킨다.
-     * 최초 가입 분기(`isNewUser`)를 보려면 code 에 'new' 를 넣어 호출한다 —
-     * 실제로는 서버가 정한다.
+     * 목은 code 를 검증할 수 없어 구글이 누구인지 알 수 없다. 그래서 구글 계정을
+     * 하나로 고정하고, 그 계정을 처음 보는지로 `isNewUser` 를 가른다 —
+     * 실제 백엔드도 `findByEmail` 이 비면 새로 만들고 `isNewUser: true` 를 준다.
+     *
+     * ⚠️ role 은 **null** 이다. 백엔드 `loginWithGoogle` 이 새 유저를 만들 때
+     *    `.role(...)` 을 넣지 않아 구글 가입자만 null 로 시작한다. 이 값이어야
+     *    온보딩(`/verify`)으로 가는 분기를 목에서도 볼 수 있다.
      */
-    const user = ENTREPRENEUR_USER
+    const existing = findAccount(GOOGLE_EMAIL)
+
+    const user: SessionUser = existing?.user ?? {
+      userId: 3,
+      email: GOOGLE_EMAIL,
+      name: '구글가입',
+      role: null,
+    }
+
+    if (!existing) {
+      // 비밀번호는 빈 문자열이다 — 소셜 계정이라 이메일 로그인이 막혀야 한다
+      const accounts = loadAccounts()
+      accounts[GOOGLE_EMAIL] = { password: '', user }
+      sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
+    }
+
     sessionStorage.setItem(SESSION_KEY, 'true')
     sessionStorage.setItem(SESSION_EMAIL_KEY, user.email)
 
@@ -487,7 +514,8 @@ export const authHandlers = [
         tokenType: 'Bearer',
         expiresIn: 1800,
         user,
-        ...(code.includes('new') ? { isNewUser: true } : {}),
+        // 실제 응답도 기존 유저에게는 null 을 준다
+        isNewUser: existing ? null : true,
       },
       '소셜 로그인 성공',
       { path },

@@ -92,6 +92,7 @@ async def search(
     open_date: date,
     annual_revenue: int | None = None,
     limit: int = PROGRAM_LIMIT,
+    chunk_limit: int = CHUNK_LIMIT,
 ) -> SearchResult:
     """검색 질의문·업종명·공고 목록을 돌려준다."""
     industry_name, std_excluded = await lookup_industry(business_code)
@@ -115,7 +116,7 @@ async def search(
             "std_excluded": std_excluded,
             "revenue": annual_revenue,
             "months": profile.biz_months(open_date),
-            "limit": CHUNK_LIMIT,
+            "limit": chunk_limit,
         })
         rows = await cur.fetchall()
 

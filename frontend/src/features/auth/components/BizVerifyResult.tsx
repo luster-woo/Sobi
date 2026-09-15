@@ -1,21 +1,6 @@
+import type { BizVerifyData } from '@/features/auth/api/businessVerify'
 import Badge from '@/shared/ui/Badge'
 import { cn } from '@/shared/utils/cn'
-
-/**
- * `POST /business/verify` 응답. 백엔드 `VerifyResponse` 와 1:1 이다.
- */
-export interface BizVerifyData {
-  /** 사업자 유형. `verify.type` — '개인사업자' 등 */
-  type: string
-  /** 업종명. 백엔드가 `verify.business_code_name` 을 이 이름으로 내려준다 */
-  businessType: string
-  businessName: string
-  address: string
-  /** `LocalDate` 직렬화 결과라 'YYYY-MM-DD' */
-  openDate: string
-  /** 휴·폐업 여부. `verify.is_close`(NOT NULL) */
-  isClose: boolean
-}
 
 interface BizVerifyResultProps {
   /** idle 조회 전 · success 일치 · error 불일치 */

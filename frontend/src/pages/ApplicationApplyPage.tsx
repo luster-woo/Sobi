@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 
 import ApplicationChecklist from '@/features/application/components/ApplicationChecklist'
 import ApplicationDocumentList from '@/features/application/components/ApplicationDocumentList'
 import ApplicationSubmitForm from '@/features/application/components/ApplicationSubmitForm'
 import {
   useApplicationDetail,
+  useCancelApplication,
   useRequestDraft,
   useSubmitApplication,
   useUploadDocument,
@@ -19,6 +20,7 @@ import { APPLICATION_STATUS_LABEL } from '@/shared/types/application'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
+import Modal from '@/shared/ui/Modal'
 import Panel from '@/shared/ui/Panel'
 import Skeleton from '@/shared/ui/Skeleton'
 
@@ -46,9 +48,11 @@ export function ApplicationApplyPage() {
   const upload = useUploadDocument(applicationId)
   const draft = useRequestDraft(applicationId)
   const submit = useSubmitApplication()
+  const cancel = useCancelApplication()
 
   const [amount, setAmount] = useState('')
   const [accountNo, setAccountNo] = useState('')
+  const [cancelOpen, setCancelOpen] = useState(false)
 
   /*
    * 서버가 이미 들고 있는 값으로 폼을 채운다. useEffect 로 하면 한 번 더 그려지고
@@ -67,7 +71,6 @@ export function ApplicationApplyPage() {
    */
   const isFromLoans = pathname.startsWith('/loans')
   const backTo = isFromLoans ? ROUTES.LOANS : ROUTES.SUPPORT_PROGRAMS
-  const backLabel = isFromLoans ? '대출' : '지원 사업'
 
   if (isLoading) {
     return (
@@ -88,7 +91,7 @@ export function ApplicationApplyPage() {
         description="주소가 잘못되었거나 이미 취소된 신청일 수 있어요."
         action={
           <Button variant="outline" onClick={() => navigate(backTo)}>
-            {backLabel} 목록으로
+            목록으로
           </Button>
         }
       />
@@ -126,6 +129,23 @@ export function ApplicationApplyPage() {
     window.open(url, '_blank', 'noopener')
   }
 
+  /**
+   * 신청 취소. 신청 건과 올린 서류가 서버에서 함께 사라진다.
+   *
+   * 되돌릴 수 없어서 모달로 한 번 확인받는다. 성공하면 지우면서 온 목록으로 돌려보낸다 —
+   * 삭제된 건을 다시 조회하면 404 라 그 자리에 머물면 에러 화면이 된다.
+   */
+  const handleCancel = () => {
+    cancel.mutate(applicationId, {
+      onSuccess: () => {
+        setCancelOpen(false)
+        showToast('신청을 취소했어요.')
+        navigate(backTo)
+      },
+      onError: () => showToast('취소하지 못했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+    })
+  }
+
   const handleSubmit = () => {
     submit.mutate(
       {
@@ -144,6 +164,16 @@ export function ApplicationApplyPage() {
   return (
     <div className="flex flex-col gap-5">
       <header>
+        {/*
+          나가는 길이 없으면 그냥 떠려던 사람이 아래 '신청 취소' 를 누른다.
+          서류까지 사라지므로 돌아갈 곳을 먼저 보여 준다.
+        */}
+        <Link
+          to={backTo}
+          className="text-body2 text-text-secondary hover:text-text mb-2 inline-block"
+        >
+          ← 목록으로
+        </Link>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-h2 text-text font-bold break-keep">{product.name}</h1>
           {!isEditable && <Badge variant="neutral">{APPLICATION_STATUS_LABEL[status]}</Badge>}
@@ -165,16 +195,30 @@ export function ApplicationApplyPage() {
             />
 
             {isEditable ? (
-              <ApplicationSubmitForm
-                detail={detail}
-                accounts={accounts ?? []}
-                amount={amount}
-                onAmountChange={setAmount}
-                accountNo={accountNo}
-                onAccountNoChange={setAccountNo}
-                isSubmitting={submit.isPending}
-                onSubmit={handleSubmit}
-              />
+              <>
+                <ApplicationSubmitForm
+                  detail={detail}
+                  accounts={accounts ?? []}
+                  amount={amount}
+                  onAmountChange={setAmount}
+                  accountNo={accountNo}
+                  onAccountNoChange={setAccountNo}
+                  isSubmitting={submit.isPending}
+                  onSubmit={handleSubmit}
+                />
+
+                {/*
+                  주 버튼과 무게를 다르게 한다. 같은 크기의 버튼으로 두면 신청하려다 잘못 누른다.
+                  평소에는 회색이고 올렸을 때만 위험 색으로 바뀐다.
+                */}
+                <button
+                  type="button"
+                  onClick={() => setCancelOpen(true)}
+                  className="text-body2 text-text-secondary hover:text-danger -mt-2 self-center underline-offset-4 transition-colors hover:underline"
+                >
+                  신청 취소
+                </button>
+              </>
             ) : (
               <p className="text-body2 text-text-secondary bg-surface-alt rounded-md px-5 py-4">
                 신청이 접수됐어요. 진행 상황은 신청 현황에서 확인할 수 있어요.
@@ -213,6 +257,32 @@ export function ApplicationApplyPage() {
           )}
         </div>
       </div>
+
+      <Modal
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        title="신청을 취소할까요?"
+        description={product.name}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setCancelOpen(false)}
+              disabled={cancel.isPending}
+            >
+              돌아가기
+            </Button>
+            <Button variant="danger" onClick={handleCancel} loading={cancel.isPending}>
+              신청 취소
+            </Button>
+          </>
+        }
+      >
+        <p className="text-body2 text-text-secondary break-keep">
+          지금까지 올린 서류도 함께 삭제되고 되돌릴 수 없어요. 다시 신청하려면 서류를 처음부터
+          올려야 합니다.
+        </p>
+      </Modal>
     </div>
   )
 }

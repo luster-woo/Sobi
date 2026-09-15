@@ -1,62 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
-import type { BizVerifyData } from '@/features/auth/components/BizVerifyResult'
+import type { BizVerifyData } from '@/features/auth/api/businessVerify'
 import BizVerifyResult from '@/features/auth/components/BizVerifyResult'
 import PhoneVerifyPopup from '@/features/auth/components/PhoneVerifyPopup'
 import PreOwnerBranchCard from '@/features/auth/components/PreOwnerBranchCard'
+import { useBusinessVerify } from '@/features/auth/hooks/useBusinessVerify'
+import { ERROR_CODE, getErrorCode, getErrorMessage, getErrorStatus } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
+import { useUiStore } from '@/shared/lib/store/useUiStore'
 import Button from '@/shared/ui/Button'
 import DatePicker from '@/shared/ui/DatePicker'
 import Input from '@/shared/ui/Input'
 import { formatBizNo } from '@/shared/utils/formatters'
 import { validateBizNo, validateOpenedAt, validateRequired } from '@/shared/utils/validators'
-
-/**
- * TODO(139): `POST /business/verify` 가 붙으면 이 블록을 통째로 지운다.
- *
- * `backend/.../db/seed/local/R__verify_dummy.sql` 의 시드 3건을 그대로 옮겼다.
- * 같은 값을 쓰면 API 연결 후에도 동일한 입력으로 동작한다.
- * 마지막 한 건은 시드에 없는 휴·폐업 확인용이라 시드가 추가되면 지워야 한다.
- */
-const MOCK_VERIFY: Record<string, { name: string; openDate: string } & BizVerifyData> = {
-  '1234567890': {
-    name: '박성현',
-    type: '개인사업자',
-    businessType: '한식음식점',
-    businessName: '맛있는 한상',
-    address: '서울특별시 강남구 테헤란로 123',
-    openDate: '2022-03-15',
-    isClose: false,
-  },
-  '2345678901': {
-    name: '황문규',
-    type: '개인사업자',
-    businessType: '분식전문점',
-    businessName: '서울분식',
-    address: '서울특별시 마포구 양화로 45',
-    openDate: '2021-08-20',
-    isClose: false,
-  },
-  '3456789012': {
-    name: '권병수',
-    type: '개인사업자',
-    businessType: '커피-음료',
-    businessName: '카페 하루',
-    address: '서울특별시 성동구 성수이로 78',
-    openDate: '2023-01-10',
-    isClose: false,
-  },
-  '9999999999': {
-    name: '폐업자',
-    type: '개인사업자',
-    businessType: '한식음식점',
-    businessName: '옛날국밥',
-    address: '대구광역시 북구 산격동 12',
-    openDate: '2019-05-02',
-    isClose: true,
-  },
-}
 
 type Status = 'idle' | 'success' | 'error'
 type Errors = Partial<Record<'brn' | 'ownerName' | 'openDate', string>>
@@ -81,8 +38,15 @@ const VERIFY_ERROR = {
 
 type VerifyErrorKind = keyof typeof VERIFY_ERROR
 
+/** 하이픈을 떼고 보낸다. `verify.brn` 은 숫자 10자리로만 저장돼 있다 */
+const toDigits = (value: string) => value.replace(/\D/g, '')
+
+const now = () => new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })
+
 export function BusinessVerifyPage() {
   const navigate = useNavigate()
+  const showToast = useUiStore((state) => state.showToast)
+  const { mutate: verify, isPending } = useBusinessVerify()
 
   const [brn, setBrn] = useState('')
   const [ownerName, setOwnerName] = useState('')
@@ -99,18 +63,28 @@ export function BusinessVerifyPage() {
    *
    * 조회 결과는 '다시 조회' 를 누를 때까지 남는다. 그 사이 입력칸을 고칠 수 있으므로
    * 등록할 때는 지금 입력값이 아니라 이 값을 보내야 한다 — 아니면 조회하지 않은
-   * 번호로 업체가 등록된다.
+   * 번호로 업체가 등록된다. 입력칸과 달리 하이픈이 없는 값이다.
    */
   const [verifiedBrn, setVerifiedBrn] = useState<string | null>(null)
 
   /** 본인확인 팝업. 실제 본인확인처럼 페이지를 옮기지 않고 이 화면 위에 띄운다 */
   const [identityOpen, setIdentityOpen] = useState(false)
 
-  /** 휴·폐업 사업자는 정책자금 신청 대상이 아니라 사업자로 시작할 수 없다 */
-  const canStartAsOwner = status === 'success' && data?.isClose === false
+  /**
+   * 휴·폐업 사업자는 정책자금 신청 대상이 아니라 사업자로 시작할 수 없다.
+   * 재조회 중에도 막는다 — 직전 결과가 화면에 남아 있어 그대로 두면 곧 뒤집힐 값으로 등록된다.
+   */
+  const canStartAsOwner = status === 'success' && data?.isClose === false && !isPending
 
   const clearError = (field: keyof Errors) =>
     setErrors((previous) => ({ ...previous, [field]: undefined }))
+
+  /** 직전 조회 결과를 버린다. 남겨두면 지금 입력값과 다른 결과가 화면에 서 있게 된다 */
+  const clearResult = () => {
+    setStatus('idle')
+    setData(undefined)
+    setVerifiedBrn(null)
+  }
 
   const handleVerify = () => {
     const next: Errors = {
@@ -120,34 +94,44 @@ export function BusinessVerifyPage() {
     }
 
     setErrors(next)
-    if (Object.values(next).some(Boolean)) return
 
-    // TODO(139): POST /business/verify { brn, name: ownerName, openDate }
-    //   실패는 error.code 로 갈린다 — BUSINESS_001(404) 번호 없음 / BUSINESS_002(400) 정보 불일치.
-    //   아래 목이 그 두 갈래를 그대로 흉내낸다.
-    const found = MOCK_VERIFY[brn.replace(/\D/g, '')]
-
-    setCheckedAt(new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }))
-
-    if (!found) {
-      setStatus('error')
-      setErrorKind('NOT_FOUND')
-      setData(undefined)
-      setVerifiedBrn(null)
+    if (Object.values(next).some(Boolean)) {
+      clearResult()
       return
     }
 
-    if (found.name !== ownerName || found.openDate !== openDate) {
-      setStatus('error')
-      setErrorKind('MISMATCH')
-      setData(undefined)
-      setVerifiedBrn(null)
-      return
-    }
+    verify(
+      { brn: toDigits(brn), name: ownerName, openDate },
+      {
+        onSuccess: (result) => {
+          setStatus('success')
+          setData(result)
+          setVerifiedBrn(toDigits(brn))
+        },
+        onError: (error) => {
+          clearResult()
 
-    setStatus('success')
-    setData(found)
-    setVerifiedBrn(brn)
+          const code = getErrorCode(error)
+
+          /*
+           * 결과 상자에는 사용자가 고칠 수 있는 두 실패만 그린다. 그 외(네트워크·5xx·
+           * 검증 오류)까지 '인증 실패' 로 보이면 멀쩡한 번호를 의심하게 된다.
+           * 인터셉터 토스트는 5xx·네트워크만 잡아서 나머지는 여기서 띄운다.
+           */
+          if (code !== ERROR_CODE.BUSINESS_NOT_FOUND && code !== ERROR_CODE.BUSINESS_MISMATCH) {
+            const httpStatus = getErrorStatus(error)
+            if (httpStatus !== undefined && httpStatus < 500) {
+              showToast(getErrorMessage(error), 'danger')
+            }
+            return
+          }
+
+          setCheckedAt(now())
+          setStatus('error')
+          setErrorKind(code === ERROR_CODE.BUSINESS_NOT_FOUND ? 'NOT_FOUND' : 'MISMATCH')
+        },
+      },
+    )
   }
 
   const handleStartAsOwner = () => {
@@ -224,6 +208,7 @@ export function BusinessVerifyPage() {
          */}
         <Button
           variant={status === 'idle' ? 'primary' : 'outline'}
+          loading={isPending}
           onClick={handleVerify}
           className="mt-3.5 w-full"
         >

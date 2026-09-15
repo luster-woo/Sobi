@@ -358,9 +358,16 @@ const applications = new Map<number, MockApplication>([
   ],
   [
     105,
-    seedTracked(105, { loanId: null, supportProgramId: 7 }, 'REVIEW', '2026-09-08T15:30:00', null, {
-      applyAmount: null,
-    }),
+    seedTracked(
+      105,
+      { loanId: null, supportProgramId: 7 },
+      'REVIEWING',
+      '2026-09-08T15:30:00',
+      null,
+      {
+        applyAmount: null,
+      },
+    ),
   ],
   [
     106,

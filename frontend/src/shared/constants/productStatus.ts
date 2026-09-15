@@ -10,7 +10,7 @@ export const PRODUCT_STATUS = {
   IMPOSSIBLE: 'IMPOSSIBLE', // 불가능
   WRITING: 'WRITING', // 작성중
   SUBMITTED: 'SUBMITTED', // 신청 완료
-  REVIEW: 'REVIEW', // 검토중
+  REVIEWING: 'REVIEWING', // 검토중
   APPROVED: 'APPROVED', // 선정
 } as const
 
@@ -22,7 +22,7 @@ const SHARED_LABEL = {
   IMPOSSIBLE: '불가',
   WRITING: '작성 중',
   SUBMITTED: '신청 완료',
-  REVIEW: '검토 중',
+  REVIEWING: '검토 중',
 } as const
 
 /**

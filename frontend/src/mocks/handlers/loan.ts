@@ -10,7 +10,7 @@ const STATUSES: ProductStatus[] = [
   'POSSIBLE',
   'IMPOSSIBLE',
   'SUBMITTED',
-  'REVIEW',
+  'REVIEWING',
   'APPROVED',
   'WRITING',
 ]
@@ -67,7 +67,7 @@ const mockLoans: LoanListItem[] = [
     bankName: '기업은행',
     interestRate: 3.9,
     maxLoanBalance: 30_000_000,
-    status: 'REVIEW',
+    status: 'REVIEWING',
     isBookmark: true,
   },
   // 페이징을 확인할 만큼 채웁니다

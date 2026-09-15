@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import ApplicationCard from '@/features/application/components/ApplicationCard'
+import ApplicationProgressStepper from '@/features/application/components/ApplicationProgressStepper'
 import ApplicationStatusTabs from '@/features/application/components/ApplicationStatusTabs'
 import { useApplications } from '@/features/application/hooks/useApplication'
 import type { ApplicationFilter } from '@/features/application/model/filter'
@@ -73,8 +74,7 @@ export function ApplicationListPage() {
                 )
               }
             >
-              {/* 174 에서 스텝퍼가 들어온다 */}
-              <p className="text-body2 text-text-secondary">진행 사항은 준비 중이에요.</p>
+              <ApplicationProgressStepper application={application} />
             </ApplicationCard>
           ))}
         </div>

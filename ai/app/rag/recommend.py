@@ -1,5 +1,7 @@
 """검색 결과를 LLM으로 검증한다. 공고 여러 건을 한 번의 호출로 판정."""
 
+from __future__ import annotations
+
 import json
 import logging
 from datetime import date

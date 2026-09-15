@@ -1,19 +1,18 @@
 import type { ID, ISODateTime } from '@/shared/types/common'
 
 /**
- * 상태 전이: PREPARING → SUBMITTED → REVIEW → APPROVED → PAID / REJECTED
+ * 상태 전이: PREPARING → SUBMITTED → REVIEWING → APPROVED → PAID / REJECTED
  *
  * PREPARING 은 신청 화면에 머무르는 동안이다. 서류를 올리고 금액을 입력하는 동안
  * 서버에 행이 이미 있어야 서류를 붙일 수 있어서, 신청하기를 누를 때 만들어진다.
  *
- * ⚠️ REVIEW 는 ProductStatus 와 맞춘 철자다. 대출 목록 API 가 이미 REVIEW 로
- *    내려주고 있어서, 같은 개념을 두 철자로 들고 있으면 매핑할 때 어긋난다.
- *    백엔드가 REVIEWING 으로 확정하면 여기와 statusBadge 만 고치면 된다.
+ * ProductStatus 에도 같은 이름의 값이 있지만 별개다 — 이쪽은 신청 건의 상태고,
+ * 그쪽은 상품 목록에 붙는 내 진행 상태다. 철자만 같고 주는 API 가 다르니 섞어 쓰지 말 것.
  */
 export const APPLICATION_STATUS = {
   PREPARING: 'PREPARING', // 신청 준비중
   SUBMITTED: 'SUBMITTED', // 신청 완료
-  REVIEW: 'REVIEW', // 심사 중
+  REVIEWING: 'REVIEWING', // 심사 중
   APPROVED: 'APPROVED', // 승인
   PAID: 'PAID', // 대출은 실행 완료, 지원사업은 지급 완료
   REJECTED: 'REJECTED', // 반려
@@ -24,7 +23,7 @@ export type ApplicationStatus = (typeof APPLICATION_STATUS)[keyof typeof APPLICA
 export const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
   PREPARING: '신청 준비중',
   SUBMITTED: '신청 완료',
-  REVIEW: '심사 중',
+  REVIEWING: '심사 중',
   APPROVED: '승인',
   // 대출은 '실행 완료', 지원사업은 '지급 완료' 로 갈린다.
   // 도메인을 모르는 곳에서 쓸 기본값만 두고, 가르는 건 features/application 에 있다

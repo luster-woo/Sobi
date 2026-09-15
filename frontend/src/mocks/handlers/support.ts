@@ -22,7 +22,7 @@ const STATUSES: ProductStatus[] = [
   'POSSIBLE',
   'IMPOSSIBLE',
   'SUBMITTED',
-  'REVIEW',
+  'REVIEWING',
   'APPROVED',
   'WRITING',
 ]

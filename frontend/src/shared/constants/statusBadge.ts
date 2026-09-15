@@ -17,7 +17,7 @@ import type { BadgeVariant } from '@/shared/ui/Badge'
 export const APPLICATION_STATUS_VARIANT: Record<ApplicationStatus, BadgeVariant> = {
   PREPARING: 'outline', // 서류를 채우는 중. 아직 제출 안 함
   SUBMITTED: 'neutral', // 접수됨. 할 일 없음
-  REVIEW: 'progress', // 기관이 심사 중
+  REVIEWING: 'progress', // 기관이 심사 중
   APPROVED: 'success',
   PAID: 'success', // 돈이 오갔다. 승인과 같은 끈난 상태라 같은 색이다
   REJECTED: 'danger',
@@ -49,6 +49,6 @@ export const PRODUCT_STATUS_VARIANT: Record<ProductStatus, BadgeVariant> = {
   IMPOSSIBLE: 'outline', // 오류가 아니라 자격 미달이라 danger 가 아니다
   WRITING: 'warning', // 사용자가 이어서 작성해야 한다
   SUBMITTED: 'neutral',
-  REVIEW: 'progress',
+  REVIEWING: 'progress',
   APPROVED: 'success',
 }

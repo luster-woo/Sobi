@@ -22,7 +22,7 @@ import { formatMoneyShort } from '@/shared/utils/formatters'
  *   POSSIBLE    신청하기            → 189 대출 신청·서류 제출
  *   WRITING     이어서 작성하기      → 189 (작성 중인 신청을 이어서)
  *   SUBMITTED   신청 내역 보기       → 202 신청 현황
- *   REVIEW      신청 내역 보기       → 202
+ *   REVIEWING   신청 내역 보기       → 202
  *   APPROVED    신청 내역 보기       → 202
  *   IMPOSSIBLE  신청 자격이 안 돼요  → 갈 곳이 없다
  *
@@ -39,7 +39,7 @@ const FOOTER_LABEL: Record<ProductStatus, string> = {
   POSSIBLE: '신청하기',
   WRITING: '이어서 작성하기',
   SUBMITTED: '신청 내역 보기',
-  REVIEW: '신청 내역 보기',
+  REVIEWING: '신청 내역 보기',
   APPROVED: '신청 내역 보기',
   IMPOSSIBLE: '신청 자격이 안 돼요',
 }

@@ -9,7 +9,7 @@ interface ProductStatusBadgeProps {
   /**
    * 상태 → 문구. 대출은 LOAN_STATUS_LABEL, 지원사업은 SUPPORT_STATUS_LABEL 을 넘긴다.
    *
-   * 기본값을 두지 않는 이유: APPROVED 가 대출에서 '보유중', 지원사업에서 '선정' 이다.
+   * 기본값을 두지 않는 이유: APPROVED 가 대출에서 '승인', 지원사업에서 '선정' 이다.
    * 기본값이 있으면 안 넘겨도 컴파일이 되고, 한쪽 문구가 다른 화면에 조용히 새어 나온다.
    */
   labels: Record<ProductStatus, string>

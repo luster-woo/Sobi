@@ -113,7 +113,7 @@ export function FavoritesPage() {
       ) : (
         <Panel>
           {shown.map((item) => {
-            const impossible = item.status === 'IMPOSSIBLE'
+            const impossible = item.status === 'INELIGIBLE'
 
             return (
               <div

@@ -133,7 +133,7 @@ export function SupportProgramListPage() {
           dense
           // 자격이 안 되는 줄은 흐리게. 관심 목록과 같은 처리다
           rowClassName={(program) =>
-            program.status === PRODUCT_STATUS.IMPOSSIBLE ? 'bg-surface-muted' : undefined
+            program.status === PRODUCT_STATUS.INELIGIBLE ? 'bg-surface-muted' : undefined
           }
           empty={
             isError ? (

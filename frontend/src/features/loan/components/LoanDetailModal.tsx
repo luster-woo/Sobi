@@ -20,29 +20,31 @@ import { formatMoneyShort } from '@/shared/utils/formatters'
 /**
  * 상태별 하단 버튼 문구와 갈 곳.
  *
- *   POSSIBLE    신청하기            → 189 대출 신청·서류 제출
- *   WRITING     이어서 작성하기      → 189 (작성 중인 신청을 이어서)
+ *   ELIGIBLE    신청하기            → 189 대출 신청·서류 제출
+ *   PREPARING   이어서 작성하기      → 189 (작성 중인 신청을 이어서)
  *   SUBMITTED   신청 내역 보기       → 202 신청 현황
  *   REVIEWING   신청 내역 보기       → 202
  *   APPROVED    신청 내역 보기       → 202
- *   IMPOSSIBLE  신청 자격이 안 돼요  → 갈 곳이 없다
+ *   PAID        신청 내역 보기       → 202 (다시 신청할 수 없다)
+ *   INELIGIBLE  신청 자격이 안 돼요  → 갈 곳이 없다
  *
  * 신청 완료 시점부터는 신청·서류 제출 화면에 다시 들어갈 수 없다.
  *
- * POSSIBLE·WRITING 은 연결됐다. 둘 다 신청 생성을 부르면 되는데, 서버가 준비중인
+ * ELIGIBLE·PREPARING 은 연결됐다. 둘 다 신청 생성을 부르면 되는데, 서버가 준비중인
  * 건이 있으면 새로 만들지 않고 그걸 돌려주기 때문이다.
  *
- * ⚠️ SUBMITTED 이상은 아직 비활성이다. 그 상품의 신청 건으로 가야 하는데
- *    상세 응답에 applicationId 가 없어 어느 건인지 알 수 없다. 백엔드에 요청해 둔 상태다.
- *    IMPOSSIBLE 은 그 뒤에도 계속 비활성이다.
+ * ⚠️ SUBMITTED 이상은 아직 비활성이다. 그 상품의 신청 건으로 가야 하는데 지금 쓰는
+ *    상세 응답에 applicationId 가 없다. 확정 명세에는 들어왔으니 317 에서 연결한다.
+ *    INELIGIBLE 은 그 뒤에도 계속 비활성이다.
  */
 const FOOTER_LABEL: Record<ProductStatus, string> = {
-  POSSIBLE: '신청하기',
-  WRITING: '이어서 작성하기',
+  ELIGIBLE: '신청하기',
+  PREPARING: '이어서 작성하기',
   SUBMITTED: '신청 내역 보기',
   REVIEWING: '신청 내역 보기',
   APPROVED: '신청 내역 보기',
-  IMPOSSIBLE: '신청 자격이 안 돼요',
+  PAID: '신청 내역 보기',
+  INELIGIBLE: '신청 자격이 안 돼요',
 }
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -80,7 +82,7 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
    */
   const createApplication = useCreateApplication()
 
-  const canApply = data?.status === 'POSSIBLE' || data?.status === 'WRITING'
+  const canApply = data?.status === 'ELIGIBLE' || data?.status === 'PREPARING'
 
   const handleApply = () => {
     createApplication.mutate(

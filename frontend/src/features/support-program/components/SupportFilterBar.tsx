@@ -12,7 +12,7 @@ const TYPE_OPTIONS = [
   })),
 ]
 
-/** judgement 는 status 6종 중 하나를 보낸다 */
+/** judgement 는 status 7종 중 하나를 보낸다 */
 const JUDGEMENT_OPTIONS = [
   { value: '', label: '판정 전체' },
   ...Object.values(PRODUCT_STATUS).map((status) => ({

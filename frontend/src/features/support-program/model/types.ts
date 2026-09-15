@@ -5,7 +5,7 @@ import type { ISODate, PageMeta, SupportProgramType } from '@/shared/types'
  * 유형 표시 문구. 값 정의는 shared/types/supportProgram.ts 에 있다.
  *
  * 값은 서버 계약이라 shared 에 두고 문구는 여기 남긴다. 같은 값에 화면마다 다른 문구를
- * 붙일 수 있어서다 — APPROVED 를 대출은 '보유중', 지원사업은 '선정' 으로 갈랐던 것처럼.
+ * 붙일 수 있어서다 — APPROVED 를 대출은 '승인', 지원사업은 '선정' 으로 갈랐던 것처럼.
  */
 export const SUPPORT_PROGRAM_TYPE_LABEL: Record<SupportProgramType, string> = {
   SUPPORT: '지원금',
@@ -67,7 +67,7 @@ export interface SupportProgramListParams {
   type?: SupportProgramType
   /** 소관기관명 */
   jrsdInsttNm?: string
-  /** 판정 결과. status 6종 중 하나를 보낸다 */
+  /** 판정 결과. status 7종 중 하나를 보낸다 */
   judgement?: ProductStatus
   isBookmark?: boolean
   sort?: string

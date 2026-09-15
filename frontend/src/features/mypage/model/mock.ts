@@ -142,7 +142,7 @@ export const MOCK_FAVORITES: FavoriteItem[] = [
     tag: '보조금',
     amount: 8_000_000,
     endDate: daysFromNow(64),
-    status: PRODUCT_STATUS.IMPOSSIBLE,
+    status: PRODUCT_STATUS.INELIGIBLE,
   },
 ]
 

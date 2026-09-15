@@ -19,12 +19,12 @@ const INSTITUTIONS = [
 ]
 
 const STATUSES: ProductStatus[] = [
-  'POSSIBLE',
-  'IMPOSSIBLE',
+  'ELIGIBLE',
+  'INELIGIBLE',
   'SUBMITTED',
   'REVIEWING',
   'APPROVED',
-  'WRITING',
+  'PREPARING',
 ]
 
 const TYPES: SupportProgramType[] = ['SUPPORT', 'LOAN', 'ETC']

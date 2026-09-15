@@ -5,5 +5,10 @@ models/
 
 # 공고문 원본 — 용량 커서 공유 드라이브로 관리, 저장소엔 survey.csv만
 data/raw/
+data/raw_pdf/
+data/parsed/
+data/parsed_hwp/
+data/parsed_hwpx/
+data/parse_test/
 
 .pytest_cache/

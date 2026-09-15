@@ -4,6 +4,7 @@ import {
   cancelApplication,
   createApplication,
   getApplicationDetail,
+  getApplications,
   requestDraft,
   submitApplication,
   uploadDocument,
@@ -57,6 +58,7 @@ export function useCreateApplication() {
     onSuccess: (data) => {
       // 방금 받은 상세를 캐시에 심어 두면 신청 화면이 로딩 없이 바로 그려진다
       queryClient.setQueryData(queryKeys.application.detail(data.applicationId), data)
+      queryClient.invalidateQueries({ queryKey: queryKeys.application.list })
     },
   })
 }
@@ -75,6 +77,7 @@ export function useCancelApplication() {
     mutationFn: (applicationId: number) => cancelApplication(applicationId),
     onSuccess: (_data, applicationId) => {
       queryClient.removeQueries({ queryKey: queryKeys.application.detail(applicationId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.application.list })
     },
   })
 }
@@ -89,6 +92,8 @@ export function useSubmitApplication() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.application.detail(body.applicationId),
       })
+      // 상태가 SUBMITTED 로 바뀜으니 목록의 배지도 달라진다
+      queryClient.invalidateQueries({ queryKey: queryKeys.application.list })
     },
   })
 }
@@ -124,5 +129,13 @@ export function useUploadDocument(applicationId: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.application.detail(applicationId) })
     },
+  })
+}
+
+/** 신청 목록. 신청·취소하면 무효화해야 하므로 키를 따로 둔다 */
+export function useApplications() {
+  return useQuery({
+    queryKey: queryKeys.application.list,
+    queryFn: getApplications,
   })
 }

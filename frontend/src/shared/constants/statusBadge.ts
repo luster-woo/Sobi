@@ -19,6 +19,7 @@ export const APPLICATION_STATUS_VARIANT: Record<ApplicationStatus, BadgeVariant>
   SUBMITTED: 'neutral', // 접수됨. 할 일 없음
   REVIEW: 'progress', // 기관이 심사 중
   APPROVED: 'success',
+  PAID: 'success', // 돈이 오갔다. 승인과 같은 끈난 상태라 같은 색이다
   REJECTED: 'danger',
 }
 

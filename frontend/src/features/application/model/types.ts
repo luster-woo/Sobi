@@ -171,3 +171,32 @@ export interface PayoutAccount {
   bankName: string
   accountNo: string
 }
+
+/**
+ * 신청 현황 목록의 한 행
+ *
+ * 상세(ApplicationDetail)와 따로 둔다. 목록에는 서류가 오지 않고, 대신 화면에 바로
+ * 필요한 상품명·기관명이 펼쳐져서 온다.
+ */
+export interface ApplicationListItem {
+  applicationId: number
+  /** 카드에 '대출' / '지원금' 으로 표시하고, 어느 도메인 상세로 갈지도 이걸로 가른다 */
+  sourceType: ApplicationSource
+  /** loanId 또는 supportProgramId */
+  programId: number
+  productName: string
+  organization: string | null
+  status: ApplicationStatus
+  /** 대출만 값이 있다. 지원사업은 금액을 입력받지 않아 null */
+  applyAmount: number | null
+  /** 접수 시각(subject_at). 신청을 만든 시점이라 항상 있다 */
+  subjectAt: string
+  /** 승인·반려가 확정된 시각(complete_at). 진행 중이면 null. */
+  completeAt: string | null
+  /** REJECTED 일 때만 채워진다 */
+  rejectReason: string | null
+}
+
+export interface ApplicationListData {
+  applications: ApplicationListItem[]
+}

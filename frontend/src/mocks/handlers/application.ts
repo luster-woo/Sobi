@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw'
 import type {
   ApplicationDetail,
   ApplicationDocument,
+  ApplicationListItem,
   ApplicationProduct,
   SubmitApplicationBody,
   VerifyStatus,
@@ -75,6 +76,13 @@ interface MockApplication {
   documents: MockDocument[]
   createdAt: string
   updatedAt: string
+  /**
+   * 승인·반려가 확정된 시각(ERD 의 complete_at). 진행 중이면 null.
+   *
+   * 서버가 추적하는 시각은 접수(subject_at)와 이것 둘뿐이다.
+   * 서류 검토·계좌 입금 단계는 언제 지났는지 알 수 없다.
+   */
+  completeAt: string | null
 }
 
 /** 서류 서식. 신청을 만들 때 이걸 복제해서 행을 미리 깔아 둔다 */
@@ -242,10 +250,132 @@ function seedApplication(): MockApplication {
     documents,
     createdAt: '2026-09-05T10:20:30',
     updatedAt: '2026-09-07T15:10:12',
+    completeAt: null,
   }
 }
 
-const applications = new Map<number, MockApplication>([[12, seedApplication()]])
+/**
+ * 신청 현황 화면용 시드.
+ *
+ * 실제로 심사하는 주체가 없어서 상태가 저절로 넘어갈 일이 없다. 화면을 보려면
+ * 이미 진행된 건들을 미리 깔아 두는 수밖에 없다. 실서버도 같은 이유로 시드가 필요하다.
+ *
+ * 상태를 골고루 두어 탭 필터와 스텝퍼 단계를 한 화면에서 다 확인할 수 있게 했다.
+ */
+function seedTracked(
+  applicationId: number,
+  source: { loanId: number | null; supportProgramId: number | null },
+  status: ApplicationStatus,
+  subjectAt: string,
+  completeAt: string | null,
+  extra: { applyAmount: number | null; rejectReason?: string },
+): MockApplication {
+  const product =
+    source.loanId !== null
+      ? (findLoanProductSummary(source.loanId) ?? FALLBACK_PRODUCT)
+      : (findSupportProductSummary(source.supportProgramId ?? 0) ?? FALLBACK_PRODUCT)
+
+  return {
+    applicationId,
+    loanId: source.loanId,
+    supportProgramId: source.supportProgramId,
+    status,
+    rejectReason: extra.rejectReason ?? null,
+    applyAmount: extra.applyAmount,
+    accountNo: '50812345678',
+    product,
+    // 제출이 끝난 건이라 서류는 전부 통과로 두고 읽기 전용으로 보인다
+    documents: createDocuments(
+      source.loanId !== null ? LOAN_DOCUMENT_TEMPLATES : SUPPORT_DOCUMENT_TEMPLATES,
+    ).map((doc) => ({
+      ...doc,
+      originalFilename: `${doc.docName}.pdf`,
+      frozenStatus: doc.documentType === 'VERIFY' ? ('PASSED' as const) : null,
+      writeStatus: doc.documentType === 'WRITE' ? ('WRITTEN' as const) : doc.writeStatus,
+      attempts: 1,
+    })),
+    createdAt: subjectAt,
+    updatedAt: completeAt ?? subjectAt,
+    completeAt,
+  }
+}
+
+const applications = new Map<number, MockApplication>([
+  [12, seedApplication()],
+  // 시안의 네 건 + 스텝퍼 중간 단계를 볼 수 있는 두 건
+  [
+    101,
+    seedTracked(
+      101,
+      { loanId: 2, supportProgramId: null },
+      'PAID',
+      '2026-08-21T09:12:00',
+      '2026-08-29T14:03:00',
+      {
+        applyAmount: 30_000_000,
+      },
+    ),
+  ],
+  [
+    102,
+    seedTracked(
+      102,
+      { loanId: null, supportProgramId: 1 },
+      'PAID',
+      '2026-08-18T11:40:00',
+      '2026-08-27T10:05:00',
+      {
+        applyAmount: null,
+      },
+    ),
+  ],
+  [
+    103,
+    seedTracked(
+      103,
+      { loanId: null, supportProgramId: 4 },
+      'REJECTED',
+      '2026-07-30T13:22:00',
+      '2026-08-07T16:44:00',
+      {
+        applyAmount: null,
+        rejectReason: '상인회 가입 확인서가 제출되지 않아 반려됐어요.',
+      },
+    ),
+  ],
+  [
+    104,
+    seedTracked(
+      104,
+      { loanId: 3, supportProgramId: null },
+      'SUBMITTED',
+      '2026-09-12T10:01:00',
+      null,
+      {
+        applyAmount: 20_000_000,
+      },
+    ),
+  ],
+  [
+    105,
+    seedTracked(105, { loanId: null, supportProgramId: 7 }, 'REVIEW', '2026-09-08T15:30:00', null, {
+      applyAmount: null,
+    }),
+  ],
+  [
+    106,
+    seedTracked(
+      106,
+      { loanId: 1, supportProgramId: null },
+      'APPROVED',
+      '2026-09-01T09:00:00',
+      '2026-09-10T11:20:00',
+      {
+        applyAmount: 50_000_000,
+      },
+    ),
+  ],
+])
 
 /** 업로드 시각으로 검증 단계를 계산한다. 고정된 서류는 그 값을 그대로 쓴다 */
 function resolveVerifyStatus(doc: MockDocument): VerifyStatus {
@@ -359,7 +489,52 @@ function awakenSeed(app: MockApplication) {
   }
 }
 
+/**
+ * 목록용 변환. 서류는 안 담고 화면에 바로 필요한 상품명·기관명을 펼쳐서 내려준다.
+ *
+ * ⚠️ subjectAt 은 createdAt 을 그대로 넣는다. ERD 는 subject_at / complete_at 인데
+ *    명세 예시는 createdAt / updatedAt 이라 이름이 갈렸다. 백엔드에 정리를
+ *    요청해 둔 상태라, 확정되면 이 함수와 타입만 고치면 된다.
+ */
+function toListItem(app: MockApplication): ApplicationListItem {
+  const isLoan = app.loanId !== null
+
+  return {
+    applicationId: app.applicationId,
+    sourceType: isLoan ? 'LOAN' : 'SUPPORT_PROGRAM',
+    programId: (isLoan ? app.loanId : app.supportProgramId) ?? 0,
+    productName: app.product.name,
+    organization: app.product.organization,
+    status: app.status,
+    applyAmount: app.applyAmount,
+    subjectAt: app.createdAt,
+    completeAt: app.completeAt,
+    rejectReason: app.rejectReason,
+  }
+}
+
 export const applicationHandlers = [
+  /**
+   * 내 신청 목록.
+   *
+   * 준비중(PREPARING)은 뺀다. 아직 제출하지 않은 건은 '신청 현황' 이 아니고,
+   * 사용자는 상품 목록에서 '이어서 작성하기' 로 다시 들어간다.
+   *
+   * 최신 신청이 위로 온다.
+   */
+  http.get('/api/v1/application', () => {
+    const applications_ = [...applications.values()]
+      .filter((app) => app.status !== 'PREPARING')
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map(toListItem)
+
+    return HttpResponse.json(
+      success('/api/v1/application', '신청 목록 조회에 성공하였습니다.', {
+        applications: applications_,
+      }),
+    )
+  }),
+
   /**
    * 신청 생성. 서류 행을 미리 다 깔아 둔다 —
    * 업로드 API 가 applicationDocumentId 를 요구하므로 미제출 서류도 id 가 있어야 한다.
@@ -406,6 +581,7 @@ export const applicationHandlers = [
       documents: createDocuments(isLoan ? LOAN_DOCUMENT_TEMPLATES : SUPPORT_DOCUMENT_TEMPLATES),
       createdAt: nowIso(),
       updatedAt: nowIso(),
+      completeAt: null,
     }
     applications.set(app.applicationId, app)
 

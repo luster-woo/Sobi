@@ -1,7 +1,7 @@
 import type { ID, ISODateTime } from '@/shared/types/common'
 
 /**
- * 상태 전이: PREPARING → SUBMITTED → REVIEW → APPROVED / REJECTED
+ * 상태 전이: PREPARING → SUBMITTED → REVIEW → APPROVED → PAID / REJECTED
  *
  * PREPARING 은 신청 화면에 머무르는 동안이다. 서류를 올리고 금액을 입력하는 동안
  * 서버에 행이 이미 있어야 서류를 붙일 수 있어서, 신청하기를 누를 때 만들어진다.
@@ -15,6 +15,7 @@ export const APPLICATION_STATUS = {
   SUBMITTED: 'SUBMITTED', // 신청 완료
   REVIEW: 'REVIEW', // 심사 중
   APPROVED: 'APPROVED', // 승인
+  PAID: 'PAID', // 대출은 실행 완료, 지원사업은 지급 완료
   REJECTED: 'REJECTED', // 반려
 } as const
 
@@ -25,6 +26,9 @@ export const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
   SUBMITTED: '신청 완료',
   REVIEW: '심사 중',
   APPROVED: '승인',
+  // 대출은 '실행 완료', 지원사업은 '지급 완료' 로 갈린다.
+  // 도메인을 모르는 곳에서 쓸 기본값만 두고, 가르는 건 features/application 에 있다
+  PAID: '완료',
   REJECTED: '반려',
 }
 

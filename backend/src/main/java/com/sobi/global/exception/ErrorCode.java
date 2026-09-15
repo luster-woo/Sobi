@@ -62,7 +62,13 @@ public enum ErrorCode {
     SUPPROT_NOT_FOUND(HttpStatus.NOT_FOUND, "BOOKMARK_002", "해당 id의 지원사업을 찾을 수 없습니다."),
     BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "BOOKMARK_003", "이미 관심목록에 등록되어있는 상품/사업입니다."),
     TYPE_BAD_REQUEST(HttpStatus.BAD_REQUEST, "BOOKMARK_004", "타입 입력이 잘못되었습니다."),
-    BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "BOOKMARK_005", "해당 북마크를 찾을 수 없습니다.");
+    BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "BOOKMARK_005", "해당 북마크를 찾을 수 없습니다."),
+
+    // application 관련
+    APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "APPLICATION_001", "존재하지 않는 신청입니다."),
+    APPLICATION_ALREADY_IN_PROGRESS(HttpStatus.CONFLICT, "APPLICATION_002", "이미 신청이 진행 중이거나 지급이 완료된 상품입니다."),
+    APPLICATION_TYPE_BAD_REQUEST(HttpStatus.BAD_REQUEST, "APPLICATION_003", "신청 종류는 LOAN 또는 SUPPORT 만 가능합니다."),
+    APPLICATION_PERIOD_CLOSED(HttpStatus.BAD_REQUEST, "APPLICATION_004", "신청 기간이 아닌 지원사업입니다.");
 
 
     private final HttpStatus status;

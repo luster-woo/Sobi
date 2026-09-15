@@ -24,11 +24,18 @@ public class LoanDetailResponse {
     private final Integer period;           // 대출 기간(일)
     private final String repaymentMethod;
     private final LoanConditionResponse conditions;
-    private final LoanEligibility eligibility;
-    private final List<String> ineligibleReasons;
+    private final LoanStatus status;
+    private final Long applicationId;       // 진행 중인 신청이 있을 때만 ([이어서 작성] 이동용), 없으면 null
+    private final List<String> ineligibleReasons; // 작성 중이어도 조건이 바뀌었을 수 있어 항상 내려준다
     private final boolean bookmarked;
 
-    public static LoanDetailResponse of(Loan loan, EligibilityResult eligibilityResult, boolean bookmarked) {
+    public static LoanDetailResponse of(
+            Loan loan,
+            EligibilityResult eligibilityResult,
+            LoanStatus status,
+            Long applicationId,
+            boolean bookmarked
+    ) {
         return new LoanDetailResponse(
                 loan.getId(),
                 loan.getAccountName(),
@@ -40,7 +47,8 @@ public class LoanDetailResponse {
                 loan.getPeriod(),
                 REPAYMENT_METHOD,
                 LoanConditionResponse.from(loan),
-                eligibilityResult.getEligibility(),
+                status,
+                applicationId,
                 eligibilityResult.getIneligibleReasons(),
                 bookmarked
         );

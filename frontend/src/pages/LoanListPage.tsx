@@ -3,18 +3,16 @@ import { Outlet, useLocation, useNavigate } from 'react-router'
 import { loanColumns } from '@/features/loan/components/loanColumns'
 import LoanFilterBar from '@/features/loan/components/LoanFilterBar'
 import { useLoans } from '@/features/loan/hooks/useLoans'
+import type { LoanSort } from '@/features/loan/model/types'
 import { PRODUCT_STATUS, type ProductStatus } from '@/shared/constants/productStatus'
 import { routeTo } from '@/shared/constants/routes'
 import { useListParams } from '@/shared/hooks/useListParams'
 import EmptyState from '@/shared/ui/EmptyState'
-import Pagination from '@/shared/ui/Pagination'
 import Panel from '@/shared/ui/Panel'
 import SearchBar from '@/shared/ui/SearchBar'
 import Table from '@/shared/ui/Table'
-import { toServerPage } from '@/shared/utils/pagination'
 
-const FILTER_KEYS = ['keyword', 'bankName', 'judgement', 'isBookmark', 'sort'] as const
-const PAGE_SIZE = 20
+const FILTER_KEYS = ['keyword', 'bankName', 'status', 'bookmarked', 'sort'] as const
 
 /**
  * 대출 상품 조회 · 검색 (S15P21D101-187 · 188)
@@ -23,28 +21,41 @@ const PAGE_SIZE = 20
  * 검색어가 있어도 필터·정렬이 그대로 걸린다 — 지원사업의 자연어 검색과 다르다.
  * 그래서 같은 화면·같은 주소에서 keyword 파라미터만 더 붙는다.
  *
- * 필터·검색어·페이지는 URL 쿼리스트링에 둔다. 상세를 보고 뒤로 왔을 때 조건이
- * 살아 있어야 하고, "기업은행 3페이지" 를 링크로 공유할 수 있어야 한다.
+ * 필터·검색어는 URL 쿼리스트링에 둔다. 상세를 보고 뒤로 왔을 때 조건이 살아 있어야
+ * 하고, "기업은행 · 가능" 을 링크로 공유할 수 있어야 한다.
+ *
+ * 페이지네이션이 없다. 판정이 사용자마다 달라 서버가 DB 에서 자르지 못하고 전체를
+ * 판정한 뒤 메모리에서 거르기 때문이다. 그래서 전체 건수를 보여줄 자리도 사라졌는데,
+ * 대신 상태별 개수(statusCounts)가 오므로 그걸 필터 선택지에 붙인다.
  */
 export function LoanListPage() {
-  const { page, values, setPage, setValues } = useListParams({ keys: FILTER_KEYS })
+  const { values, setValues } = useListParams({ keys: FILTER_KEYS })
   const navigate = useNavigate()
   const location = useLocation()
 
   const { data, isLoading, isFetching, isError } = useLoans({
-    page: toServerPage(page),
-    size: PAGE_SIZE,
     keyword: values.keyword || undefined,
     bankName: values.bankName || undefined,
-    judgement: (values.judgement as ProductStatus) || undefined,
-    isBookmark: values.isBookmark === 'true' ? true : undefined,
-    sort: values.sort || undefined,
+    status: (values.status as ProductStatus) || undefined,
+    bookmarked: values.bookmarked === 'true' ? true : undefined,
+    sort: (values.sort as LoanSort) || undefined,
   })
 
   const keyword = values.keyword
   const loans = data?.loans ?? []
-  const totalElements = data?.page.totalElements ?? 0
-  const totalPages = data?.page.totalPages ?? 0
+
+  /*
+   * loans 는 서버가 검색어·은행·판정·즐겨찾기를 모두 적용한 결과다. 그래서 줄 수를
+   * 그대로 세면 어떤 필터를 걸든 맞는 값이 나온다 — 필터마다 개수를 따로 받을 필요가 없다.
+   *
+   * totalCount 는 반대로 필터 적용 전 전체다. 둘을 나란히 보여줘야 "23개 중 7개로
+   * 좁혔다" 가 읽힌다. 페이지네이션이 사라지면서 전체 규모를 알려줄 자리가 여기뿐이다.
+   */
+  const shownCount = loans.length
+  const totalCount = data?.totalCount ?? 0
+  const filtered = Boolean(
+    values.keyword || values.bankName || values.status || values.bookmarked === 'true',
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
@@ -68,22 +79,26 @@ export function LoanListPage() {
 
         <LoanFilterBar
           bankName={values.bankName}
-          judgement={values.judgement}
-          isBookmark={values.isBookmark === 'true'}
+          status={values.status}
+          bookmarked={values.bookmarked === 'true'}
           sort={values.sort}
           onChange={setValues}
         />
 
+        {/*
+          검색어를 따로 짚지 않는다. 검색창에 그대로 남아 있고 빈 결과 안내에도 나오는데,
+          여기서 또 반복하면 정작 알아야 할 '몇 개로 좁혀졌는지' 가 묻힌다.
+        */}
         <p className="text-body2 text-text-secondary px-4 py-3">
-          {keyword ? (
+          {filtered ? (
             <>
-              <span className="text-text font-semibold">‘{keyword}’</span> 검색 결과{' '}
-              <span className="text-text font-semibold">{totalElements}</span>건
+              전체 {totalCount}개 중 <span className="text-text font-semibold">{shownCount}</span>개
+              상품
             </>
           ) : (
             <>
-              내 사업체 기준 · 전체 <span className="text-text font-semibold">{totalElements}</span>
-              개 상품
+              내 사업체 기준 · 전체 <span className="text-text font-semibold">{totalCount}</span>개
+              상품
             </>
           )}
         </p>
@@ -107,7 +122,7 @@ export function LoanListPage() {
            * 관심 목록과 같은 처리다.
            */
           rowClassName={(loan) =>
-            loan.status === PRODUCT_STATUS.IMPOSSIBLE ? 'bg-surface-muted' : undefined
+            loan.status === PRODUCT_STATUS.INELIGIBLE ? 'bg-surface-muted' : undefined
           }
           empty={
             isError ? (
@@ -128,12 +143,6 @@ export function LoanListPage() {
             )
           }
         />
-
-        {totalPages > 1 && (
-          <div className="border-border-subtle border-t px-4 py-3">
-            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-          </div>
-        )}
       </Panel>
 
       {/* /loans/:loanId — 상품 상세 모달이 이 자리에 렌더된다 */}

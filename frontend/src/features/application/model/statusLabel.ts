@@ -7,7 +7,7 @@ import { APPLICATION_STATUS_LABEL, type ApplicationStatus } from '@/shared/types
  *   대출      돈이 계좌로 들어온 것이라 '실행 완료'
  *   지원사업   지원금을 받은 것이라 '지급 완료'
  *
- * ProductStatus 의 APPROVED 가 '보유중' / '선정' 으로 갈리는 것과 같은 이유다.
+ * ProductStatus 의 PAID 가 '실행 완료' / '지급 완료' 로 갈리는 것과 같은 이유다.
  * 서버가 주는 값은 하나고 문구만 갈린다.
  */
 export function applicationStatusLabel(

@@ -3,16 +3,18 @@ import { http } from 'msw'
 import type { ApplicationProduct } from '@/features/application/model/types'
 import type { LoanDetail, LoanListData, LoanListItem } from '@/features/loan/model/types'
 import { fail, ok } from '@/mocks/lib/envelope'
-import type { ProductStatus } from '@/shared/constants/productStatus'
+import { PRODUCT_STATUS, type ProductStatus } from '@/shared/constants/productStatus'
 
 const BANKS = ['싸피은행', '기업은행', '대구은행', '소상공인시장진흥공단', '중소벤처기업진흥공단']
+/** 생성 상품에 돌아가며 붙인다. 일곱 상태가 화면에 한 번씩은 나오게 전부 넣는다 */
 const STATUSES: ProductStatus[] = [
-  'POSSIBLE',
-  'IMPOSSIBLE',
+  'ELIGIBLE',
+  'INELIGIBLE',
   'SUBMITTED',
   'REVIEWING',
   'APPROVED',
-  'WRITING',
+  'PREPARING',
+  'PAID',
 ]
 
 const mockLoans: LoanListItem[] = [
@@ -23,7 +25,7 @@ const mockLoans: LoanListItem[] = [
     interestRate: 3.4,
     maxLoanBalance: 100_000_000,
     status: 'SUBMITTED',
-    isBookmark: true,
+    bookmarked: true,
   },
   {
     loanId: 2,
@@ -31,8 +33,8 @@ const mockLoans: LoanListItem[] = [
     bankName: '소상공인시장진흥공단',
     interestRate: 3.0,
     maxLoanBalance: 70_000_000,
-    status: 'POSSIBLE',
-    isBookmark: false,
+    status: 'ELIGIBLE',
+    bookmarked: false,
   },
   {
     loanId: 3,
@@ -41,7 +43,7 @@ const mockLoans: LoanListItem[] = [
     interestRate: 4.1,
     maxLoanBalance: 50_000_000,
     status: 'APPROVED',
-    isBookmark: true,
+    bookmarked: true,
   },
   {
     loanId: 4,
@@ -49,8 +51,8 @@ const mockLoans: LoanListItem[] = [
     bankName: '중소벤처기업진흥공단',
     interestRate: 2.8,
     maxLoanBalance: 50_000_000,
-    status: 'IMPOSSIBLE',
-    isBookmark: false,
+    status: 'INELIGIBLE',
+    bookmarked: false,
   },
   {
     loanId: 5,
@@ -58,8 +60,8 @@ const mockLoans: LoanListItem[] = [
     bankName: '중소벤처기업진흥공단',
     interestRate: 2.5,
     maxLoanBalance: 100_000_000,
-    status: 'WRITING',
-    isBookmark: false,
+    status: 'PREPARING',
+    bookmarked: false,
   },
   {
     loanId: 6,
@@ -68,7 +70,7 @@ const mockLoans: LoanListItem[] = [
     interestRate: 3.9,
     maxLoanBalance: 30_000_000,
     status: 'REVIEWING',
-    isBookmark: true,
+    bookmarked: true,
   },
   // 페이징을 확인할 만큼 채웁니다
   ...Array.from({ length: 17 }, (_, index) => ({
@@ -78,7 +80,7 @@ const mockLoans: LoanListItem[] = [
     interestRate: Number((2 + (index % 20) / 10).toFixed(1)),
     maxLoanBalance: [30_000_000, 50_000_000, 70_000_000, 100_000_000][index % 4],
     status: STATUSES[index % STATUSES.length],
-    isBookmark: index % 3 === 0,
+    bookmarked: index % 3 === 0,
   })),
 ]
 
@@ -111,20 +113,33 @@ export function findLoanProductSummary(loanId: number): ApplicationProduct | nul
 }
 
 /**
- * 대출 (loan) 목 핸들러. 백엔드 미구현이라 이 목이 유일한 구현이다.
+ * 상태별 개수. 서버처럼 일곱 키를 0 으로 깔고 센다 — 해당 상품이 없는 상태도
+ * 키가 있어야 화면에서 `statusCounts[value]` 를 그냥 읽을 수 있다.
+ */
+function countByStatus(loans: LoanListItem[]): Record<ProductStatus, number> {
+  const counts = Object.fromEntries(
+    Object.values(PRODUCT_STATUS).map((status) => [status, 0]),
+  ) as Record<ProductStatus, number>
+
+  for (const loan of loans) counts[loan.status] += 1
+  return counts
+}
+
+/**
+ * 대출 (loan) 목 핸들러.
  *
- * ⚠️ sort 형식은 'interestRate,asc' (Spring) 으로 가정. 확정되면 이 파일만 고친다.
+ * 응답 모양을 확정 명세에 맞췄다. 페이지네이션이 없고, 대신 필터 적용 전 기준의
+ * totalCount·statusCounts 가 함께 온다. 서버가 상태 7개 키를 항상 채워 주므로
+ * 여기서도 0 으로 깔아 둔 뒤 센다 — 프론트가 키 존재를 따지지 않게 하기 위함이다.
  */
 export const loanHandlers = [
   // GET /api/v1/loan
   http.get('/api/v1/loan', ({ request }) => {
     const url = new URL(request.url)
-    const page = Number(url.searchParams.get('page') ?? 0)
-    const size = Number(url.searchParams.get('size') ?? 20)
     const keyword = url.searchParams.get('keyword')
     const bankName = url.searchParams.get('bankName')
-    const judgement = url.searchParams.get('judgement')
-    const isBookmark = url.searchParams.get('isBookmark')
+    const status = url.searchParams.get('status')
+    const bookmarked = url.searchParams.get('bookmarked')
     const sort = url.searchParams.get('sort')
 
     let filtered = mockLoans
@@ -135,32 +150,25 @@ export const loanHandlers = [
       )
     }
     if (bankName) filtered = filtered.filter((loan) => loan.bankName === bankName)
-    if (judgement) filtered = filtered.filter((loan) => loan.status === judgement)
-    if (isBookmark === 'true') filtered = filtered.filter((loan) => loan.isBookmark)
+    if (status) filtered = filtered.filter((loan) => loan.status === status)
+    if (bookmarked === 'true') filtered = filtered.filter((loan) => loan.bookmarked)
 
-    if (sort) {
-      const [field, direction] = sort.split(',')
-      const sign = direction === 'desc' ? -1 : 1
-      filtered = [...filtered].sort((a, b) => {
-        if (field === 'maxLoanBalance') return (a.maxLoanBalance - b.maxLoanBalance) * sign
-        return (a.interestRate - b.interestRate) * sign
-      })
-    }
-
-    const totalElements = filtered.length
-    const totalPages = Math.ceil(totalElements / size)
+    /*
+     * 방향이 값에 박혀 있다. 서버가 금리는 오름차순, 한도는 내림차순만 준다.
+     * 1차 기준이 같을 때 순서가 흔들리지 않게 서버처럼 2차 기준까지 건다.
+     */
+    filtered = [...filtered].sort((a, b) =>
+      sort === 'MAX_BALANCE'
+        ? b.maxLoanBalance - a.maxLoanBalance || a.interestRate - b.interestRate
+        : a.interestRate - b.interestRate || b.maxLoanBalance - a.maxLoanBalance,
+    )
 
     return ok<LoanListData>(
       {
-        loans: filtered.slice(page * size, page * size + size),
-        page: {
-          number: page,
-          size,
-          totalElements,
-          totalPages,
-          first: page === 0,
-          last: page >= totalPages - 1,
-        },
+        // 개수는 필터 전 전체 기준이다
+        totalCount: mockLoans.length,
+        statusCounts: countByStatus(mockLoans),
+        loans: filtered,
       },
       '대출 목록 조회 성공',
       { path: '/api/v1/loan' },
@@ -183,7 +191,7 @@ export const loanHandlers = [
         accountName: found.accountName,
         description: `업력 ${6 + (loanId % 3) * 6}개월 이상 소상공인 대상 · 대리대출(시중은행 취급)로 실행돼요.`,
         status: found.status,
-        isBookmark: found.isBookmark,
+        isBookmark: found.bookmarked,
         interestRate: found.interestRate,
         minLoanBalance: minBalanceOf(found.maxLoanBalance),
         maxLoanBalance: found.maxLoanBalance,

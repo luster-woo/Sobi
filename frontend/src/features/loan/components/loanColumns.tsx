@@ -29,7 +29,7 @@ export const loanColumns: Column<LoanListItem>[] = [
         <b
           className={cn(
             'text-body2 block truncate font-medium',
-            loan.status === PRODUCT_STATUS.IMPOSSIBLE ? 'text-text-muted' : 'text-text',
+            loan.status === PRODUCT_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text',
           )}
         >
           {loan.accountName}
@@ -47,7 +47,7 @@ export const loanColumns: Column<LoanListItem>[] = [
       <span
         className={cn(
           'text-[12.5px] tabular-nums',
-          loan.status === PRODUCT_STATUS.IMPOSSIBLE ? 'text-text-muted' : 'text-text',
+          loan.status === PRODUCT_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text',
         )}
       >
         {/* 관심 목록이 소수점 한 자리로 맞춰 읽는다. 3 과 3.5 가 섞이면 자릿수가 흔들린다 */}연{' '}
@@ -64,7 +64,7 @@ export const loanColumns: Column<LoanListItem>[] = [
       <span
         className={cn(
           'text-[12.5px] tabular-nums',
-          loan.status === PRODUCT_STATUS.IMPOSSIBLE ? 'text-text-muted' : 'text-text',
+          loan.status === PRODUCT_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text',
         )}
       >
         최대 {formatMoneyShort(loan.maxLoanBalance)}
@@ -95,9 +95,9 @@ export const loanColumns: Column<LoanListItem>[] = [
     align: 'center',
     render: (loan) => (
       <span
-        className={cn('flex justify-center', loan.isBookmark ? 'text-text' : 'text-text-disabled')}
+        className={cn('flex justify-center', loan.bookmarked ? 'text-text' : 'text-text-disabled')}
       >
-        <BookmarkIcon filled={loan.isBookmark} />
+        <BookmarkIcon filled={loan.bookmarked} />
       </span>
     ),
   },

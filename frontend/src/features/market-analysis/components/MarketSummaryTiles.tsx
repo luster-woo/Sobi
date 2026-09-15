@@ -36,7 +36,12 @@ export default function MarketSummaryTiles({
     },
     { label: '일평균 유동인구', ...footTraffic },
     { label: '동종 평균 매출 (월)', ...revenue },
-    { label: '연 폐업률', value: storeChurn.annualCloseRate.toFixed(1), unit: '%' },
+    {
+      label: '연 폐업률',
+      // 점포가 0 곳이면 폐업률을 계산할 수 없다. '0%' 로 적으면 좋은 상권으로 읽힌다
+      value: storeChurn.annualCloseRate?.toFixed(1) ?? '-',
+      unit: storeChurn.annualCloseRate === null ? '' : '%',
+    },
   ]
 
   return <StatTiles items={tiles} />

@@ -1,4 +1,9 @@
-import { formatPeopleText, formatWonText } from '@/features/market-analysis/model/format'
+import {
+  formatPeopleCountText,
+  formatPeopleText,
+  formatPercentText,
+  formatWonText,
+} from '@/features/market-analysis/model/format'
 import type { MarketAnalysis, NeighborMarket } from '@/features/market-analysis/model/types'
 import Panel from '@/shared/ui/Panel'
 import type { Column } from '@/shared/ui/Table'
@@ -38,7 +43,8 @@ export default function NeighborTable({ location, neighbors }: NeighborTableProp
       key: 'footTrafficPerStoreDaily',
       header: '점포당 유동인구',
       align: 'right',
-      render: (row) => `${row.footTrafficPerStoreDaily.toLocaleString('ko-KR')}명`,
+      // 그 동에 점포가 0 곳이면 나눌 수가 없다
+      render: (row) => formatPeopleCountText(row.footTrafficPerStoreDaily),
     },
     {
       key: 'revenuePerStoreMonthly',
@@ -51,7 +57,7 @@ export default function NeighborTable({ location, neighbors }: NeighborTableProp
       key: 'annualCloseRate',
       header: '연 폐업률',
       align: 'right',
-      render: (row) => `${row.annualCloseRate.toFixed(1)}%`,
+      render: (row) => formatPercentText(row.annualCloseRate),
     },
   ]
 

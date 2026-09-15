@@ -8,9 +8,12 @@ interface BusinessMixPanelProps {
   businessMix: MarketAnalysis['businessMix']
 }
 
-/** '868곳·9.9%' */
-const mixValue = (storeCount: number, sharePercent: number) =>
-  `${storeCount.toLocaleString('ko-KR')}곳·${sharePercent.toFixed(1)}%`
+/** '868곳·9.9%' · 비율을 못 구하면 '868곳' 만 */
+const mixValue = (storeCount: number, sharePercent: number | null) => {
+  const count = `${storeCount.toLocaleString('ko-KR')}곳`
+
+  return sharePercent === null ? count : `${count}·${sharePercent.toFixed(1)}%`
+}
 
 /**
  * 업종 구성 — 이 행정동에 어떤 가게가 몇 곳 있는지.
@@ -25,7 +28,11 @@ const mixValue = (storeCount: number, sharePercent: number) =>
  */
 export default function BusinessMixPanel({ business, businessMix }: BusinessMixPanelProps) {
   const rest = getBusinessMixRest(businessMix)
-  const maxShare = Math.max(...businessMix.items.map((item) => item.sharePercent), 1)
+  /*
+   * 비율이 null 인 항목은 막대 길이를 정할 수 없어 0 으로 둔다. 그게 '비율이 0'
+   * 이 아니라 '알 수 없음' 이라는 건 오른쪽 숫자가 '-' 로 말해준다.
+   */
+  const maxShare = Math.max(...businessMix.items.map((item) => item.sharePercent ?? 0), 1)
 
   return (
     <MiniPanel
@@ -42,7 +49,7 @@ export default function BusinessMixPanel({ business, businessMix }: BusinessMixP
             key={item.code}
             label={item.name}
             value={mixValue(item.storeCount, item.sharePercent)}
-            ratio={item.sharePercent / maxShare}
+            ratio={(item.sharePercent ?? 0) / maxShare}
             // 조회한 업종이 어느 줄인지 초록으로 표시한다
             highlight={item.code === business.code}
             labelWidth={62}
@@ -53,7 +60,7 @@ export default function BusinessMixPanel({ business, businessMix }: BusinessMixP
 
       {rest && (
         <p className="text-text-secondary text-[11.5px] leading-relaxed tabular-nums">
-          그 외 업종 {rest.storeCount.toLocaleString('ko-KR')}곳 · {rest.sharePercent.toFixed(1)}%
+          그 외 업종 {mixValue(rest.storeCount, rest.sharePercent)}
         </p>
       )}
     </MiniPanel>

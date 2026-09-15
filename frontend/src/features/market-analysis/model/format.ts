@@ -35,6 +35,21 @@ export function formatWonText(won: number | null): string {
   return `${value}${unit}`
 }
 
+/**
+ * 비율을 한 줄로. 17.53 → '17.5%' · null → '-'
+ *
+ * 서버가 분모 0 일 때 null 을 준다. 그때 '0%' 로 적으면 "폐업률이 0 인 좋은 상권"
+ * 으로 읽힌다 — 실제로는 계산할 수 없는 것이라 '-' 로 비워야 한다.
+ */
+export function formatPercentText(ratio: number | null): string {
+  return ratio === null ? '-' : `${ratio.toFixed(1)}%`
+}
+
+/** 221 → '221명' · null → '-' */
+export function formatPeopleCountText(count: number | null): string {
+  return count === null ? '-' : `${count.toLocaleString('ko-KR')}명`
+}
+
 /** 191734 → '19.2만 명' */
 
 export function formatPeopleText(count: number): string {

@@ -2,7 +2,8 @@ import type { BusinessMix } from '@/features/market-analysis/model/types'
 
 export interface BusinessMixRest {
   storeCount: number
-  sharePercent: number
+  /** 항목의 비율이 하나라도 null 이면(동 전체 점포 0) 나머지도 구할 수 없다 */
+  sharePercent: number | null
 }
 
 /**
@@ -16,15 +17,23 @@ export interface BusinessMixRest {
  */
 export function getBusinessMixRest(businessMix: BusinessMix): BusinessMixRest | null {
   const listedStores = businessMix.items.reduce((sum, item) => sum + item.storeCount, 0)
-  const listedShare = businessMix.items.reduce((sum, item) => sum + item.sharePercent, 0)
 
   const storeCount = businessMix.totalStoreCount - listedStores
   // 항목이 전체를 덮었으면 기타 줄을 그리지 않는다
   if (storeCount <= 0) return null
 
+  /*
+   * 비율이 하나라도 비어 있으면 합을 널 수 없다. null 을 0 으로 치면 나머지가
+   * 실제보다 크게 나온다 — 점포 수만 보여주고 비율은 포기한다.
+   */
+  const hasAllShares = businessMix.items.every((item) => item.sharePercent !== null)
+  const listedShare = hasAllShares
+    ? businessMix.items.reduce((sum, item) => sum + (item.sharePercent ?? 0), 0)
+    : null
+
   return {
     storeCount,
     // 소수 첫째 자리까지 반올림. 항목들의 sharePercent 도 그 자리까지 온다
-    sharePercent: Math.round((100 - listedShare) * 10) / 10,
+    sharePercent: listedShare === null ? null : Math.round((100 - listedShare) * 10) / 10,
   }
 }

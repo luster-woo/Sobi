@@ -1,4 +1,5 @@
 import MiniPanel from '@/features/market-analysis/components/MiniPanel'
+import { formatPercentText } from '@/features/market-analysis/model/format'
 import type { MarketAnalysis } from '@/features/market-analysis/model/types'
 import Badge from '@/shared/ui/Badge'
 import { cn } from '@/shared/utils/cn'
@@ -47,7 +48,16 @@ function Stat({
  */
 export default function StoreChurnPanel({ business, storeChurn }: StoreChurnPanelProps) {
   const shrinking = storeChurn.net < 0
-  const closeGap = Math.round((storeChurn.annualCloseRate - storeChurn.seoulAvgCloseRate) * 10) / 10
+
+  const { annualOpenRate, annualCloseRate, seoulAvgCloseRate } = storeChurn
+  /*
+   * 폐업률을 서울 평균과 견주는 문장이라 둘 다 있어야 성립한다. 하나라도 없으면
+   * 비교를 빼고 안내 문장으로 바꾼다 — 숫자가 없는데 '높습니다' 라고 쓸 수 없다.
+   */
+  const closeGap =
+    annualCloseRate !== null && seoulAvgCloseRate !== null
+      ? Math.round((annualCloseRate - seoulAvgCloseRate) * 10) / 10
+      : null
 
   return (
     <MiniPanel
@@ -68,10 +78,16 @@ export default function StoreChurnPanel({ business, storeChurn }: StoreChurnPane
       </div>
 
       <p className="text-text-secondary text-[11.5px] leading-relaxed">
-        연간 개업률 {storeChurn.annualOpenRate.toFixed(1)}% · 폐업률{' '}
-        {storeChurn.annualCloseRate.toFixed(1)}% — 서울시 {business.name} 평균 폐업률{' '}
-        {storeChurn.seoulAvgCloseRate.toFixed(1)}% 보다 {Math.abs(closeGap).toFixed(1)}%p{' '}
-        {closeGap >= 0 ? '높습니다' : '낮습니다'}.
+        {closeGap === null ? (
+          '이 상권은 동종업종 점포가 집계되지 않아 개업·폐업률을 계산할 수 없어요.'
+        ) : (
+          <>
+            연간 개업률 {formatPercentText(annualOpenRate)} · 폐업률{' '}
+            {formatPercentText(annualCloseRate)} — 서울시 {business.name} 평균 폐업률{' '}
+            {formatPercentText(seoulAvgCloseRate)} 보다 {Math.abs(closeGap).toFixed(1)}%p{' '}
+            {closeGap >= 0 ? '높습니다' : '낮습니다'}.
+          </>
+        )}
         {shrinking && ' 점포가 순감소 중인 상권이라 자리가 나는 이유를 확인해보세요.'}
       </p>
     </MiniPanel>

@@ -70,7 +70,12 @@ public enum ErrorCode {
     APPLICATION_TYPE_BAD_REQUEST(HttpStatus.BAD_REQUEST, "APPLICATION_003", "신청 종류는 LOAN 또는 SUPPORT 만 가능합니다."),
     APPLICATION_PERIOD_CLOSED(HttpStatus.BAD_REQUEST, "APPLICATION_004", "신청 기간이 아닌 지원사업입니다."),
     APPLICATION_STATUS_BAD_REQUEST(HttpStatus.BAD_REQUEST, "APPLICATION_005", "신청 상태 필터는 IN_PROGRESS 또는 DONE 만 가능합니다."),
-    APPLICATION_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "APPLICATION_006", "작성 중인 신청만 취소할 수 있습니다.");
+    APPLICATION_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "APPLICATION_006", "작성 중인 신청만 취소할 수 있습니다."),
+    APPLICATION_SUBMIT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "APPLICATION_007", "작성 중인 신청만 제출할 수 있습니다."),
+    APPLICATION_DOCUMENT_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "APPLICATION_008", "모든 서류의 검증이 완료되어야 신청할 수 있습니다."),
+    APPLICATION_AMOUNT_INVALID(HttpStatus.BAD_REQUEST, "APPLICATION_009", "신청 금액이 상품의 한도 범위를 벗어났습니다."),
+    APPLICATION_ACCOUNT_INVALID(HttpStatus.BAD_REQUEST, "APPLICATION_010", "본인의 수시입출금 계좌를 선택해야 합니다."),
+    APPLICATION_NOT_ELIGIBLE(HttpStatus.BAD_REQUEST, "APPLICATION_011", "신청 조건을 충족하지 않습니다.");
 
 
     private final HttpStatus status;

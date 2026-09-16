@@ -3,6 +3,8 @@ package com.sobi.application.controller;
 import com.sobi.application.dto.ApplicationCreateResponse;
 import com.sobi.application.dto.ApplicationDetailResponse;
 import com.sobi.application.dto.ApplicationListResponse;
+import com.sobi.application.dto.ApplicationSubmitRequest;
+import com.sobi.application.dto.ApplicationSubmitResponse;
 import com.sobi.application.service.ApplicationService;
 import com.sobi.global.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -91,6 +93,26 @@ public class ApplicationController {
                 .body(ApiResponse.success(
                         HttpStatus.OK,
                         "신청 취소에 성공하였습니다.",
+                        request
+                ));
+    }
+
+    // 신청 제출 ([신청하기]). 대출은 금융망 심사·가입까지 한 번에 진행된다
+    @PostMapping("/{applicationId}/submit")
+    public ResponseEntity<ApiResponse<ApplicationSubmitResponse>> submit(
+            @PathVariable Long applicationId,
+            @AuthenticationPrincipal Long userId,
+            @RequestBody ApplicationSubmitRequest submitRequest,
+            HttpServletRequest request
+    ) {
+        ApplicationSubmitResponse response = applicationService.submit(userId, applicationId, submitRequest);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "신청 제출에 성공하였습니다.",
+                        response,
                         request
                 ));
     }

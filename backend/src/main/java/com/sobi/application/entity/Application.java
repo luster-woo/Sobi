@@ -53,4 +53,19 @@ public class Application {
 
     @Column(name = "complete_at")
     private LocalDateTime completeAt;
+
+    // 제출 후 금융망 심사에서 거절된 경우
+    public void reject(String rejectReason, LocalDateTime completeAt) {
+        this.status = ApplicationStatus.REJECTED.name();
+        this.rejectReason = rejectReason;
+        this.completeAt = completeAt;
+    }
+
+    // 제출 완료 (대출은 실행금 입금, 지원사업은 지급까지 끝난 상태)
+    public void pay(Long amount, Account account, LocalDateTime completeAt) {
+        this.amount = amount;
+        this.account = account;
+        this.status = ApplicationStatus.PAID.name();
+        this.completeAt = completeAt;
+    }
 }

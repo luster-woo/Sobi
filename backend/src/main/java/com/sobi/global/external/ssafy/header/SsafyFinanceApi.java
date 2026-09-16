@@ -26,6 +26,19 @@ public enum SsafyFinanceApi {
             SsafyAuthType.API_KEY
     ),
 
+    // 대출 심사·가입 (2.7.5, 2.7.7)
+    CREATE_LOAN_APPLICATION(
+            "createLoanApplication",
+            "createLoanApplication",
+            SsafyAuthType.BOTH
+    ),
+
+    CREATE_LOAN_ACCOUNT(
+            "createLoanAccount",
+            "createLoanAccount",
+            SsafyAuthType.BOTH
+    ),
+
     // 대출 가입·상환 (2.7.8 ~ 2.7.10)
     INQUIRE_LOAN_ACCOUNT_LIST(
             "inquireLoanAccountList",

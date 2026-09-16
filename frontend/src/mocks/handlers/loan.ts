@@ -1,6 +1,6 @@
 import { http } from 'msw'
 
-import type { ApplicationProduct } from '@/features/application/model/types'
+import type { ApplicationLoanSummary } from '@/features/application/model/types'
 import type { LoanDetail, LoanListData, LoanListItem } from '@/features/loan/model/types'
 import { isBookmarked } from '@/mocks/lib/bookmarkStore'
 import { fail, ok } from '@/mocks/lib/envelope'
@@ -153,19 +153,18 @@ export function bookmarkedLoanRows() {
  * 신청 화면 상단에 쓸 상품 요약. 신청 목(handlers/application.ts)이 가져간다.
  *
  * 두 목이 따로 데이터를 들면 목록에서 고른 상품과 신청 화면의 상품이 어긋난다.
- * 대출은 마감이 없어서 deadline 은 항상 null 이다.
  */
-export function findLoanProductSummary(loanId: number): ApplicationProduct | null {
+export function findLoanProductSummary(loanId: number): ApplicationLoanSummary | null {
   const found = mockLoans.find((loan) => loan.loanId === loanId)
   if (!found) return null
 
   return {
-    name: found.accountName,
-    organization: found.bankName,
+    loanId: found.loanId,
+    accountName: found.accountName,
+    bankName: found.bankName,
     interestRate: found.interestRate,
-    minAmount: minBalanceOf(found.maxLoanBalance),
-    maxAmount: found.maxLoanBalance,
-    deadline: null,
+    minLoanBalance: minBalanceOf(found.maxLoanBalance),
+    maxLoanBalance: found.maxLoanBalance,
   }
 }
 

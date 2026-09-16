@@ -1,11 +1,12 @@
 import { http } from 'msw'
 
-import type { ApplicationProduct } from '@/features/application/model/types'
+import type { ApplicationSupportSummary } from '@/features/application/model/types'
 import type {
   SupportProgramDetail,
   SupportProgramListData,
   SupportProgramListItem,
 } from '@/features/support-program/model/types'
+import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
 import { isBookmarked } from '@/mocks/lib/bookmarkStore'
 import { fail, ok } from '@/mocks/lib/envelope'
 import type { ProductStatus } from '@/shared/constants/productStatus'
@@ -122,22 +123,25 @@ export function bookmarkedSupportProgramRows() {
  * 두 목이 따로 데이터를 들면 목록에서 고른 공고와 신청 화면의 상품이 어긋난다.
  *
  * type 별로 값이 있고 없다.
- *   SUPPORT  무상 지원금 — 금리 0, 금액 범위 있음
- *   LOAN     융자 — 금리와 금액 범위 둘 다 있음
- *   ETC      그 외 — 금리도 금액도 없음
+ *   SUPPORT  무상 지원금 — 금액 범위 있음
+ *   LOAN     융자 — 금액 범위 있음
+ *   ETC      그 외 — 돈이 오가지 않아 금액이 없다. 그래서 신청 화면이 금액·계좌를 숨긴다
  */
-export function findSupportProductSummary(supportProgramId: number): ApplicationProduct | null {
+export function findSupportProductSummary(
+  supportProgramId: number,
+): ApplicationSupportSummary | null {
   const found = mockPrograms.find((program) => program.supportProgramId === supportProgramId)
   if (!found) return null
 
   return {
-    name: found.pblancNm,
-    organization: found.jrsdInsttNm,
-    // 지원금은 0(무상), 금리 개념이 없는 공고는 null 이다
-    interestRate: found.type === 'LOAN' ? found.interestRate : found.type === 'SUPPORT' ? 0 : null,
-    minAmount: found.type === 'ETC' ? null : found.minBalance,
-    maxAmount: found.type === 'ETC' ? null : found.maxBalance,
-    deadline: found.endDate,
+    supportProgramId: found.supportProgramId,
+    programName: found.pblancNm,
+    jurisdiction: found.jrsdInsttNm,
+    supportType: SUPPORT_PROGRAM_TYPE_LABEL[found.type],
+    startDate: found.startDate,
+    endDate: found.endDate,
+    minBalance: found.type === 'ETC' ? null : found.minBalance,
+    maxBalance: found.type === 'ETC' ? null : found.maxBalance,
   }
 }
 

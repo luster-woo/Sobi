@@ -1,9 +1,10 @@
-"""공고 본문에서 자격 조건·필요 서류를 LLM으로 추출해 DB에 적재한다.
+"""공고 본문에서 자격 조건을 LLM으로 추출해 DB에 적재한다.
 
 공고당 GMS 1회 호출. 실패 시 hashtags 폴백(source='tag').
+필요 서류는 추출하지 않는다 — 정확도가 낮아 수기로 채우기로 했다.
 
     python scripts/extract_conditions.py
-    python scripts/extract_conditions.py --limit 5 --force
+    python scripts/extract_conditions.py --limit 5 --force --model gpt-4.1-mini
 """
 
 import argparse
@@ -11,23 +12,47 @@ import asyncio
 import json
 import re
 import sys
-import httpx
 from pathlib import Path
 
+import httpx
 import psycopg
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core import config, gms
+from pipeline.text import shrink
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
-TAG = re.compile(r"<[^>]+>")
-MAX_BODY_CHARS = 40000
+HTML_TAG = re.compile(r"<[^>]+>")
+TITLE_TAG = re.compile(r"^\s*\[([^\]]+)\]")
+MAX_BODY_CHARS = 20000
 CONCURRENCY = 4
 
 SIDO = ["서울", "부산", "대구", "인천", "대전", "울산", "세종", "경기", "강원",
         "충북", "충남", "전북", "전남광주", "경북", "경남", "제주"]
+
+# 정형 필드에 이미 담긴 내용. LLM이 지시를 어기고 넣는 경우가 잦다.
+REDUNDANT = re.compile(
+    r"상시\s*(종업원|근로자)|소상공인\s*(보호|기본)법|"
+    r"창업\s*\d+\s*년\s*(이상|이내|미만)|연매출액?\s*\d+\s*억"
+)
+
+# 서류 제출은 자격이 아니라 절차다. 다만 지역·업종·대표자처럼 실질 내용이
+# 함께 있으면 자격 조건이므로 남긴다.
+#   버림: "소상공인확인서 제출", "중소기업확인서 보유 업체"
+#   남김: "사업자등록증상 소재지가 제주인 소상공인"
+DOC_WORD = re.compile(r"증명서|증명원|확인서|수료증|납세증명")
+DOC_ACTION = re.compile(r"제출|발급|보유|소지|구비")
+SUBSTANTIVE = re.compile(r"소재|주소|관할|대표자|업종|휴·?폐업|체납|연령|나이")
+
+
+def is_noise(text: str) -> bool:
+    """자격 조건이 아닌 항목인지."""
+    if REDUNDANT.search(text):
+        return True
+    return bool(DOC_WORD.search(text) and DOC_ACTION.search(text)
+                and not SUBSTANTIVE.search(text))
 
 SIDO_ALIAS = {
     "전남": "전남광주", "광주": "전남광주",
@@ -41,10 +66,8 @@ SIDO_ALIAS = {
     "제주특별자치도": "제주", "제주도": "제주",
 }
 
-TITLE_TAG = re.compile(r"^\s*\[([^\]]+)\]")
-
 SYSTEM_PROMPT = f"""\
-너는 소상공인 정부지원사업 공고문에서 신청 자격과 필요 서류를 추출한다.
+너는 소상공인 정부지원사업 공고문에서 신청 자격을 추출한다.
 
 ## 절대 규칙
 확실하지 않으면 null을 쓴다. 틀린 값보다 null이 낫다.
@@ -55,72 +78,101 @@ SYSTEM_PROMPT = f"""\
 
 nationwide: 전국 대상이면 true, 특정 지역 한정이면 false
 region_sido: 다음 16개 중 하나 또는 null
-  서울 부산 대구 인천 대전 울산 세종 경기 강원 충북 충남 전북 전남광주 경북 경남 제주
-  - 전라남도·광주광역시는 둘 다 "전남광주"로 쓴다. "전남"이나 "광주"라고만 쓰지 않는다
-  - **신청 자격에 "~에 소재한 사업자"처럼 지역 제한이 명시된 경우에만 채운다**
-  - **수행기관 소재지, 지원 시설·센터의 위치, 행사 장소, 사업명에 들어간
-    지명은 지역 제한이 아니다.** 예) "소담스퀘어 in 부산"은 시설 위치일 뿐
-    전국 소상공인이 신청할 수 있으므로 nationwide=true, region_sido=null
-  - 공고문에 "관내"·"도내"로만 쓰여 있으면 주관기관으로 판단한다
-  - 판단이 서지 않으면 nationwide=true, region_sido=null 로 둔다
-    - **"우대"·"가점"·"우선 선정" 대상 지역은 제한이 아니다.** 전국 사업으로 보고
-    nationwide=true, region_sido=null 로 둔 뒤, llm_conditions에
-    category "region", mode "우대"로 기록한다
-    예) "경상북도 소재 소상공인 우대" → nationwide=true, region_sido=null
-  - region_sido를 채우는 것은 "~에 소재한 사업자만 신청 가능"처럼
-    해당 지역이 아니면 신청 자체가 불가능한 경우뿐이다
+  {' '.join(SIDO)}
+  - 전라남도·광주광역시는 둘 다 "전남광주"로 쓴다
+  - 신청 자격에 "~에 소재한 사업자"처럼 지역 제한이 명시된 경우에만 채운다
+  - 수행기관 소재지, 지원 시설·센터의 위치, 사업명에 들어간 지명은
+    지역 제한이 아니다. 예) "소담스퀘어 in 부산"은 시설 위치일 뿐이다
+  - "우대"·"가점" 대상 지역은 제한이 아니다. nationwide=true로 두고
+    llm_conditions에 mode "우대"로 기록한다
+  - 판단이 서지 않으면 nationwide=true, region_sido=null
+
+target_scale: "소상공인" | "소공인" | "중소기업" | "무관" | null
+  - 소공인은 제조업 기반 소상공인이다. 공고가 소공인 한정이면 "소공인"
+
 std_exclusion: 표준 융자제외업종 조항이 있으면 true
   - true: 유흥·도박·사행성 업종을 배제하거나, 표준산업분류 코드로 된
     제외업종 목록(붙임·별표 포함)이 있는 경우
   - false: 체납·폐업·중복수혜처럼 업종과 무관한 제외 사유만 있는 경우.
     "제외"라는 단어가 나온다고 true가 아니다
-  - 이 값이 true이면 llm_conditions에도 category "industry"로 조항을 남긴다.
-    조건부 허용·예외가 있으면 그 내용까지 적는다.
-    예) "부동산중개업은 전체의 20% 이내로 제한하여 허용"
-target_scale: "소상공인" | "소공인" | "중소기업" | "무관" | null
-  - 소공인은 제조업 기반 소상공인이다. 공고가 소공인 한정이면 "소공인"
+
 max_revenue: 연매출 상한(원 단위 정수). 없으면 null. 예) 3억원 → 300000000
 min_biz_months / max_biz_months: 업력 하한·상한(개월). 없으면 null
   - "창업 3년 이상" → min 36, "창업 7년 이내" → max 84
 
 type: 지원 방식으로 정한다
-  - "지원금": 현금·비용 보전·물품·시설개선 등을 무상 지원 (보조금, 수수료 지원, 임차료 지원)
-  - "대출": 융자, 이차보전, 보증. 돌려줘야 하거나 이자를 지원하는 것
-  - "기타": 교육, 컨설팅, 상담, 판로·마케팅 지원 등 금전 지급이 아닌 것
+  - "지원금": 현금·비용 보전·물품·시설개선 등 무상 지원
+  - "대출": 융자, 이차보전, 보증
+  - "기타": 교육, 컨설팅, 상담, 판로·마케팅 지원
 min_balance / max_balance: 지원·융자 금액 하한·상한(원). 없으면 null
 interest_rate: 이차보전·융자 금리(%). 없으면 null
 
 ## llm_conditions
-정형 필드로 표현할 수 없는 조건만 적는다.
-지역(시도)·규모·매출 상한·업력처럼 위 정형 필드에 이미 담은 조건은
-여기에 다시 쓰지 않는다. 시군구·읍면동은 정형 필드가 없으므로 여기에 쓴다.
-업력("창업 N년 이상/이내")은 min_biz_months·max_biz_months로만 표현하고
-llm_conditions에는 쓰지 않는다.
+
+정형 필드에 담은 내용은 여기에 쓰지 마라.
+  쓰지 않음: "상시근로자 5인 미만", "소상공인기본법 제2조에 따른 소상공인",
+            "연매출 N억원 이하", "창업 N년 이상/이내", 시도 수준의 지역
+  쓰는 것: 시군구·읍면동, 대표자 연령·성별, 업종·품목,
+          보유·가입·지위 요건, 본인 신고 사항
+
+조건 하나에 한 가지 내용만 담는다. 예외·할당·단서가 있으면 항목을 나눈다.
+  틀림: "별표1 제외업종은 지원 제외. 다만 부동산중개업(68221)은 신청 가능하며
+        전체의 20% 이내로 선착순 지원"
+  옳음: {{"direction": "결격", "text": "별표1 제외업종(도박·사행성·유흥 등)"}}
+        {{"direction": "요건", "text": "부동산 중개·대리업(68221)은 6개월 이상 동일장소 영업 시 신청 가능"}}
+        {{"direction": "결격", "text": "부동산중개업은 전체 지원규모의 20% 이내 선착순"}}
+
+조건은 12개를 넘기지 마라. 절차·심사 관련 항목은 버리고 자격에 직결되는 것만 남긴다.
+
 category: "region" | "owner" | "industry" | "self_report" | "other" | "track"
-  - region: 시군구·읍면동 한정 (시도는 정형 필드로 갔으므로 여기엔 세부 지역만)
+  - region: 시군구·읍면동 한정
   - owner: 대표자 연령·성별·자녀 등
   - industry: 필수 업종·취급 품목
-  - self_report: 휴폐업·체납·중복수혜·프랜차이즈 등 본인 신고 사항
+  - self_report: 휴폐업·체납·중복수혜 등 본인 신고 사항
   - track: 공고 내 트랙·유형 구분
+
 mode: "필수" | "우대"
-  - 충족하지 않아도 신청할 수 있으면 "우대"다. 가점·우선선정·우대금리가 여기 해당한다
+  다음 표현이 나오면 반드시 "우대"다.
+    우대, 우선지원, 우선 선정, 가점, 가산점, 배점, 인센티브,
+    우대금리, 지원비율 상향, 자부담 경감, 국비 지원 비율 우대
+  "~인 경우 우선지원 가능"은 우대다. 충족하지 않아도 신청할 수 있다.
+    예) "만 50세 이상 대표자 우선지원" → 우대
+    예) "인구감소지역 소재 시 우선지원" → 우대
+  "우선지원"·"우선 선정" 항목 아래 나열된 조건은 그 블록 전체가 우대다.
+  하위 항목에 "자격요건"이라는 표현이 있어도 우대다.
+  공고에 "일반지원"처럼 다른 신청 경로가 있으면, 우선지원 조건은 필수가 아니다.
+  "필수"는 충족하지 않으면 신청 자체가 불가능한 조건만이다.
+    예) "안동시에 사업장을 둔 소상공인" → 필수
+  mode에는 "필수" 또는 "우대"만 쓴다. "요건"·"결격"을 쓰지 마라.
 
-## documents
-doc_name: 서류 이름
-type: "제출용" | "작성용"
-  - 제출용: 이미 존재하는 서류를 발급받아 낸다 (사업자등록증, 통장사본, 증명원)
-  - 작성용: 빈 양식에 신청인이 채운다 (신청서, 동의서, 확약서, 사업계획서)
-  - 공고에 서식·양식 번호가 붙어 있으면 작성용이다
-attachment_index: 그 서류의 양식이 첨부파일 목록에 있으면 번호, 없으면 null
+direction: "요건" | "결격"
+  - 요건: 해당해야만 통과. 상품·설비 보유, 지위 지정(백년소상공인 등),
+    보험·대출 가입, 약정 체결, 대표자 연령·성별, 자녀 보유
+  - 결격: 해당하면 탈락. 체납, 휴·폐업, 중복 수혜, 제외업종, 위반건축물,
+    브로커 개입
+  지원 제외 대상으로 나열된 항목은 전부 "결격"이다. 요건으로 뒤집지 마라.
+  text와 direction은 일치해야 한다. text가 "~여야 함"이면 요건,
+  "~인 경우 신청 불가"면 결격이다. 원문에서의 위치보다 문장의 의미를 따른다.
 
+conditions에 넣지 않는 것
+  - 신청 절차·제출 방법·유형 선택 ("구입형·렌탈형 중 선택", "온라인 접수")
+  - 심사 방식, 선정 기준, 선착순 마감
+  - 제출 서류와 증빙 요구
+      예) "소상공인확인서 제출", "중소기업확인서 보유 업체",
+          "국세·지방세 완납증명서 제출 필수", "수료증 제출"
+      서류를 내라는 요구는 자격이 아니다.
+      다만 서류의 내용이 자격을 규정하면 그건 조건이다.
+      예) "사업자등록증상 소재지가 제주인 소상공인" → 지역 조건이므로 넣는다
+  - 공고에 없는 내용
+  
 ## 출력
-아래 JSON만 출력한다. 설명을 덧붙이지 않는다.
+아래 JSON 형식으로만 답한다. 설명을 덧붙이지 않는다.
 {{"nationwide": false, "region_sido": null, "target_scale": null,
   "std_exclusion": false, "max_revenue": null,
   "min_biz_months": null, "max_biz_months": null,
   "type": "기타", "min_balance": null, "max_balance": null, "interest_rate": null,
-  "llm_conditions": {{"conditions": [{{"category": "region", "text": "", "mode": "필수"}}]}},
-  "documents": [{{"doc_name": "", "type": "제출용", "attachment_index": null}}]}}
+  "llm_conditions": {{"conditions": [
+    {{"category": "region", "mode": "필수", "direction": "요건", "text": ""}}]}}}}
 """
 
 UPSERT_CONDITION = """
@@ -149,14 +201,9 @@ SET type = %(type)s, min_balance = %(min_balance)s,
 WHERE id = %(pid)s
 """
 
-INSERT_DOC = """
-INSERT INTO program_document (support_program_id, doc_name, type, url)
-VALUES (%s, %s, %s, %s)
-"""
-
 
 def strip_html(html: str) -> str:
-    return re.sub(r"\s+", " ", TAG.sub(" ", html or "").replace("&nbsp;", " ")).strip()
+    return re.sub(r"\s+", " ", HTML_TAG.sub(" ", html or "").replace("&nbsp;", " ")).strip()
 
 
 def find_body(pblanc_id: str) -> str | None:
@@ -172,24 +219,14 @@ def find_body(pblanc_id: str) -> str | None:
     return None
 
 
-def attachments(item: dict) -> list[tuple[str, str]]:
-    names = [n for n in (item.get("fileNm") or "").split("@") if n]
-    urls = [u for u in (item.get("flpthNm") or "").split("@") if u]
-    return list(zip(names, urls))
-
-
 def build_prompt(item: dict, body: str) -> str:
-    files = attachments(item)
-    lines = [
+    return "\n".join([
         f"# 공고 제목\n{item.get('pblancNm', '')}",
         f"\n# 주관기관\n{item.get('jrsdInsttNm', '')} / 수행 {item.get('excInsttNm', '')}",
         f"\n# 해시태그\n{item.get('hashtags', '')}",
-    ]
-    if files:
-        lines.append("\n# 첨부파일")
-        lines += [f"{i}: {name}" for i, (name, _) in enumerate(files)]
-    lines.append(f"\n# 공고 본문\n{body[:MAX_BODY_CHARS]}")
-    return "\n".join(lines)
+        f"\n# 공고 본문\n{shrink(body)[:MAX_BODY_CHARS]}",
+    ])
+
 
 def region_override(item: dict) -> tuple[bool, str] | None:
     """제목 태그로 시도를 결정한다. 태그가 없으면 None(=LLM 값 유지).
@@ -213,11 +250,7 @@ def region_override(item: dict) -> tuple[bool, str] | None:
 def from_hashtags(item: dict) -> dict:
     """LLM 실패 시 폴백. 해시태그에서 시도만 건진다."""
     tags = {t.strip() for t in (item.get("hashtags") or "").split(",")}
-    sido = None
-    for name in SIDO:
-        if name in tags:
-            sido = name
-            break
+    sido = next((name for name in SIDO if name in tags), None)
     if not sido and ({"광주", "전남"} & tags):
         sido = "전남광주"
     return {
@@ -225,8 +258,9 @@ def from_hashtags(item: dict) -> dict:
         "target_scale": None, "std_exclusion": False, "max_revenue": None,
         "min_biz_months": None, "max_biz_months": None,
         "type": "기타", "min_balance": None, "max_balance": None, "interest_rate": None,
-        "llm_conditions": {"conditions": []}, "documents": [],
+        "llm_conditions": {"conditions": []},
     }
+
 
 async def key_info() -> dict | None:
     """GMS 크레딧 조회. httpx 기본 UA로는 500이 나서 curl UA를 쓴다."""
@@ -244,6 +278,39 @@ async def key_info() -> dict | None:
     except Exception as e:
         print(f"크레딧 조회 실패: {type(e).__name__}: {e}")
         return None
+
+
+def normalize(data: dict, item: dict) -> dict:
+    """LLM 출력의 값 오염을 바로잡는다."""
+    override = region_override(item)
+    if override:
+        data["nationwide"], data["region_sido"] = override
+    else:
+        sido = SIDO_ALIAS.get(data.get("region_sido"), data.get("region_sido"))
+        data["region_sido"] = sido if sido in SIDO else None
+
+    if data.get("type") not in ("지원금", "대출", "기타"):
+        data["type"] = "기타"
+
+    lc = data.get("llm_conditions")
+    if isinstance(lc, list):
+        lc = {"conditions": lc}
+    if not isinstance(lc, dict):
+        lc = {"conditions": []}
+
+    conditions = []
+    for c in lc.get("conditions", []):
+        if is_noise(c.get("text", "")):
+            continue  # 정형 필드와 중복이거나 서류 제출 요구
+        if c.get("mode") not in ("필수", "우대"):
+            c["mode"] = "필수"
+        if c.get("direction") not in ("요건", "결격"):
+            c["direction"] = "결격"
+        conditions.append(c)
+
+    lc["conditions"] = conditions
+    data["llm_conditions"] = lc
+    return data
 
 
 async def extract(item: dict, body: str, sem: asyncio.Semaphore,
@@ -267,42 +334,21 @@ async def extract(item: dict, body: str, sem: asyncio.Semaphore,
             )
 
             if completion.choices[0].finish_reason == "length":
-                print("      경고: 응답 잘림 — 조건·서류가 누락됐을 수 있음")
-            tokens = completion.usage.total_tokens if completion.usage else 0
+                print("      경고: 응답 잘림 — 조건이 누락됐을 수 있음")
+            usage = completion.usage
+            tokens = usage.total_tokens if usage else 0
+            if usage:
+                print(f"      입력 {usage.prompt_tokens:,} / 출력 {usage.completion_tokens:,}")
 
             data = json.loads(completion.choices[0].message.content)
-
-            override = region_override(item)
-            if override:
-                data["nationwide"], data["region_sido"] = override
-            else:
-                sido = SIDO_ALIAS.get(data.get("region_sido"), data.get("region_sido"))
-                data["region_sido"] = sido if sido in SIDO else None
-
-            if data.get("type") not in ("지원금", "대출", "기타"):
-                data["type"] = "기타"
-
-            # 모델에 따라 배열로 주는 경우가 있다.
-            lc = data.get("llm_conditions")
-            if isinstance(lc, list):
-                lc = {"conditions": lc}
-            if not isinstance(lc, dict):
-                lc = {"conditions": []}
-            data["llm_conditions"] = lc
-
-            return data, "llm", tokens
+            return normalize(data, item), "llm", tokens
 
         except Exception as e:
             print(f"      LLM 실패 → 태그 폴백: {type(e).__name__}: {e}")
-            data = from_hashtags(item)
-            override = region_override(item)
-            if override:
-                data["nationwide"], data["region_sido"] = override
-            return data, "tag", 0
+            return normalize(from_hashtags(item), item), "tag", 0
 
 
-def save(conn, program_id: int, item: dict, data: dict, source: str) -> None:
-    files = attachments(item)
+def save(conn, program_id: int, data: dict, source: str) -> None:
     with conn.cursor() as cur:
         cur.execute(UPSERT_CONDITION, {
             "pid": program_id,
@@ -324,15 +370,6 @@ def save(conn, program_id: int, item: dict, data: dict, source: str) -> None:
             "max_balance": data.get("max_balance"),
             "interest_rate": data.get("interest_rate"),
         })
-
-        cur.execute("DELETE FROM program_document WHERE support_program_id = %s",
-                    (program_id,))
-        for doc in data.get("documents") or []:
-            idx = doc.get("attachment_index")
-            url = files[idx][1][:500] if isinstance(idx, int) and 0 <= idx < len(files) else None
-            doc_type = doc.get("type") if doc.get("type") in ("제출용", "작성용") else "제출용"
-            cur.execute(INSERT_DOC, (
-                program_id, (doc.get("doc_name") or "")[:200], doc_type, url))
 
 
 async def main() -> None:
@@ -374,16 +411,16 @@ async def main() -> None:
             body = find_body(pblanc_id) or strip_html(item.get("bsnsSumryCn", ""))
             data, source, tokens = await extract(item, body, sem, args.model)
             totals["tokens"] += tokens
-            save(conn, program_id, item, data, source)
+            save(conn, program_id, data, source)
             conn.commit()
             stats[source] += 1
-            cond = (data.get("llm_conditions") or {}).get("conditions", [])
+            conds = (data.get("llm_conditions") or {}).get("conditions", [])
+            우대 = sum(1 for c in conds if c.get("mode") == "우대")
             print(f"[{i:>3}/{len(targets)}] {pblanc_id[-6:]} {source:>3} "
                   f"{str(data.get('region_sido')):>6} "
                   f"{str(data.get('target_scale')):>5} "
-                  f"조건 {len(cond):>2} 서류 {len(data.get('documents') or []):>2} "
-                  f"{tokens:>6}토큰  "
-                  f"{item.get('pblancNm', '')[:28]}")
+                  f"조건 {len(conds):>2}(우대 {우대}) {tokens:>6}토큰  "
+                  f"{item.get('pblancNm', '')[:26]}")
 
         await asyncio.gather(*(run(pid, pbid, i)
                                for i, (pid, pbid) in enumerate(targets, 1)))

@@ -1,15 +1,16 @@
 """검색 결과를 LLM으로 검증한다.
 
 판정 범위는 사업자 프로필로 대조할 수 있는 조건으로 한정한다.
+조건의 mode/direction으로 처리 방식이 갈린다.
 설계 근거는 docs/04_judgement_design.md.
 """
 
 from __future__ import annotations
 
-import json
-import re
-import logging
 import asyncio
+import json
+import logging
+import re
 from datetime import date
 
 from app.core import gms
@@ -17,22 +18,45 @@ from app.rag import profile, search
 
 logger = logging.getLogger(__name__)
 
+BATCH_SIZE = 10  # 한 번에 판정할 공고 수. 응답 잘림을 막는다
+
+# 기업마당 제목 규칙: "[경북] 구미시 2026년 ..." — 태그 뒤 첫 토큰이 시군구다.
+TITLE_SIGUNGU = re.compile(r"^\s*\[[^\]]+\]\s*([가-힣]+[시군구])\s")
+
 SYSTEM_PROMPT = """\
 너는 소상공인 정부지원사업 자격 심사관이다.
 사업자 정보와 공고별 조건을 대조해 신청 자격을 판정한다.
 
 ## 판정 범위
 사업자 정보로 대조할 수 있는 조건만 판정한다.
+대조 가능한 정보: 주소(시도·시군구·읍면동), 업종, 표준 융자제외업종 해당 여부,
+대표자 연령, 개업일(업력·예비창업자 여부), 상시근로자 수, 연매출
 
-판정에 사용
-  region   시도·시군구·읍면동 → 사업자 주소와 대조
-  industry 업종·표준 융자제외업종 → 사업자 업종과 대조
-  owner    대표자 연령, 예비창업자 여부 → 생년월일·개업일과 대조
-  track    1인 사업장 등 규모 → 상시근로자 수와 대조
+## 조건 읽는 법
+각 조건에는 mode와 direction이 붙어 있다.
 
-판정하지 않음 — 전부 check_items로 옮긴다
-  self_report  체납, 휴·폐업, 중복 수혜, 위반건축물 등 본인 신고 사항
-  other        그 밖의 조건
+mode
+  "우대" — 판정에 쓰지 않는다. benefits에 넣는다
+  "필수" — 아래 direction에 따라 처리한다
+
+direction
+  "요건" — 해당해야만 통과하는 조건
+    대조 가능하고 충족 → 통과
+    대조 가능하고 미충족 → ineligible
+    대조 불가 → unknown
+  "결격" — 해당하면 탈락하는 조건
+    대조 가능하고 해당 → ineligible
+    대조 가능하고 해당 없음 → 통과
+    대조 불가 → 해당하지 않는 것으로 보고 check_items에 적는다
+
+## status
+  ineligible — 위 규칙으로 탈락이 하나라도 확인됨
+  unknown    — 탈락은 없으나 대조 불가한 "요건"이 있음
+  eligible   — 그 외
+
+확인 불가를 이유로 ineligible을 주지 마라.
+제공되지 않은 정보를 "없다" 또는 "있다"로 단정하지 마라.
+공고에 없는 조건을 지어내지 마라. 근거는 제공된 조건 목록에서만 찾는다.
 
 ## 제목에 표기된 지역
 기업마당이 제목 앞에 붙인 표기다. 참고 정보이며 조건 목록보다 우선하지 않는다.
@@ -41,44 +65,12 @@ SYSTEM_PROMPT = """\
     한정일 가능성이 높다고 보고 판단에 참고한다
   - 사업명에 들어간 지명이 지원 시설·센터의 위치일 수 있다는 점도 함께 고려한다
 
-## mode 해석
-  필수 — 충족하지 않으면 ineligible
-  제외 — 해당하면 ineligible. 해당 여부를 확인할 수 없으면
-         해당하지 않는 것으로 보고 check_items에 적는다
-  우대 — 판정에 쓰지 않는다. benefits에 넣는다
-
-## status
-  "ineligible" — 판정 범위 안의 조건이 명확히 어긋남이 확인됨
-  "unknown"    — 확인할 수 없는 필수 조건이 "해당해야만 통과"하는 종류일 때만.
-                 성별(여성기업), 신용점수, 특정 지위(새출발기금 약정,
-                 백년소상공인), 보험·대출 가입, 매출 감소율이 여기 해당한다
-  "eligible"   — 그 외. 확인 불가 조건이 결격사유형(체납·휴폐업·중복수혜)
-                 뿐이면 eligible이다
-
-## 확인할 수 없는 조건
-사업자 정보로 확인할 수 없는 조건은 방향에 따라 다르게 처리한다.
-
-"해당하지 않으면 통과"하는 조건 — 체납, 휴·폐업, 중복 수혜, 위반건축물,
-제외업종, 브로커 개입
-  → 충족한 것으로 보고 check_items에 적는다. status에 영향을 주지 않는다.
-
-"해당해야만 통과"하는 조건 — 특정 상품·설비 보유, 지위 지정(백년소상공인 등),
-보험·대출 가입, 약정 체결, 자녀·가족 요건, 신용점수, 성별, 트랙 선택
-  → status를 unknown으로 한다. check_items에도 적는다.
-
-제공되지 않은 정보를 "없다" 또는 "있다"로 단정하지 마라.
-  틀림: "대표자에게 만 2세 미만 자녀가 없으므로 부적합"
-  틀림: "육아휴직 대상자 조건 충족 가능"
-
-확인 불가를 이유로 ineligible을 주지 마라.
-공고에 없는 조건을 지어내지 마라. 근거는 제공된 조건 목록에서만 찾는다.
-
-적극요건형(해당해야만 통과하는 조건)을 확인할 수 없으면 반드시 unknown이다.
-자녀 유무, 특정 지위(새출발기금 약정, 백년소상공인), 보험·대출 가입,
-신용점수, 성별이 여기 해당한다.
-
-확인 불가를 이유로 ineligible을 주지 마라.
-공고에 없는 조건을 지어내지 마라. 근거는 제공된 조건 목록에서만 찾는다.
+## 업종 코드 체계
+사업자 업종은 CS 코드(소상공인 상권정보 분류)이고, 공고는 KSIC(한국표준산업분류)
+코드를 쓰는 경우가 많다. 두 체계는 번호가 다르므로 코드 숫자를 직접 비교하지 마라.
+업종 이름으로 대조한다.
+  예) 사업자 "부동산중개업" ↔ 공고 "부동산 중개·대리업(68221)" → 같은 업종
+  예) 사업자 "제과점" ↔ 공고 "식품제조업(KSIC C10)" → 제과점은 소매·음식점이므로 다름
 
 ## 출력
 아래 JSON 형식으로만 답한다. 설명을 덧붙이지 않는다.
@@ -89,11 +81,6 @@ reason은 판정 근거를 한 문장으로. ineligible이면 무엇이 어긋�
 check_items는 신청 전 사업자가 직접 확인해야 할 항목이다.
 benefits는 우대 조건을 그대로 옮긴다. 없으면 빈 배열.
 """
-
-JUDGED = ("region", "industry", "owner", "track")
-
-# 기업마당 제목 규칙: "[경북] 구미시 2026년 ..." — 태그 뒤 첫 토큰이 시군구다.
-TITLE_SIGUNGU = re.compile(r"^\s*\[[^\]]+\]\s*([가-힣]+[시군구])\s")
 
 
 def _sigungu(title: str) -> str | None:
@@ -133,7 +120,7 @@ def _build_user_prompt(
         lines.append(f"\n## program_id: {hit.program_id}")
         lines.append(hit.title)
 
-        sigungu = _sigungu(hit.title)          # ← 여기
+        sigungu = _sigungu(hit.title)
         if sigungu:
             lines.append(f"- (참고) 제목에 표기된 지역: {sigungu}")
 
@@ -143,14 +130,10 @@ def _build_user_prompt(
             continue
         for c in conditions:
             mode = c.get("mode", "필수")
+            direction = c.get("direction", "결격")
             category = c.get("category", "other")
-            lines.append(f"- [{mode}/{category}] {c.get('text', '')}")
+            lines.append(f"- [{mode}/{direction}/{category}] {c.get('text', '')}")
     return "\n".join(lines)
-
-
-import asyncio
-
-BATCH_SIZE = 10  # 한 번에 판정할 공고 수. 출력 잘림을 막는다
 
 
 async def _judge(hits: list[search.ProgramHit], *, model: str,
@@ -182,6 +165,7 @@ async def _judge(hits: list[search.ProgramHit], *, model: str,
     if missing:
         logger.warning("판정 누락 %d건: %s", len(missing), sorted(missing))
     return parsed, tokens
+
 
 async def recommend(
     *,
@@ -218,7 +202,6 @@ async def recommend(
             "annual_revenue": annual_revenue,
             "birth_date": birth_date,
         }
-        # 한 번에 많이 넣으면 응답이 잘려 뒤쪽 공고가 누락된다.
         batches = [result.hits[i:i + BATCH_SIZE]
                    for i in range(0, len(result.hits), BATCH_SIZE)]
         outcomes = await asyncio.gather(

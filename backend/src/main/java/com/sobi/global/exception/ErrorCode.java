@@ -68,7 +68,9 @@ public enum ErrorCode {
     APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "APPLICATION_001", "존재하지 않는 신청입니다."),
     APPLICATION_ALREADY_IN_PROGRESS(HttpStatus.CONFLICT, "APPLICATION_002", "이미 신청이 진행 중이거나 지급이 완료된 상품입니다."),
     APPLICATION_TYPE_BAD_REQUEST(HttpStatus.BAD_REQUEST, "APPLICATION_003", "신청 종류는 LOAN 또는 SUPPORT 만 가능합니다."),
-    APPLICATION_PERIOD_CLOSED(HttpStatus.BAD_REQUEST, "APPLICATION_004", "신청 기간이 아닌 지원사업입니다.");
+    APPLICATION_PERIOD_CLOSED(HttpStatus.BAD_REQUEST, "APPLICATION_004", "신청 기간이 아닌 지원사업입니다."),
+    APPLICATION_STATUS_BAD_REQUEST(HttpStatus.BAD_REQUEST, "APPLICATION_005", "신청 상태 필터는 IN_PROGRESS 또는 DONE 만 가능합니다."),
+    APPLICATION_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "APPLICATION_006", "작성 중인 신청만 취소할 수 있습니다.");
 
 
     private final HttpStatus status;

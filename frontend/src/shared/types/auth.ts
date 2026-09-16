@@ -1,3 +1,4 @@
+import type { ISODate } from '@/shared/types/common'
 import type { UserRole } from '@/shared/types/user'
 
 /**
@@ -14,13 +15,21 @@ export interface LoginRequest {
 }
 
 /**
- * 명세가 받는 필드는 셋뿐이다. `role` 은 가입 시점에 정해지지 않고
+ * 백엔드 `SignupRequest` 와 1:1. `role` 은 가입 시점에 정해지지 않고
  * `POST /business` 로 업체를 등록하면 ENTREPRENEUR 가 된다.
  */
 export interface SignUpRequest {
   email: string
   password: string
   name: string
+  /**
+   * 생년월일 'YYYY-MM-DD'. 백엔드 `SignupRequest.birthDate` 는 `@NotNull @Past` 라
+   * **필수이고 오늘은 안 된다** — 오늘을 보내면 400 COMMON_001 이다.
+   *
+   * ⚠️ `users.birth_date` 컬럼 자체는 nullable 이다. 소셜 가입은 구글이 생일을 안 줘서
+   *    비워 두기로 했고(V23 마이그레이션 주석), 로컬 가입만 필수다.
+   */
+  birthDate: ISODate
 }
 
 export interface TokenResponse {

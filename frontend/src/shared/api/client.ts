@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 
 import { API_BASE_URL, endpoints, NO_REISSUE_PATHS } from '@/shared/api/endpoints'
+import { clearAuthState } from '@/shared/lib/clearAuthState'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import type { ApiResponse, TokenResponse } from '@/shared/types'
@@ -172,8 +173,14 @@ api.interceptors.response.use(unwrapEnvelope, async (error: AxiosError) => {
     config.headers.Authorization = `Bearer ${accessToken}`
     return await api(config)
   } catch (reissueError) {
-    // 재발급까지 실패하면 세션을 되살릴 방법이 없다. 라우팅은 보호 라우트가 판단한다
-    useAuthStore.getState().clearSession()
+    /*
+     * 재발급까지 실패하면 세션을 되살릴 방법이 없다. 라우팅은 보호 라우트가 판단한다.
+     *
+     * ⚠️ `clearSession()` 만 부르면 안 된다. react-query 캐시에 이전 사용자의 응답이
+     *    gcTime(5분) 동안 남아, 같은 탭에서 다른 계정으로 들어오면 첫 화면에 스친다.
+     *    로그아웃·탈퇴와 같은 정리를 쓴다.
+     */
+    clearAuthState()
     return Promise.reject(reissueError)
   }
 })

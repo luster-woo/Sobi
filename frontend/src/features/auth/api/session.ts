@@ -22,7 +22,14 @@ export async function getMe() {
   return data
 }
 
-/** 로그아웃. 서버가 refreshToken 쿠키를 지운다. 프론트 상태 정리는 `useLogout` 이 한다 */
+/**
+ * 로그아웃. 서버가 Redis 의 refreshToken 을 지워 재발급을 막는다.
+ * 프론트 상태 정리는 `useLogout`·`useIdleLogout` 이 한다.
+ *
+ * ⚠️ **쿠키는 안 지워진다.** `AuthController.logout` 이 만료 쿠키를 만들어 놓고 응답
+ *    헤더에 싣지 않는다(탈퇴 쪽은 제대로 싣는다). Redis 기록이 없어 재발급은 실패하므로
+ *    실피해는 없지만, 브라우저에는 값이 남는다 — 백엔드 수정 요청해 둔 상태다.
+ */
 export async function logout() {
   await api.post(endpoints.auth.logout)
 }

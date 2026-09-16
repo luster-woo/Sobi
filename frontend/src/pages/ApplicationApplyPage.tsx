@@ -293,7 +293,7 @@ export function ApplicationApplyPage() {
             <Panel title="승인되면 출금 계좌로">
               <div className="px-[15px] py-4">
                 <p className="text-body1 text-text font-semibold">
-                  {selectedAccount.bankName} {selectedAccount.accountNo}
+                  {selectedAccount.bankName} {maskAccountNo(selectedAccount.accountNo)}
                 </p>
                 <p className="text-body2 text-text-secondary mt-1 break-keep">
                   신청 화면에서 고른 출금 계좌예요. 실행금 입금과 자동상환에 사용돼요.

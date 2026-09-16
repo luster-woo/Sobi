@@ -1,8 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 
 import { logout } from '@/features/auth/api/session'
 import { ROUTES } from '@/shared/constants/routes'
-import { useAuthStore } from '@/shared/lib/store/useAuthStore'
+import { clearAuthState } from '@/shared/lib/clearAuthState'
 
 /**
  * 로그아웃. 서버 호출이 실패해도 세션은 정리한다.
@@ -19,14 +19,11 @@ import { useAuthStore } from '@/shared/lib/store/useAuthStore'
  *    로그아웃은 그 편이 안전하기도 하다.
  */
 export function useLogout() {
-  const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: logout,
     onSettled: () => {
       // 이동 전에도 지운다. 이동이 막히는 환경에서도 세션은 남지 않아야 한다
-      useAuthStore.getState().clearSession()
-      queryClient.clear()
+      clearAuthState()
 
       window.location.replace(ROUTES.HOME)
     },

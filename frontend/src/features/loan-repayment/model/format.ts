@@ -21,11 +21,12 @@ export function formatDotDate(isoDate: string | null): string {
 }
 
 /**
- * 계좌번호 뒷자리만. '0324003842129948' → '****-9948'
+ * 계좌번호 마스킹.
  *
- * 전체를 보여줄 이유가 없고, 로그인한 본인 화면이라도 화면 공유·어깨너머로 새어 나간다.
+ * 구현은 `shared/utils/mask.ts` 로 옮겼다 — 신청 화면도 같은 값을 그대로 노출하고
+ * 있어서 상환 화면 전용으로 둘 이유가 없었다 (S15P21D101-395).
+ *
+ * 여기서 다시 내보내는 이유는 이 파일을 쓰던 세 컴포넌트의 import 를 건드리지 않기
+ * 위해서다. 새 코드는 `shared/utils/mask` 에서 바로 가져다 쓸 것.
  */
-export function maskAccountNo(accountNo: string): string {
-  const tail = accountNo.slice(-4)
-  return tail ? `****-${tail}` : '-'
-}
+export { maskAccountNo } from '@/shared/utils/mask'

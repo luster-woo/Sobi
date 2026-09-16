@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 
 import { useBusinessSummary } from '@/features/business/hooks/useBusinessSummary'
+import { getErrorStatus } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { isPreOwner } from '@/shared/types'
@@ -24,7 +25,7 @@ function Frame({ children }: { children: ReactNode }) {
  */
 export function SidebarBusinessCard() {
   const role = useAuthStore((s) => s.user?.role)
-  const { data, isPending, isError } = useBusinessSummary()
+  const { data, isPending, isError, error } = useBusinessSummary()
 
   if (isPreOwner(role ?? null)) return null
 
@@ -43,7 +44,17 @@ export function SidebarBusinessCard() {
     )
   }
 
-  if (isError || !data) {
+  /*
+   * ⚠️ **404 만 '미등록'이다.** 예전에는 `isError` 를 전부 미등록으로 그렸는데, 그러면
+   *    401·500·네트워크 끊김에도 '업체 등록하기' 가 떠서 **이미 등록한 사업자를 등록
+   *    화면으로 보낸다.** 거기서 같은 사업자번호를 다시 넣으면 unique 제약에 걸려 500 이
+   *    나고, 백엔드에 user 당 1건 제약이 없어 다른 번호로는 행이 둘 생긴다 —
+   *    그러면 `findByUserId` 가 단건을 못 골라 `/business/me` 와 `/insurance` 가
+   *    영구 500 이 된다. 잘못된 안내 하나가 계정을 못 쓰게 만드는 경로다.
+   *
+   *    미등록 응답은 404 BUSINESS_O04 뿐이다(`BusinessServiceImpl`).
+   */
+  if (isError && getErrorStatus(error) === 404) {
     return (
       <Frame>
         {/* 업체 등록은 사업자 인증 화면에서 한다. /onboarding 은 라우트가 없어 404 였다 */}
@@ -57,6 +68,12 @@ export function SidebarBusinessCard() {
       </Frame>
     )
   }
+
+  /*
+   * 그 밖의 실패는 아무것도 그리지 않는다. 사이드바 한 칸이라 오류를 설명할 자리가
+   * 없고, 잘못 안내하느니 비워 두는 편이 낫다 — 진짜 문제는 본문 화면이 알린다.
+   */
+  if (isError || !data) return null
 
   const { name, region, industryName } = data
 

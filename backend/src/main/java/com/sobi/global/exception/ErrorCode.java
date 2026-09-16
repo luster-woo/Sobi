@@ -34,6 +34,9 @@ public enum ErrorCode {
     LOCAL_LOGIN_ONLY(HttpStatus.BAD_REQUEST, "AUTH_017", "소셜 로그인 계정은 비밀번호를 변경할 수 없습니다."),
     SOCIAL_LOGIN_RESET_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "AUTH_018", "소셜 로그인으로 가입된 계정입니다. 소셜 로그인으로 시도해주세요."),
 
+    // 마이데이터
+    MYDATA_NOT_FOUND(HttpStatus.NOT_FOUND, "MYDATA_001", "마이데이터에 등록되지 않은 사업자입니다."),
+
     // business 관련
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_001", "사업자 번호가 일치하는 사업자 정보를 찾을 수 없습니다."),
     BUSINESS_INFO_MISMATCH(HttpStatus.BAD_REQUEST, "BUSINESS_002", "입력한 사업자 정보와 실제 등록된 사업자 정보가 일치하지 않습니다."),

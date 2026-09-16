@@ -14,4 +14,6 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     // 제출 시 선택한 계좌가 본인 것인지 확인하기 위해 사용자까지 조건으로 건다
     Optional<Account> findByIdAndUser_Id(Long id, Long userId);
+
+    boolean existsByAccountNo(String accountNo);
 }

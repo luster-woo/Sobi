@@ -25,6 +25,13 @@ interface ProgressStepperProps {
    * 이 점만 위험 색으로 그린다. 선은 지나온 길이라 완료 색 그대로 둔다.
    */
   failedIndex?: number | null
+  /**
+   * 마지막 단계까지 끝났는지. 끝난 건에는 박동을 주지 않는다.
+   *
+   * doneCount 만으로는 가릴 수 없다. 4단계를 다 지난 것과 3단계에서 멈춘 것이
+   * 다른데, 지급까지 끝난 건에 계속 심장이 뛰면 아직 진행 중으로 읽힌다.
+   */
+  settled?: boolean
   className?: string
 }
 
@@ -43,18 +50,32 @@ interface ProgressStepperProps {
  *
  * 지나온 선은 점 테두리와 같은 3px 로 긋는다. 1px 이면 점만 굵고 선은 가늘어서 따로 노는
  * 것처럼 보인다. 아직 안 지난 구간은 1px 그대로 둔다 — 굵기 차이가 곧 진행 여부다.
+ *
+ * 마지막으로 칠해진 점이 박동한다. 색만으로는 '여기까지 왔다' 는 보이지만 '지금 여기에
+ * 있다' 가 안 보인다 — 다 지난 점과 방금 도달한 점이 똑같이 초록이기 때문이다.
+ * 심사에 들어간 것과 심사를 마친 것은 사용자에게 전혀 다른 상황이다.
  */
 export default function ProgressStepper({
   steps,
   doneCount,
   failedIndex = null,
+  settled = false,
   className,
 }: ProgressStepperProps) {
+  /*
+   * 지금 서 있는 자리는 마지막으로 칠해진 점이다. doneCount 가 '지나온 개수' 가 아니라
+   * '들어간 개수' 라서 그렇다 — 심사 중이면 심사까지 칠해진다.
+   *
+   * 아직 한 칸도 안 갔거나(0), 막혔거나, 다 끝났으면 박동할 자리가 없다.
+   */
+  const currentIndex = settled || failedIndex !== null || doneCount === 0 ? null : doneCount - 1
+
   return (
     <ol className={cn('flex', className)}>
       {steps.map((step, index) => {
         const failed = index === failedIndex
         const done = index < doneCount
+        const current = index === currentIndex
         /* 선 색 기준. 막힌 단계도 거기까지는 진행된 것이라 이어진 것으로 본다 */
         const reached = done || failed
 
@@ -82,7 +103,18 @@ export default function ProgressStepper({
                     ? 'border-primary bg-primary-soft'
                     : 'border-border-strong bg-surface',
               )}
-            />
+            >
+              {/*
+                박동하는 링. 점 뒤에 깔고 커지며 사라진다. 점 자체를 키우면 칸 높이가
+                흔들려 줄 전체가 들썩인다. -z-10 으로 테두리 아래에 둔다.
+              */}
+              {current && (
+                <span
+                  aria-hidden="true"
+                  className="animate-pulse-ring bg-primary absolute -z-10 size-full rounded-full"
+                />
+              )}
+            </span>
 
             <span
               className={cn(

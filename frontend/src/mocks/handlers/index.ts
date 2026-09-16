@@ -5,6 +5,7 @@ import { createServerFirstProbes } from '@/mocks/lib/serverFirst'
 import { accountHandlers } from './account'
 import { applicationHandlers } from './application'
 import { authHandlers } from './auth'
+import { bookmarkHandlers } from './bookmark'
 import { businessHandlers } from './business'
 import { fundingHandlers } from './funding'
 import { insuranceHandlers } from './insurance'
@@ -19,6 +20,7 @@ const HANDLERS_BY_DOMAIN = {
   account: accountHandlers,
   application: applicationHandlers,
   auth: authHandlers,
+  bookmark: bookmarkHandlers,
   business: businessHandlers,
   funding: fundingHandlers,
   insurance: insuranceHandlers,

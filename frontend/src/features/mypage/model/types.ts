@@ -136,7 +136,13 @@ export interface FavoriteLoan extends FavoriteBase {
   interestRate: number
   /** 한도 상한(원) */
   maxLoanBalance: number
-  /** 대출 기간(개월). 보조 문구에 '36개월' 로 붙는다 */
+  /**
+   * 대출 기간(**일**). 보조 문구에 '360일' 로 붙는다.
+   *
+   * ⚠️ 개월이 아니다. 금융망 대출이 일 단위로 매일 한 회차씩 갚는 구조라
+   *    백엔드 `LoanDetailResponse` 도 '대출 기간(일)' 로 적어 뒀고, 대출 상세 모달도
+   *    `{period}일` 로 그린다. 개월로 읽으면 30배 긴 상품이 된다.
+   */
   period: number
 }
 

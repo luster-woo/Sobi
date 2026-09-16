@@ -138,9 +138,9 @@ export const endpoints = {
    *    `"LOAN"` · `"SUPPORT"` 두 문자열만 받고 나머지는 400 을 준다.
    */
   bookmark: {
-    /** query `type`. 이미 담긴 것을 또 담으면 400 BOOKMARK_ALREADY_EXISTS */
+    /** query `type`. 이미 담긴 것을 또 담으면 409 BOOKMARK_003 */
     add: (programId: number) => `/bookmark/${programId}`,
-    /** query `type`. 담기지 않은 것을 빼면 404 BOOKMARK_NOT_FOUND */
+    /** query `type`. 담기지 않은 것을 빼면 404 BOOKMARK_005 */
     remove: (programId: number) => `/bookmark/${programId}`,
     /**
      * 내 관심 목록. 대출과 지원사업을 `{ loanList, supportProgramList }` 두 배열로 나눠 준다.

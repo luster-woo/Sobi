@@ -4,16 +4,27 @@ import com.sobi.application.dto.ApplicationCreateResponse;
 import com.sobi.application.dto.ApplicationDetailResponse;
 import com.sobi.application.dto.ApplicationListResponse;
 import com.sobi.application.dto.ApplicationSummaryResponse;
+import com.sobi.application.dto.ApplicationSubmitRequest;
+import com.sobi.application.dto.ApplicationSubmitResponse;
 import com.sobi.application.entity.Application;
 import com.sobi.application.entity.ApplicationDocument;
 import com.sobi.application.entity.ApplicationStatus;
 import com.sobi.application.entity.ApplicationStatusFilter;
 import com.sobi.application.entity.ApplicationType;
+import com.sobi.application.entity.ValidationStatus;
+import com.sobi.account.entity.Account;
+import com.sobi.account.repository.AccountRepository;
+import com.sobi.business.repository.BusinessReporitory;
 import com.sobi.application.repository.ApplicationDocumentRepository;
 import com.sobi.application.repository.ApplicationRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.loan.client.SsafyLoanClient;
+import com.sobi.loan.clientDto.SsafyLoanAccount;
+import com.sobi.loan.dto.EligibilityResult;
+import com.sobi.loan.dto.LoanEligibility;
 import com.sobi.loan.entity.Loan;
+import com.sobi.loan.service.LoanEligibilityChecker;
 import com.sobi.loan.repository.LoanDocumentRepository;
 import com.sobi.loan.repository.LoanRepository;
 import com.sobi.support.entity.SupportProgram;
@@ -31,6 +42,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +51,12 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 
+    private static final String APPROVED_DECISION = "승인";            // 금융망 심사 결과
+    private static final String COMMON_ACCOUNT_TYPE = "COMMON";       // 수시입출금 계좌
+    private static final String LOAN_ACCOUNT_TYPE = "LOAN";           // 대출 계좌
+    private static final String NON_MONETARY_SUPPORT_TYPE = "기타";    // 돈이 오가지 않는 지원사업
+    private static final String REJECT_REASON_CREDIT_RATING = "금융망 심사 거절 (신용등급 기준 미달)";
+
     private final ApplicationRepository applicationRepository;
     private final ApplicationDocumentRepository applicationDocumentRepository;
     private final LoanRepository loanRepository;
@@ -46,6 +64,10 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final SupportProgramRepository supportProgramRepository;
     private final ProgramDocumentRepository programDocumentRepository;
     private final UserRepository userRepository;
+    private final AccountRepository accountRepository;
+    private final BusinessReporitory businessReporitory;
+    private final LoanEligibilityChecker eligibilityChecker;
+    private final SsafyLoanClient loanClient;
 
     /**
      * [신청] 클릭 시 호출. 작성 중(PREPARING) 신청이 있으면 새로 만들지 않고 그 신청을 반환
@@ -141,6 +163,169 @@ public class ApplicationServiceImpl implements ApplicationService {
         // 서류 행은 application_document 의 ON DELETE CASCADE 로 함께 삭제
         // 업로드된 실제 파일(stored_path)은 업로드 기능 구현 시 함께 정리
         applicationRepository.delete(application);
+    }
+
+    /**
+     * [신청하기]. 
+     * 대출: 조건 재판정 → 금융망 심사(2.7.5) → 승인 시 가입(2.7.7) → 대출 계좌 저장 → PAID
+     * 지원사업: 금융망 호출 없이 바로 PAID (지원 형태가 '기타'면 금액·계좌 없이)
+     */
+    @Override
+    @Transactional
+    public ApplicationSubmitResponse submit(Long userId, Long applicationId, ApplicationSubmitRequest request) {
+
+        User user = findUser(userId);
+
+        Application application = applicationRepository.findByIdAndUser_Id(applicationId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.APPLICATION_NOT_FOUND));
+
+        if (ApplicationStatus.valueOf(application.getStatus()) != ApplicationStatus.PREPARING) {
+            throw new BusinessException(ErrorCode.APPLICATION_SUBMIT_NOT_ALLOWED);
+        }
+
+        // 프론트 버튼만으로는 우회할 수 있으므로 서버에서 다시 검사
+        validateDocumentsPassed(applicationId);
+
+        if (application.getLoan() != null) {
+            return submitLoan(userId, user, application, request);
+        }
+        if (application.getSupportProgram() != null) {
+            return submitSupport(userId, user, application, request);
+        }
+        // 상품·사업이 삭제된 신청(ON DELETE SET NULL)은 제출할 수 없다
+        throw new BusinessException(ErrorCode.APPLICATION_SUBMIT_NOT_ALLOWED);
+    }
+
+    // 대출 신청(싸피 금융망 API)
+    private ApplicationSubmitResponse submitLoan(
+            Long userId,
+            User user,
+            Application application,
+            ApplicationSubmitRequest request
+    ) {
+
+        Loan loan = application.getLoan();
+
+        // 작성 중에 신용등급·사업자 정보가 바뀌었을 수 있어 제출 시점에 다시 판정
+        EligibilityResult eligibility = eligibilityChecker.check(
+                loan, user.getCreditRating(), businessReporitory.findByUserId(userId));
+
+        if (eligibility.getEligibility() != LoanEligibility.ELIGIBLE) {
+            throw new BusinessException(ErrorCode.APPLICATION_NOT_ELIGIBLE);
+        }
+
+        // 금융망에 보내기 전에 검증해 A1037(가입 불가 금액)·A1003(계좌 오류)을 미리 막는다
+        Long amount = requireAmount(request, loan.getMinLoanBalance(), loan.getMaxLoanBalance());
+        Account account = findMyDepositAccount(userId, request.getAccountId());
+
+        // 심사는 신청 즉시 결과가 나온다. 거절도 정상 응답이라 신청을 반려로 남긴다
+        String decision = callFinance(() ->
+                loanClient.createLoanApplication(user.getUserKey(), loan.getAccountTypeUniqueNo())
+        ).getApplication().getStatus();
+
+        if (!APPROVED_DECISION.equals(decision)) {
+            application.reject(REJECT_REASON_CREDIT_RATING, LocalDateTime.now(KOREA_ZONE));
+            return ApplicationSubmitResponse.of(application, null);
+        }
+
+        // 가입하면 대출금이 선택한 계좌로 입금되고, 다음날부터 같은 계좌에서 자동 상환된다
+        SsafyLoanAccount loanAccount = callFinance(() ->
+                loanClient.createLoanAccount(
+                        user.getUserKey(), loan.getAccountTypeUniqueNo(), amount, account.getAccountNo())
+        ).getAccount();
+
+        // 개설된 대출 계좌를 우리 DB 에도 남긴다 (상환 관리에서 사용)
+        accountRepository.save(
+                Account.builder()
+                        .user(user)
+                        .bankName(loan.getBankName())
+                        .accountNo(loanAccount.getAccountNo())
+                        .type(LOAN_ACCOUNT_TYPE)
+                        .transferAccount(account.getAccountNo())
+                        .build()
+        );
+
+        application.pay(amount, account, LocalDateTime.now(KOREA_ZONE));
+
+        return ApplicationSubmitResponse.of(application, loanAccount.getAccountNo());
+    }
+
+    // 지원 사업 신청
+    private ApplicationSubmitResponse submitSupport(
+            Long userId,
+            User user,
+            Application application,
+            ApplicationSubmitRequest request
+    ) {
+
+        SupportProgram program = application.getSupportProgram();
+
+        // 작성 중에 마감됐을 수 있으므로 제출 시점에도 모집 기간을 확인한다
+        validateApplicationPeriod(program);
+
+        // 지원 형태가 '기타'면 돈이 오가지 않아 금액·계좌를 받지 않는다
+        if (NON_MONETARY_SUPPORT_TYPE.equals(program.getType())) {
+            application.pay(null, null, LocalDateTime.now(KOREA_ZONE));
+            return ApplicationSubmitResponse.of(application, null);
+        }
+
+        Long amount = requireAmount(request, program.getMinBalance(), program.getMaxBalance());
+        Account account = findMyDepositAccount(userId, request.getAccountId());
+
+        // 지원사업은 금융망 상품이 아니라 심사 없이 바로 지급 처리
+        application.pay(amount, account, LocalDateTime.now(KOREA_ZONE));
+
+        return ApplicationSubmitResponse.of(application, null);
+    }
+
+    // 서류가 하나라도 검증 통과가 아니면 제출할 수 없다 (서류가 없는 지원사업은 바로 통과)
+    private void validateDocumentsPassed(Long applicationId) {
+
+        boolean allPassed = applicationDocumentRepository
+                .findAllWithRequiredDocumentByApplicationId(applicationId).stream()
+                .allMatch(document -> ValidationStatus.PASSED.name().equals(document.getValidationStatus()));
+
+        if (!allPassed) {
+            throw new BusinessException(ErrorCode.APPLICATION_DOCUMENT_NOT_COMPLETED);
+        }
+    }
+
+    // 상품의 최소·최대 금액 범위 검사 (지원사업은 값이 없을 수 있다)
+    private Long requireAmount(ApplicationSubmitRequest request, Long minBalance, Long maxBalance) {
+
+        Long amount = request.getAmount();
+
+        if (amount == null || amount <= 0
+                || (minBalance != null && amount < minBalance)
+                || (maxBalance != null && amount > maxBalance)) {
+            throw new BusinessException(ErrorCode.APPLICATION_AMOUNT_INVALID);
+        }
+        return amount;
+    }
+
+    // 본인 명의의 수시입출금(COMMON) 계좌만 허용. 계좌번호 문자열로 받으면 남의 계좌도 막을 수 없다
+    private Account findMyDepositAccount(Long userId, Long accountId) {
+
+        if (accountId == null) {
+            throw new BusinessException(ErrorCode.APPLICATION_ACCOUNT_INVALID);
+        }
+
+        Account account = accountRepository.findByIdAndUser_Id(accountId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.APPLICATION_ACCOUNT_INVALID));
+
+        if (!COMMON_ACCOUNT_TYPE.equals(account.getType())) {
+            throw new BusinessException(ErrorCode.APPLICATION_ACCOUNT_INVALID);
+        }
+        return account;
+    }
+
+    // 금융망 오류(A1084 이미 승인, A1014 잔액 부족 등)는 모두 500 으로 내보낸다
+    private <T> T callFinance(Supplier<T> financeCall) {
+        try {
+            return financeCall.get();
+        } catch (RuntimeException e) {
+            throw new BusinessException(ErrorCode.FINANCE_API_ERROR);
+        }
     }
 
     /**

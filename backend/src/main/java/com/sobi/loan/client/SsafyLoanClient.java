@@ -92,4 +92,58 @@ public class SsafyLoanClient {
                 SsafyCreateLoanProductResponse.class
         );
     }
+
+    // 2.7.5 대출심사 신청 - 신청 즉시 승인/거절이 결정되고, 이미 승인된 상품이면 A1084
+    public SsafyCreateLoanApplicationResponse createLoanApplication(
+            String userKey,
+            String accountTypeUniqueNo
+    ) {
+
+        SsafyRequestHeader header =
+                headerFactory.create(
+                        SsafyFinanceApi.CREATE_LOAN_APPLICATION,
+                        userKey
+                );
+
+        SsafyCreateLoanApplicationRequest request =
+                SsafyCreateLoanApplicationRequest.builder()
+                        .header(header)
+                        .accountTypeUniqueNo(accountTypeUniqueNo)
+                        .build();
+
+        return financeClient.post(
+                "/edu/loan/createLoanApplication",
+                request,
+                SsafyCreateLoanApplicationResponse.class
+        );
+    }
+
+    // 2.7.7 대출 상품 가입 - 심사 승인된 상품만 가능. 대출금은 출금 계좌로 입금되고 다음날부터 같은 계좌에서 자동 상환된다
+    public SsafyCreateLoanAccountResponse createLoanAccount(
+            String userKey,
+            String accountTypeUniqueNo,
+            Long loanBalance,
+            String withdrawalAccountNo
+    ) {
+
+        SsafyRequestHeader header =
+                headerFactory.create(
+                        SsafyFinanceApi.CREATE_LOAN_ACCOUNT,
+                        userKey
+                );
+
+        SsafyCreateLoanAccountRequest request =
+                SsafyCreateLoanAccountRequest.builder()
+                        .header(header)
+                        .accountTypeUniqueNo(accountTypeUniqueNo)
+                        .loanBalance(String.valueOf(loanBalance))
+                        .withdrawalAccountNo(withdrawalAccountNo)
+                        .build();
+
+        return financeClient.post(
+                "/edu/loan/createLoanAccount",
+                request,
+                SsafyCreateLoanAccountResponse.class
+        );
+    }
 }

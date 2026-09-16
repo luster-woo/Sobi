@@ -84,4 +84,10 @@ export const VALIDATION_MESSAGE = {
 
   dateFormat: 'YYYY-MM-DD 형식으로 입력해 주세요.',
   dateFuture: '오늘 이전 날짜를 입력해 주세요.',
+  /**
+   * 생년월일 전용. `dateFuture` 와 달리 **오늘도 안 된다** — 백엔드가 `@Past` 라
+   * 오늘 날짜를 보내면 400 이다. 문구를 따로 두지 않으면 '오늘 이전' 이라고 안내해
+   * 놓고 오늘을 고른 사용자가 서버 오류를 만난다.
+   */
+  birthDateFuture: '어제 이전 날짜를 입력해 주세요.',
 } as const

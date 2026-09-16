@@ -24,7 +24,7 @@ interface BookmarkLoanResponse {
   interestRate: number
   maxLoanBalance: number
   minLoanBalance: number
-  /** 대출 기간(개월) */
+  /** ⚠️ 대출 기간(**일**). 개월이 아니다 — 백엔드 주석이 '대출 기간(일)' 이다 */
   period: number
   status: string
 }

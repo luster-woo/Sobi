@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import LoanDetailModal from '@/features/loan/components/LoanDetailModal'
 import Breadcrumb from '@/features/mypage/components/Breadcrumb'
-import { useBookmarks } from '@/features/mypage/hooks/useBookmarks'
+import { useBookmarks, useRemoveFavorite } from '@/features/mypage/hooks/useBookmarks'
 import { FAVORITE_KIND, type FavoriteItem, type FavoriteKind } from '@/features/mypage/model/types'
 import SupportProgramDetailModal from '@/features/support-program/components/SupportProgramDetailModal'
 import { LOAN_STATUS_LABEL, SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
@@ -70,14 +70,15 @@ function toCells(item: FavoriteItem): [Cell, Cell] {
 /**
  * 이름 아래 한 줄. 유형과 기관은 공통이고 뒤에 붙는 것이 갈린다.
  *
- * 대출은 기간(36개월), 지원사업은 융자형일 때만 이율. 둘 다 값 칸에 넣기엔 덜
+ * 대출은 기간(360일), 지원사업은 융자형일 때만 이율. 둘 다 값 칸에 넣기엔 덜
  * 중요하지만 없으면 상품을 구분하기 어려운 것들이다.
  */
 function toSubtitle(item: FavoriteItem): string {
   const parts = [KIND_LABEL[item.kind], item.organization]
 
   if (item.kind === FAVORITE_KIND.LOAN) {
-    parts.push(`${item.period}개월`)
+    // ⚠️ 개월이 아니라 일이다. 대출 상세 모달과 같은 단위를 쓴다
+    parts.push(`${item.period}일`)
   } else if (item.interestRate !== null) {
     // 보조금·바우처에는 이율이 없다. null 이면 통째로 뺀다
     parts.push(`연 ${item.interestRate.toFixed(1)}%`)
@@ -101,7 +102,7 @@ const SKELETON_ROWS = 4
  * 카드가 아니라 행으로 그리는 이유: 여기 오는 사람은 훑어보러 온 것이 아니라 저장해둔
  * 것 중 하나를 고르러 온다. 한 줄에 하나씩 놓아야 이름과 값을 세로로 비교한다.
  *
- * 값은 `GET /bookmark/me` 에서 온다 (368). 담기·빼기는 아직 화면 안에서만 돈다 (367).
+ * 값은 `GET /bookmark/me` 에서 온다 (368). 빼기는 `DELETE /bookmark/{programId}` 다 (367).
  */
 export function FavoritesPage() {
   const [filter, setFilter] = useState<Filter>('ALL')
@@ -109,12 +110,10 @@ export function FavoritesPage() {
   const { data, isLoading, isError } = useBookmarks()
 
   /*
-   * ⚠️ 해제를 화면 안에서만 기억한다. 새로고침하면 돌아온다.
-   *    367 에서 `DELETE /bookmark/{programId}?type=` 을 부르는 useMutation 으로 바꾸고
-   *    이 state 를 지운다. 되돌리기가 없는 동작이라 낙관적 갱신을 넣는다면 onMutate 에서
-   *    캐시를 직접 손대는 쪽이 맞다.
+   * 낙관적으로 지운다 — 누른 줄이 곧바로 사라진다. 실패하면 되돌아오고 토스트가 뜬다.
+   * 자세한 건 `useRemoveFavorite` 주석에.
    */
-  const [removed, setRemoved] = useState<Set<string>>(new Set())
+  const removeFavorite = useRemoveFavorite()
 
   /*
    * 키에 유형을 섞는다. programId 가 대출 id 와 지원사업 id 를 겸해서 21번 대출을
@@ -122,7 +121,7 @@ export function FavoritesPage() {
    */
   const keyOf = (item: FavoriteItem) => `${item.kind}-${item.id}`
 
-  const items = (data ?? []).filter((item) => !removed.has(keyOf(item)))
+  const items = data ?? []
   const shown = filter === 'ALL' ? items : items.filter((item) => item.kind === filter)
 
   const countOf = (kind: FavoriteKind) => items.filter((item) => item.kind === kind).length
@@ -279,7 +278,11 @@ export function FavoritesPage() {
                   <button
                     type="button"
                     aria-label={`${item.title} 관심 목록에서 제거`}
-                    onClick={() => setRemoved((previous) => new Set(previous).add(keyOf(item)))}
+                    onClick={() => removeFavorite.mutate({ programId: item.id, type: item.kind })}
+                    /*
+                     * 연타를 막지 않는다. 낙관적 갱신으로 줄이 이미 사라져서 같은 줄을
+                     * 두 번 누를 수가 없고, 다른 줄은 각자 독립이라 막을 이유가 없다.
+                     */
                     className="text-text hover:text-text-muted focus-visible:outline-primary rounded p-1 transition-colors focus-visible:outline focus-visible:outline-offset-1"
                   >
                     {/* 저장돼 있는 것만 모인 자리라 항상 채워진 리본이다 */}

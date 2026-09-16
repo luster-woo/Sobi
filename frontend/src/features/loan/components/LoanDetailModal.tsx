@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import { useCreateApplication } from '@/features/application/hooks/useApplication'
@@ -9,7 +8,9 @@ import { describeConditions } from '@/features/loan/model/conditions'
 import type { ProductStatus } from '@/shared/constants/productStatus'
 import { LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { ROUTES, routeTo } from '@/shared/constants/routes'
+import { useBookmarkToggle } from '@/shared/hooks/useBookmarkToggle'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
+import { BOOKMARK_TARGET } from '@/shared/types'
 import BookmarkButton from '@/shared/ui/BookmarkButton'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
@@ -102,17 +103,18 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
   }
 
   /*
-   * ⚠️ 즐겨찾기를 화면 안에서만 기억한다. `POST`/`DELETE /bookmark/{programId}` 가
-   *    붙으면 이 state 를 지우고 useMutation + invalidateQueries 로 바꾼다.
+   * 관심 목록 담기·빼기 (367). 낙관적 갱신을 하지 않는 대신, 요청이 도는 동안에는
+   * 방금 누른 값(`variables.next`)을 보여준다 — 그러지 않으면 응답이 올 때까지
+   * 리본이 안 바뀌어서 버튼이 고장난 것으로 보인다.
    *
-   * 서버 값을 그대로 읽지 않는 이유: 토글 API 가 없어 눌러도 응답이 바뀌지 않는다.
-   * 눌리는 느낌이 없으면 버튼이 고장난 것으로 보인다.
-   *
-   * 누르기 전에는 서버 값, 누른 뒤에는 override 가 이긴다. effect 로 동기화하면
+   * 끝나면 무효화가 돌아 상세를 다시 받아오므로 그때부터는 서버 값이 이긴다.
+   * state 를 따로 두지 않는 이유: effect 로 서버 값과 동기화하면
    * react-hooks/set-state-in-effect 에 걸리고 렌더가 한 번 더 돈다.
    */
-  const [override, setOverride] = useState<boolean | null>(null)
-  const bookmarked = override ?? data?.bookmarked ?? false
+  const toggleBookmark = useBookmarkToggle()
+  const bookmarked = toggleBookmark.isPending
+    ? toggleBookmark.variables.next
+    : (data?.bookmarked ?? false)
 
   const handleFooterClick = () => {
     if (trackedApplicationId !== null) {
@@ -136,7 +138,13 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
         data && (
           <BookmarkButton
             bookmarked={bookmarked}
-            onToggle={() => setOverride(!bookmarked)}
+            onToggle={() =>
+              toggleBookmark.mutate({
+                programId: loanId,
+                type: BOOKMARK_TARGET.LOAN,
+                next: !bookmarked,
+              })
+            }
             label={data.accountName}
           />
         )

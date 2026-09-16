@@ -8,6 +8,13 @@ from datetime import date
 
 CS_MAJOR = {"CS1": "외식업", "CS2": "서비스업", "CS3": "소매업"}
 
+def age(birth_date: date, today: date | None = None) -> int:
+    """만 나이."""
+    today = today or date.today()
+    years = today.year - birth_date.year
+    if (today.month, today.day) < (birth_date.month, birth_date.day):
+        years -= 1
+    return years
 
 def biz_months(open_date: date, today: date | None = None) -> int:
     """개업일로부터 경과 개월 수."""

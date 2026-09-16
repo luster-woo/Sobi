@@ -3,6 +3,8 @@ package com.sobi.user.service;
 import com.sobi.auth.repository.RefreshTokenRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.user.dto.BirthDateRequest;
+import com.sobi.user.dto.BirthDateResponse;
 import com.sobi.user.dto.NotificationResponse;
 import com.sobi.user.dto.PasswordChangeReqeust;
 import com.sobi.user.entity.Provider;
@@ -57,5 +59,17 @@ public class UserServiceImpl implements UserService {
 
         user.withdraw();
         refreshTokenRepository.delete(userId);      // 세션 무효화
+    }
+
+    @Override
+    @Transactional
+    public BirthDateResponse updateBirthDate(Long userId, BirthDateRequest request) {
+        User user = userRepository.findById(userId)
+                .filter(u -> u.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NO_USER));
+
+        user.updateBirthDate(request.getBirthDate());
+
+        return new BirthDateResponse(user.getBirthDate());
     }
 }

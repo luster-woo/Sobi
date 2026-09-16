@@ -1,6 +1,8 @@
 package com.sobi.user.controller;
 
 import com.sobi.global.response.ApiResponse;
+import com.sobi.user.dto.BirthDateRequest;
+import com.sobi.user.dto.BirthDateResponse;
 import com.sobi.user.dto.NotificationResponse;
 import com.sobi.user.dto.PasswordChangeReqeust;
 import com.sobi.user.service.UserService;
@@ -81,4 +83,21 @@ public class UserController {
                 ));
     }
 
+    @PatchMapping("/birth-date")
+    public ResponseEntity<ApiResponse<BirthDateResponse>> updateBirthDate(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody BirthDateRequest birthDateRequest,
+            HttpServletRequest request) {
+
+        BirthDateResponse response = userService.updateBirthDate(userId, birthDateRequest);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "생년월일이 저장되었습니다.",
+                        response,
+                        request
+                ));
+    }
 }

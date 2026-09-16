@@ -17,6 +17,7 @@ import { useUiStore } from '@/shared/lib/store/useUiStore'
 import Button from '@/shared/ui/Button'
 import DatePicker from '@/shared/ui/DatePicker'
 import Input from '@/shared/ui/Input'
+import { yesterdayIso } from '@/shared/utils/date'
 import {
   validateAuthCode,
   validateBirthDate,
@@ -39,22 +40,6 @@ const MESSAGE = {
 type Errors = Partial<
   Record<'name' | 'birthDate' | 'email' | 'code' | 'password' | 'passwordConfirm', string>
 >
-
-/**
- * 생년월일로 고를 수 있는 가장 늦은 날. 백엔드가 `@Past` 라 오늘은 안 된다.
- *
- * DatePicker 의 `max` 기본값이 오늘이라 그대로 두면 달력에서 오늘을 고를 수 있고,
- * 그 값은 서버에서 400 이 된다 — 화면이 막는 편이 낫다.
- */
-function yesterdayIso(): string {
-  const date = new Date()
-  date.setDate(date.getDate() - 1)
-
-  // 로컬 기준 날짜여야 한다. toISOString 은 UTC 로 바꿔서 한국 시간 오전에 하루가 밀린다
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${date.getFullYear()}-${month}-${day}`
-}
 
 export function SignUpPage() {
   const navigate = useNavigate()

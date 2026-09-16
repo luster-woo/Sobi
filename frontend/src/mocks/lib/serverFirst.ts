@@ -29,11 +29,60 @@ const implemented = new Map<string, boolean>()
  */
 const AMBIGUOUS_STATUS = new Set([404, 405, 500, 501, 502, 503, 504])
 
-async function callRealServer(request: Request): Promise<Response | null> {
+/**
+ * 되돌릴 수 없는 동작. 여기에는 목이 **덜** 끼어든다.
+ *
+ * 문제는 `callRealServer` 가 요청을 **이미 보낸 뒤에** 판정한다는 것이다. 응답이
+ * 애매하면 목으로 넘기는데, 500 은 "서버가 받아서 실행하다가 터졌다" 일 수 있다.
+ * 그러면 실제로는 탈퇴됐는데 목이 다시 200 을 만들어 성공으로 보여준다.
+ *
+ * 502·503·504 는 게이트웨이가 낸 것이라(백엔드가 안 떠 있으면 vite 프록시가 이걸 준다)
+ * 요청이 스프링까지 못 갔다는 뜻이고, 404·405 는 매핑이 없다는 뜻이라 둘 다 안전하다.
+ * 그래서 500·501 에서만 목을 막는다 — 안전한 쪽은 그대로 두어 백엔드 없이도 화면이 돈다.
+ */
+const DESTRUCTIVE = new Set(['DELETE /api/v1/user/me', 'PATCH /api/v1/user/password'])
+
+/** 실행됐을 수도 있는 애매한 실패. 되돌릴 수 없는 동작에서는 목으로 넘기지 않는다 */
+const MAY_HAVE_RUN = new Set([500, 501])
+
+/**
+ * 실서버를 물어보지 않고 **항상 목이 받는** 엔드포인트.
+ *
+ * 백엔드에 매핑이 없는데도 실서버가 '응답' 해 버리는 경우가 있다.
+ * `GlobalExceptionHandler` 가 `ResponseEntityExceptionHandler` 를 상속하지 않고
+ * `@ExceptionHandler(Exception.class)` 캐치올을 두고 있어서, 매핑 없는 경로가 던지는
+ * `NoResourceFoundException` 까지 잡아 **500 + 공통 봉투**로 만들어 낸다. 아래
+ * `callRealServer` 는 봉투가 있으면 백엔드가 낸 응답으로 보므로, 그 500 을 그대로
+ * 화면에 넘기고 목은 영영 비켜선다.
+ *
+ * 그래서 '아직 안 만든 것' 은 물어보지도 않는다. 왕복이 한 번 줄고, 백엔드 로그에
+ * 매번 찍히던 ERROR 스택트레이스도 사라진다.
+ *
+ * ⚠️ **백엔드가 만들면 여기서 지워야 한다.** 다른 엔드포인트처럼 저절로 빠지지 않는다 —
+ *    그게 이 목록의 대가다. 그래서 티켓 번호를 같이 적어 둔다.
+ */
+const MOCK_ONLY = new Set([
+  // 조회는 매핑이 없다. 같은 경로의 DELETE(탈퇴)는 백엔드에 있다 — S15P21D101-377
+  'GET /api/v1/user/me',
+  /*
+   * 구글 가입자의 이름·생년월일. 백엔드에는 생년월일만 받는 `PATCH /user/birth-date` 가
+   * 있고, 이름까지 받는 이 경로는 요청해 둔 상태다. 올라오면 이 줄을 지운다.
+   */
+  'PATCH /api/v1/user/profile',
+])
+
+async function callRealServer(request: Request, destructive: boolean): Promise<Response | null> {
   try {
     const response = await fetch(bypass(request.clone()))
 
     if (!AMBIGUOUS_STATUS.has(response.status)) return response
+
+    /*
+     * 되돌릴 수 없는 동작이 500 을 받았다. 서버가 받아서 실행하다 터진 것일 수 있어
+     * 목으로 넘기지 않는다 — 실패로 보여주는 편이 낫다. 성공으로 보여줬다가 실제로는
+     * 안 된 경우보다, 실패로 보여줬다가 실제로는 된 경우가 사용자에게 덜 위험하다.
+     */
+    if (destructive && MAY_HAVE_RUN.has(response.status)) return response
 
     const body: unknown = await response
       .clone()
@@ -76,10 +125,15 @@ export function createServerFirstProbes(handlers: HttpHandler[]): HttpHandler[] 
 
     const key = `${method} ${path}`
 
+    // 물어볼 것도 없이 목이 받는다. 탐지 핸들러를 아예 깔지 않는다
+    if (MOCK_ONLY.has(key)) return []
+
+    const destructive = DESTRUCTIVE.has(key)
+
     return http[httpMethod](path, async ({ request }) => {
       if (implemented.get(key) === false) return undefined
 
-      const response = await callRealServer(request)
+      const response = await callRealServer(request, destructive)
 
       if (response === null) {
         if (!implemented.has(key)) {

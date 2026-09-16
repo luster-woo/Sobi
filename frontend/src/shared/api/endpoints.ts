@@ -33,10 +33,55 @@ export const endpoints = {
     social: (provider: string) => `/auth/social/${provider}`,
   },
 
-  /** ⚠️ 백엔드 `com.sobi.user` 에 controller 가 없다. 목으로만 돈다 (S15P21D101-377) */
   user: {
-    /** 로그인한 본인 정보. 세션 복구에서 재발급 직후 호출한다 */
+    /**
+     * 로그인한 본인 정보. 세션 복구에서 재발급 직후 호출한다.
+     *
+     * ⚠️ **GET 은 아직 백엔드에 없다.** `UserController` 에 `DELETE /user/me` 는 있지만
+     *    같은 경로의 GET 매핑이 없어 목으로만 돈다 (S15P21D101-377).
+     */
     me: '/user/me',
+    /**
+     * 회원 탈퇴. 되돌릴 수 없다.
+     *
+     * 서버가 `deleted_at` 을 채우고 refreshToken 을 지운 뒤, 응답에 쿠키 만료 헤더를
+     * 실어 보낸다 — 프론트는 메모리에 남은 세션만 치우면 된다.
+     */
+    withdraw: '/user/me',
+    /**
+     * 비밀번호 변경. body 는 `{ password }` — **새 비밀번호 하나뿐이다.**
+     *
+     * ⚠️ 현재 비밀번호를 받지 않는다. 백엔드 `PasswordChangeReqeust` 에 필드가 없어서
+     *    로그인만 돼 있으면 바로 바뀐다. 화면에서 현재 비밀번호를 물어도 서버로 보낼
+     *    곳이 없어 검증되지 않으므로, 묻는 척하지 않기로 했다 (S15P21D101-379).
+     *    백엔드에 `currentPassword` 가 생기면 그때 입력칸을 되살린다.
+     */
+    password: '/user/password',
+    /**
+     * 새 공고 알림 수신 토글. body 가 없다 — 서버가 현재 값을 뒤집고 결과를 준다.
+     */
+    notification: '/user/notification',
+    /**
+     * 생년월일만 저장. body·응답 모두 `{ birthDate }`.
+     *
+     * ⚠️ **지금은 아무도 안 쓴다.** 이름까지 같이 받기로 하면서 아래 `profile` 로
+     *    옮겼다. 백엔드에는 아직 살아 있어서 남겨 둔다 — `profile` 이 올라오면 지운다.
+     */
+    birthDate: '/user/birth-date',
+    /**
+     * 구글 가입자의 이름·생년월일 저장. body·응답 모두 `{ name, birthDate }`.
+     *
+     * 구글은 생일을 주지 않고(가입 시 null), 이름은 구글 프로필 이름이 들어가 있어
+     * 실명이 아닐 수 있다. 둘을 한 요청으로 받는다 — 나눠 보내면 한쪽만 저장된 상태를
+     * 화면이 설명할 방법이 없다.
+     *
+     * 검증은 `name` 이 `@NotBlank @Size(max = 100)`(SignupRequest 와 동일),
+     * `birthDate` 가 `@NotNull @Past`(BirthDateRequest 와 동일).
+     *
+     * ⚠️ **백엔드 작업 대기 중.** 현재 `UserController` 에는 `/birth-date` 만 있다.
+     *    그때까지 목이 받는다 — `mocks/lib/serverFirst.ts` 의 `MOCK_ONLY` 참고.
+     */
+    profile: '/user/profile',
   },
 
   business: {

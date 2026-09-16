@@ -3,6 +3,7 @@ import type {
   ApplicationListData,
   CreateApplicationParams,
   SubmitApplicationBody,
+  SubmitApplicationResult,
   UploadDocumentParams,
 } from '@/features/application/model/types'
 import { api } from '@/shared/api/client'
@@ -33,9 +34,21 @@ export async function cancelApplication(applicationId: number) {
   await api.delete<null>(endpoints.application.cancel(applicationId))
 }
 
-/** 최종 신청. 서류가 다 끝난 뒤에만 호출한다 */
-export async function submitApplication(body: SubmitApplicationBody) {
-  await api.post<null>(endpoints.application.submit, body)
+/**
+ * 최종 신청. 서류가 다 끝난 뒤에만 호출한다.
+ *
+ * 응답으로 결과가 바로 온다. 금융망이 신청 즉시 심사 결과를 주고 대출까지 실행해서,
+ * 접수만 하고 기다리는 구간이 없다. 거절도 200 이라 status 로 가른다.
+ */
+export async function submitApplication(
+  applicationId: number,
+  body: SubmitApplicationBody,
+): Promise<SubmitApplicationResult> {
+  const { data } = await api.post<SubmitApplicationResult>(
+    endpoints.application.submit(applicationId),
+    body,
+  )
+  return data
 }
 
 /**

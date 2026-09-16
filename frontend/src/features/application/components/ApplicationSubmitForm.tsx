@@ -1,4 +1,5 @@
 import { countRemaining } from '@/features/application/model/documents'
+import { amountRange } from '@/features/application/model/summary'
 import type { ApplicationDetail, PayoutAccount } from '@/features/application/model/types'
 import Button from '@/shared/ui/Button'
 import Input from '@/shared/ui/Input'
@@ -12,8 +13,9 @@ interface ApplicationSubmitFormProps {
   /** 숫자만 담긴 문자열. 빈 문자열이면 아직 입력 전 */
   amount: string
   onAmountChange: (value: string) => void
-  accountNo: string
-  onAccountNoChange: (value: string) => void
+  /** 고른 계좌의 account.id. 아직 안 골랐으면 null */
+  accountId: number | null
+  onAccountIdChange: (value: number | null) => void
   isSubmitting: boolean
   onSubmit: () => void
 }
@@ -26,7 +28,8 @@ function withComma(digits: string): string {
 /**
  * 금액·계좌 입력과 최종 제출.
  *
- * 금액은 대출만 받는다. 지원사업은 지원금이 정해져 있어 사용자가 정할 게 없다.
+ * 금액·계좌는 돈이 오가는 신청에만 받는다. '기타' 지원사업(컨설팅·교육 등)은 금액
+ * 범위가 없고 서버도 둘 다 받지 않는다 — 그래서 범위 유무로 가른다.
  *
  * 막는 이유를 버튼 문구로 알려준다. 비활성 버튼만 있고 이유가 없으면 사용자가 무엇을
  * 더 해야 하는지 알 수 없다.
@@ -36,43 +39,43 @@ export default function ApplicationSubmitForm({
   accounts,
   amount,
   onAmountChange,
-  accountNo,
-  onAccountNoChange,
+  accountId,
+  onAccountIdChange,
   isSubmitting,
   onSubmit,
 }: ApplicationSubmitFormProps) {
-  const isLoan = detail.loanId !== null
-  const { minAmount, maxAmount } = detail.product
-
   /*
-   * 금액 범위가 없으면 검증할 기준이 없다. 대출은 항상 범위가 오지만 지원사업을
-   * 같은 타입으로 받아서 null 이 가능하다. 그럴 땐 범위 문구와 검사를 건너뛴다.
+   * 범위가 있으면 돈이 오가는 신청이다. 대출은 항상 있고, 지원사업은 '기타' 일 때만
+   * 없다. 이 하나로 금액 입력·계좌 선택·제출 본문이 모두 갈린다.
    */
-  const hasRange = minAmount !== null && maxAmount !== null
-  const range = hasRange
-    ? `${formatMoneyShort(minAmount)} ~ ${formatMoneyShort(maxAmount)}`
+  const range = amountRange(detail)
+  const needsMoney = range !== null
+
+  const rangeText = range
+    ? `${formatMoneyShort(range.min)} ~ ${formatMoneyShort(range.max)}`
     : undefined
 
   const amountNumber = amount ? Number(amount) : null
   const amountError =
-    hasRange && amountNumber !== null && (amountNumber < minAmount || amountNumber > maxAmount)
-      ? `${range} 사이로 입력해 주세요`
+    range && amountNumber !== null && (amountNumber < range.min || amountNumber > range.max)
+      ? `${rangeText} 사이로 입력해 주세요`
       : undefined
 
   const remaining = countRemaining(detail.documents)
-  const needsAmount = isLoan && (amountNumber === null || Boolean(amountError))
-  const blocked = remaining > 0 || needsAmount || !accountNo
+  const needsAmount = needsMoney && (amountNumber === null || Boolean(amountError))
+  const needsAccount = needsMoney && accountId === null
+  const blocked = remaining > 0 || needsAmount || needsAccount
 
   const label = (() => {
     if (remaining > 0) return `신청하기 · 서류 ${remaining}건 남음`
     if (needsAmount) return '신청하기 · 금액 입력 필요'
-    if (!accountNo) return '신청하기 · 출금 계좌 선택 필요'
+    if (needsAccount) return '신청하기 · 출금 계좌 선택 필요'
     return '신청하기'
   })()
 
   return (
     <div className="flex flex-col gap-6">
-      {isLoan && (
+      {needsMoney && (
         <section>
           <h2 className="text-body2 text-text-secondary mb-3 font-semibold">신청 금액</h2>
           <Input
@@ -83,25 +86,33 @@ export default function ApplicationSubmitForm({
             placeholder="0"
             rightSlot={<span className="text-body2 text-text-secondary">원</span>}
             error={amountError}
-            helperText={range}
+            helperText={rangeText}
           />
         </section>
       )}
 
-      <section>
-        <h2 className="text-body2 text-text-secondary mb-3 font-semibold">출금 계좌</h2>
-        <Select
-          options={accounts.map((account) => ({
-            value: account.accountNo,
-            // ⚠️ value 는 원본이어야 한다. 서버로 나가는 값이라 가리면 안 된다
-            label: `${account.bankName} ${maskAccountNo(account.accountNo)}`,
-          }))}
-          value={accountNo}
-          onChange={(event) => onAccountNoChange(event.target.value)}
-          placeholder="계좌를 선택해 주세요"
-          helperText="입력한 출금 계좌는 대출 실행금 입금과 자동이체(자동상환) 계좌로 등록돼요."
-        />
-      </section>
+      {/* 돈이 오가지 않는 공고는 계좌도 받지 않는다 */}
+      {needsMoney && (
+        <section>
+          <h2 className="text-body2 text-text-secondary mb-3 font-semibold">출금 계좌</h2>
+          <Select
+            /*
+             * 값은 account.id 다. 제출이 accountId 를 요구하고 계좌번호로는 지목할 수
+             * 없다. Select 가 문자열만 다뤄서 넣고 뺄 때 변환한다.
+             */
+            options={accounts.map((account) => ({
+              value: String(account.accountId),
+              label: `${account.bankName} ${account.accountNo}`,
+            }))}
+            value={accountId === null ? '' : String(accountId)}
+            onChange={(event) =>
+              onAccountIdChange(event.target.value ? Number(event.target.value) : null)
+            }
+            placeholder="계좌를 선택해 주세요"
+            helperText="입력한 출금 계좌는 대출 실행금 입금과 자동이체(자동상환) 계좌로 등록돼요."
+          />
+        </section>
+      )}
 
       <Button
         className="w-full"

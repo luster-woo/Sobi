@@ -130,11 +130,11 @@ export const endpoints = {
     create: '/application',
     detail: (applicationId: number) => `/application/${applicationId}`,
     cancel: (applicationId: number) => `/application/${applicationId}`,
-    /** 최종 신청. body 에 applicationId·applyAmount·accountNo */
-    submit: '/application/finan',
-    /** 서류 업로드. multipart. 작성 서류도 같은 곳으로 올리고 검증만 안 한다 */
+    /** 최종 신청. 본문에 amount·accountId */
+    submit: (applicationId: number) => `/application/${applicationId}/submit`,
+    /** ⚠️ 412 대기. 서버에 아직 multipart 엔드포인트가 없다 */
     uploadDocument: '/document',
-    /** 작성 서류 초안 생성. 비동기로 돌고 상세 조회로 결과를 받는다 */
+    /** ⚠️ 413 대기. 서버에 아직 없다 */
     requestDraft: '/document/draft',
     /** 내 신청 목록. 신청 현황 화면이 쓴다 */
     list: '/application',

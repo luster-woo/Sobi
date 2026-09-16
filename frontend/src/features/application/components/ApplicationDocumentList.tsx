@@ -17,7 +17,13 @@ interface ApplicationDocumentListProps {
   /** AI 에게 초안을 만들어 달라고 요청한다 */
   onRequestDraft: (applicationDocumentId: number) => void
   /** 서식 원본·초안 내려받기 */
-  onDownload: (url: string) => void
+  /**
+   * 서식·초안 내려받기.
+   *
+   * ⚠️ 지금은 url 이 항상 null 이다 (413 대기). 부르는 쪽이 '준비 중' 을 알린다.
+   *    엔드포인트가 정해지면 주소를 넘기고 이 주석을 지운다.
+   */
+  onDownload: (url: string | null) => void
   /**
    * 신청이 접수된 뒤라 서류를 더 바꿀 수 없는 상태.
    *
@@ -44,19 +50,19 @@ export default function ApplicationDocumentList({
   onDownload,
   readOnly = false,
 }: ApplicationDocumentListProps) {
-  const { verify, write } = splitByType(documents)
+  const { submit, write } = splitByType(documents)
 
   return (
     <div className="flex flex-col gap-6">
-      {verify.length > 0 && (
+      {submit.length > 0 && (
         <section>
           <h2 className="text-body2 text-text-secondary mb-3 font-semibold">제출 서류</h2>
           <div className="flex flex-col gap-3">
-            {verify.map((doc) => (
+            {submit.map((doc) => (
               <DocumentUploadItem
                 key={doc.applicationDocumentId}
-                name={doc.docName}
-                status={toSubmitUiStatus(doc.status)}
+                name={doc.documentName ?? '이름 없는 서류'}
+                status={toSubmitUiStatus(doc.validationStatus)}
                 description={describeDocument(doc)}
                 accept={UPLOAD_ACCEPT}
                 maxSizeMb={UPLOAD_MAX_SIZE_MB}
@@ -76,18 +82,22 @@ export default function ApplicationDocumentList({
             {write.map((doc) => (
               <DocumentWriteItem
                 key={doc.applicationDocumentId}
-                name={doc.docName}
-                status={toWriteUiStatus(doc.status)}
+                name={doc.documentName ?? '이름 없는 서류'}
+                status={toWriteUiStatus(doc)}
                 description={describeDocument(doc)}
                 accept={UPLOAD_ACCEPT}
                 maxSizeMb={UPLOAD_MAX_SIZE_MB}
-                // 주소가 없는 버튼은 그리지 않는다. 누르면 아무 일도 안 일어나는 버튼이 된다
-                onDownloadOriginal={
-                  doc.templateUrl ? () => onDownload(doc.templateUrl as string) : undefined
-                }
-                onDownloadDraft={
-                  doc.draftUrl ? () => onDownload(doc.draftUrl as string) : undefined
-                }
+                /*
+                 * ⚠️ 서식·초안 내려받기는 아직 동작하지 않는다 (413). 확정 응답에
+                 *    templateUrl·draftUrl 이 없고 다운로드 엔드포인트도 정해지지 않았다.
+                 *    자리는 두고 누르면 준비 중임을 알린다.
+                 *
+                 *    다만 초안 받기는 초안이 실제로 있을 때만 넘긴다. 이 컴포넌트가
+                 *    핸들러 유무로 '초안이 있느냐' 를 판단해서, 항상 넘기면 만든 적도
+                 *    없는데 '초안 다시 만들기' 가 뜬다.
+                 */
+                onDownloadOriginal={() => onDownload(null)}
+                onDownloadDraft={doc.draftStatus === 'WRITTEN' ? () => onDownload(null) : undefined}
                 // 읽기 전용이면 핸들러를 안 넘긴다. 그러면 그 버튼들이 사라진다
                 onStartDraft={
                   readOnly ? undefined : () => onRequestDraft(doc.applicationDocumentId)

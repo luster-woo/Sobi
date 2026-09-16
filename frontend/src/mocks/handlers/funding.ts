@@ -19,7 +19,7 @@ function loanItem(loanId: number, allocatedAmount: number, interestRate: number)
     sourceType: 'LOAN_PRODUCT',
     fundingType: 'LOAN',
     id: loanId,
-    name: findLoanProductSummary(loanId)?.name ?? `(목에 없는 상품 ${loanId})`,
+    name: findLoanProductSummary(loanId)?.accountName ?? `(목에 없는 상품 ${loanId})`,
     allocatedAmount,
     interestRate,
   }
@@ -36,7 +36,8 @@ function supportItem(
     fundingType,
     id: supportProgramId,
     name:
-      findSupportProductSummary(supportProgramId)?.name ?? `(목에 없는 공고 ${supportProgramId})`,
+      findSupportProductSummary(supportProgramId)?.programName ??
+      `(목에 없는 공고 ${supportProgramId})`,
     allocatedAmount,
     interestRate,
   }

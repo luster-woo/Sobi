@@ -12,7 +12,7 @@ import {
   useUploadDocument,
 } from '@/features/application/hooks/useApplication'
 import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
-import { describeProduct } from '@/features/application/model/summary'
+import { amountRange, productName, productSummary } from '@/features/application/model/summary'
 import { UPLOAD_ACCEPT_LABEL, UPLOAD_MAX_SIZE_MB } from '@/features/application/model/upload'
 import { ROUTES } from '@/shared/constants/routes'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
@@ -24,7 +24,7 @@ import Modal from '@/shared/ui/Modal'
 import Panel from '@/shared/ui/Panel'
 import Skeleton from '@/shared/ui/Skeleton'
 import { toSafeExternalUrl } from '@/shared/utils/externalUrl'
-import { maskAccountNo } from '@/shared/utils/mask'
+import { formatMoneyShort } from '@/shared/utils/formatters'
 
 /**
  * 대출·지원사업 신청 · 서류 제출 (S15P21D101-189 · 194)
@@ -49,23 +49,17 @@ export function ApplicationApplyPage() {
   const { data: accounts } = usePayoutAccounts()
   const upload = useUploadDocument(applicationId)
   const draft = useRequestDraft(applicationId)
-  const submit = useSubmitApplication()
+  const submit = useSubmitApplication(applicationId)
   const cancel = useCancelApplication()
 
   const [amount, setAmount] = useState('')
-  const [accountNo, setAccountNo] = useState('')
+  const [accountId, setAccountId] = useState<number | null>(null)
   const [cancelOpen, setCancelOpen] = useState(false)
-
   /*
-   * 서버가 이미 들고 있는 값으로 폼을 채운다. useEffect 로 하면 한 번 더 그려지고
-   * set-state-in-effect 규칙에도 걸려서, 렌더 중에 비교해 맞춘다.
+   * 제출 확인 모달. 누르는 순간 실제로 대출이 실행되고 계좌가 열려서, 취소와 마찬가지로
+   * 한 번 확인받는다. 같은 모달이 확인 → 진행 중 → 결과 세 모습을 갖는다.
    */
-  const [seededId, setSeededId] = useState<number | null>(null)
-  if (detail && seededId !== detail.applicationId) {
-    setSeededId(detail.applicationId)
-    setAmount(detail.applyAmount ? String(detail.applyAmount) : '')
-    setAccountNo(detail.accountNo ?? '')
-  }
+  const [submitOpen, setSubmitOpen] = useState(false)
 
   /*
    * 데이터가 오기 전에도 '목록으로' 를 그려야 해서 경로로 판단한다.
@@ -100,11 +94,30 @@ export function ApplicationApplyPage() {
     )
   }
 
-  const { product, documents, status } = detail
-  const summary = describeProduct(product)
+  const { documents, status } = detail
+  const name = productName(detail)
+  const summary = productSummary(detail)
+  /* 범위가 있으면 돈이 오가는 신청이다. 금액·계좌 입력과 제출 본문이 여기서 갈린다 */
+  const needsMoney = amountRange(detail) !== null
+
+  /*
+   * 제출 결과. 있으면 모달이 결과 화면으로 바뀐다.
+   *
+   * 갈 곳이 결과마다 다르다. 실행됐으면 다음 할 일이 상환이고, 거절이면 신청 현황에
+   * 사유가 남는다. 성공한 사람을 신청 현황으로 보내면 할 일이 없는 화면을 본다.
+   */
+  const submitResult = submit.data ?? null
+  const submitResultTitle =
+    submitResult?.status === 'PAID'
+      ? detail.loan
+        ? '대출이 실행됐어요'
+        : '지원금이 지급됐어요'
+      : '심사에서 거절됐어요'
+  const submitDoneTo =
+    submitResult?.status === 'PAID' ? ROUTES.LOAN_REPAYMENTS : ROUTES.APPLICATIONS
   // 제출하고 나면 서류도 금액도 더 손댈 수 없다
   const isEditable = status === 'PREPARING'
-  const selectedAccount = accounts?.find((account) => account.accountNo === accountNo)
+  const selectedAccount = accounts?.find((account) => account.accountId === accountId)
 
   const handleUpload = (applicationDocumentId: number, file: File) => {
     upload.mutate(
@@ -135,7 +148,14 @@ export function ApplicationApplyPage() {
    *    noreferrer 를 같이 준다. noopener 만 있으면 새 탭이 우리 주소를 referrer 로
    *    가져간다 — 신청 화면 주소에는 applicationId 가 들어 있다.
    */
-  const handleDownload = (url: string) => {
+
+  const handleDownload = (url: string | null) => {
+    // ⚠️ 413 대기. 서식·초안을 어떻게 내려받을지 아직 정해지지 않았다
+    if (url === null) {
+      showToast('서식 내려받기는 준비 중이에요.', 'warning')
+      return
+    }
+
     const safe = toSafeExternalUrl(url)
 
     if (!safe) {
@@ -163,17 +183,26 @@ export function ApplicationApplyPage() {
     })
   }
 
+  /**
+   * 최종 신청.
+   *
+   * 되돌릴 수 없다. 서버가 이 한 번의 요청에서 심사·계좌개설·입금까지 끝낸다 —
+   * 접수만 하고 기다리는 구간이 없다. 그래서 결과도 응답으로 바로 온다.
+   *
+   * 거절도 200 이라 onError 가 아니라 결과 화면에서 status 로 가른다.
+   */
   const handleSubmit = () => {
     submit.mutate(
       {
-        applicationId,
-        // 지원사업은 금액을 입력받지 않는다
-        applyAmount: detail.loanId !== null ? Number(amount) : null,
-        accountNo,
+        // 돈이 오가지 않는 공고('기타')는 둘 다 안 보낸다
+        amount: needsMoney ? Number(amount) : null,
+        accountId: needsMoney ? accountId : null,
       },
       {
-        onSuccess: () => showToast('신청이 완료됐어요.'),
-        onError: () => showToast('신청에 실패했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+        onError: () => {
+          setSubmitOpen(false)
+          showToast('신청에 실패했어요. 잠시 후 다시 시도해 주세요.', 'danger')
+        },
       },
     )
   }
@@ -192,7 +221,7 @@ export function ApplicationApplyPage() {
           ← 목록으로
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-h2 text-text font-bold break-keep">{product.name}</h1>
+          <h1 className="text-h2 text-text font-bold break-keep">{name}</h1>
           {!isEditable && <Badge variant="neutral">{APPLICATION_STATUS_LABEL[status]}</Badge>}
         </div>
         {/* 금리도 금액도 없는 공고가 있어서, 요약이 비면 줄 자체를 안 그린다 */}
@@ -218,10 +247,10 @@ export function ApplicationApplyPage() {
                   accounts={accounts ?? []}
                   amount={amount}
                   onAmountChange={setAmount}
-                  accountNo={accountNo}
-                  onAccountNoChange={setAccountNo}
+                  accountId={accountId}
+                  onAccountIdChange={setAccountId}
                   isSubmitting={submit.isPending}
-                  onSubmit={handleSubmit}
+                  onSubmit={() => setSubmitOpen(true)}
                 />
 
                 {/*
@@ -279,7 +308,7 @@ export function ApplicationApplyPage() {
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
         title="신청을 취소할까요?"
-        description={product.name}
+        description={name}
         footer={
           <>
             <Button
@@ -299,6 +328,86 @@ export function ApplicationApplyPage() {
           지금까지 올린 서류도 함께 삭제되고 되돌릴 수 없어요. 다시 신청하려면 서류를 처음부터
           올려야 합니다.
         </p>
+      </Modal>
+
+      {/*
+        제출 모달. 한 모달이 세 모습을 갖는다 — 확인 → 진행 중 → 결과.
+        열고 닫기를 반복하면 어수선하고, 무엇보다 진행 중 구간에 창이 비면 사용자가
+        한 번 더 누르거나 떠난다. 그 사이에 돈은 이미 나가고 있다.
+
+        결과(submit.data)가 있으면 결과 화면이 이긴다. 거절도 200 이라 여기서 가른다.
+      */}
+      <Modal
+        open={submitOpen}
+        onClose={() => {
+          // 진행 중에는 닫히지 않는다. 금융망 호출이 도는 중이다
+          if (submit.isPending) return
+          setSubmitOpen(false)
+          if (submit.data) navigate(submit.data.status === 'PAID' ? ROUTES.LOAN_REPAYMENTS : backTo)
+        }}
+        title={
+          submitResult ? submitResultTitle : `${formatMoneyShort(Number(amount))}을 신청할까요?`
+        }
+        description={submitResult ? undefined : name}
+        footer={
+          submitResult ? (
+            <Button
+              onClick={() => {
+                setSubmitOpen(false)
+                navigate(submitDoneTo)
+              }}
+            >
+              {submitResult.status === 'PAID' ? '상환 관리로' : '신청 현황으로'}
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setSubmitOpen(false)}
+                disabled={submit.isPending}
+              >
+                돌아가기
+              </Button>
+              <Button onClick={handleSubmit} loading={submit.isPending}>
+                신청하기
+              </Button>
+            </>
+          )
+        }
+      >
+        {submitResult ? (
+          <div className="text-body2 text-text-secondary flex flex-col gap-2 break-keep">
+            {submitResult.status === 'PAID' ? (
+              <>
+                {submitResult.amount !== null && (
+                  <p className="text-body1 text-text font-semibold">
+                    {formatMoneyShort(submitResult.amount)}
+                  </p>
+                )}
+                {selectedAccount && (
+                  <p>
+                    {selectedAccount.bankName} {selectedAccount.accountNo} 로 입금됩니다.
+                  </p>
+                )}
+                {submitResult.loanAccountNo && (
+                  <p>
+                    대출 계좌 {submitResult.loanAccountNo} · 내일부터 같은 계좌에서 자동이체로
+                    상환됩니다.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p>{submitResult.rejectReason ?? '사유가 확인되지 않았어요.'}</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-body2 text-text-secondary break-keep">
+            {needsMoney && selectedAccount
+              ? `${selectedAccount.bankName} ${selectedAccount.accountNo} 로 입금되고, 다음 날부터 같은 계좌에서 자동이체로 상환됩니다. `
+              : ''}
+            신청 후에는 취소할 수 없어요.
+          </p>
+        )}
       </Modal>
     </div>
   )

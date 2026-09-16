@@ -14,19 +14,19 @@
 import type { ApplicationStatus } from '@/shared/types/application'
 
 /**
- * 서류 종류. 이 값이 status 집합을 가르는 판별자다.
- *   VERIFY  올려서 OCR 검증을 받는 서류
+ * 서류 종류.
+ *   SUBMIT  올려서 검증받는 서류
  *   WRITE   화면에서 작성하는 서류 (AI 초안 지원)
  */
 export const DOCUMENT_TYPE = {
-  VERIFY: 'VERIFY',
+  SUBMIT: 'SUBMIT',
   WRITE: 'WRITE',
 } as const
 
 export type DocumentType = (typeof DOCUMENT_TYPE)[keyof typeof DOCUMENT_TYPE]
 
-/** VERIFY 서류의 상태 */
-export const VERIFY_STATUS = {
+/** 올린 파일의 검증 상태. 작성 서류도 올리고 나면 이 축을 탄다 */
+export const VALIDATION_STATUS = {
   NOT_SUBMITTED: 'NOT_SUBMITTED',
   PENDING: 'PENDING',
   VALIDATING: 'VALIDATING',
@@ -34,98 +34,96 @@ export const VERIFY_STATUS = {
   FAILED: 'FAILED',
 } as const
 
-export type VerifyStatus = (typeof VERIFY_STATUS)[keyof typeof VERIFY_STATUS]
+export type ValidationStatus = (typeof VALIDATION_STATUS)[keyof typeof VALIDATION_STATUS]
 
-/** WRITE 서류의 상태 */
-export const WRITE_STATUS = {
+/** 작성 서류의 초안 생성 상태 */
+export const DRAFT_STATUS = {
   NOT_STARTED: 'NOT_STARTED',
   WRITING: 'WRITING',
   WRITTEN: 'WRITTEN',
 } as const
 
-export type WriteStatus = (typeof WRITE_STATUS)[keyof typeof WRITE_STATUS]
+export type DraftStatus = (typeof DRAFT_STATUS)[keyof typeof DRAFT_STATUS]
 
-interface DocumentBase {
+/**
+ * 서류 한 장.
+ *
+ * 예전에는 documentType 으로 갈리는 판별 유니온이었다. 서버는 그렇게 주지 않는다 —
+ * 한 서류에 validationStatus 와 draftStatus 를 둘 다 단다. 작성 서류는 두 축이 다
+ * 도는 게 맞다. 초안을 만들고(draftStatus) 사용자가 손봐서 올린 것을 검증한다
+ * (validationStatus). 그래서 유니온을 걷어내고 평평한 타입 하나로 둔다.
+ *
+ * ⚠️ templateUrl · draftUrl 이 없다. 화면의 '빈 서식 받기' · '초안 작성본 받기' 가
+ *    그 주소로 파일을 여는데, 어떻게 받는지 아직 정해지지 않았다 (413).
+ * ⚠️ issuer(발급처)도 없어졌다. 체크리스트의 '홈택스' 표시가 그 값이었다.
+ */
+export interface ApplicationDocument {
   /**
    * 미제출이어도 행이 미리 만들어져 있어서 항상 값이 있다.
    * 업로드할 때 이 값을 보낸다 — 그래서 없으면 업로드 자체가 불가능하다.
    */
   applicationDocumentId: number
-  /** 서류명. '국세 납세증명서'. 업로드한 파일명(originalFilename)과 다르다 */
-  docName: string
-  /** 발급처. '홈택스', '인터넷등기소'. 서버가 못 주면 null 로 두고 줄을 생략한다 */
-  issuer: string | null
+  /** 서류명. 필수 서류가 삭제돼 연결이 끊기면 null */
+  documentName: string | null
+  documentType: DocumentType
+  validationStatus: ValidationStatus
+  /** 검증 실패 사유 */
+  validationMessage: string | null
   /** 아직 안 올렸으면 null */
   originalFilename: string | null
+  /** 작성 서류만 값이 있다 */
+  draftStatus: DraftStatus | null
 }
 
-/**
- * documentType 이 판별자다. 이걸로 좁히면 status 집합도 같이 좁혀져서,
- * 작성 서류에서 실수로 FAILED 를 비교하는 코드는 컴파일되지 않는다.
- */
-export type ApplicationDocument =
-  | (DocumentBase & {
-      documentType: typeof DOCUMENT_TYPE.VERIFY
-      status: VerifyStatus
-      /** 실패면 사유, 통과면 OCR 이 확인한 내용. 없으면 null */
-      validationMessage: string | null
-    })
-  | (DocumentBase & {
-      documentType: typeof DOCUMENT_TYPE.WRITE
-      status: WriteStatus
-      /** 빈 서식 내려받기 주소 */
-      templateUrl: string | null
-      /**
-       * 서버가 만든 초안 내려받기 주소.
-       *
-       * WRITING 이 두 구간을 겸한다 — 초안을 만드는 중과 사용자가 그걸 손보는 중.
-       * 이 값이 차면 생성이 끝난 것이라, 폴링을 멈출지 여부도 이걸로 가른다.
-       */
-      draftUrl: string | null
-    })
+/** 상단 요약 — 대출 */
+export interface ApplicationLoanSummary {
+  loanId: number
+  accountName: string
+  bankName: string
+  interestRate: number
+  minLoanBalance: number
+  maxLoanBalance: number
+}
 
-/**
- * 화면 상단 요약. 상세 API 를 또 부르지 않으려고 신청 응답에 같이 받는다.
- *
- * 대출과 지원사업이 한 타입을 쓴다. 지원사업은 금리·금액이 없는 종류(ETC)가 있어서
- * name 말고는 전부 없을 수 있다. 없으면 안 그린다.
- */
-export interface ApplicationProduct {
-  name: string
-  /** 기관명. 대출이면 은행, 지원사업이면 주관기관 */
-  organization: string | null
+/** 상단 요약 — 지원사업 */
+export interface ApplicationSupportSummary {
+  supportProgramId: number
+  programName: string
+  /** 소관기관 */
+  jurisdiction: string
   /**
-   * 연 이율(%). 0 이면 무상, null 이면 금리 개념이 없는 상품이다.
-   * 0 과 null 을 구분해야 한다 — 0 을 '연 0%' 로 쓰면 이상하고 무상은 알려야 한다.
-   */
-  interestRate: number | null
-  /**
-   * 신청 가능 금액 범위.
+   * 지원 형태. '기타' 면 돈이 오가지 않아 금액·계좌 입력란을 숨긴다.
    *
-   * 대출은 이 범위로 입력값을 검증한다. 지원사업은 금액을 입력받지 않아서 표시용이고,
-   * 금액 개념이 없는 공고는 둘 다 null 이다.
+   * ⚠️ 서버가 문자열로 준다. 한글인지 enum 인지 확인이 필요하다.
    */
-  minAmount: number | null
-  maxAmount: number | null
-  /** 접수 마감일(YYYY-MM-DD). 대출은 마감이 없어서 null 이다 */
-  deadline: string | null
+  supportType: string
+  startDate: string | null
+  endDate: string | null
+  minBalance: number | null
+  maxBalance: number | null
 }
 
+/**
+ * 신청 상세 (서류 제출 페이지).
+ *
+ * 상품 요약이 loan / support 둘로 갈린다. 신청 종류에 따라 한쪽만 값이 있고,
+ * 상품이 지워지면 둘 다 null 이다.
+ *
+ * applyAmount · accountNo 가 없어졌다. 서버가 금액·계좌를 임시 저장하지 않고
+ * 제출할 때만 받기 때문이다 — 입력하다 나가면 값이 사라진다.
+ */
 export interface ApplicationDetail {
   applicationId: number
-  /** 대출이면 loanId 가, 지원사업이면 supportProgramId 가 찬다. 둘 중 하나만 */
-  loanId: number | null
-  supportProgramId: number | null
+  /** 상품·사업이 지워지면 null */
+  type: ApplicationSource | null
   status: ApplicationStatus
   rejectReason: string | null
-  /** 대출만 입력받는다. 지원사업은 항상 null */
-  applyAmount: number | null
-  /** 출금 계좌. 아직 안 고르면 null */
-  accountNo: string | null
-  product: ApplicationProduct
+  loan: ApplicationLoanSummary | null
+  support: ApplicationSupportSummary | null
   documents: ApplicationDocument[]
-  createdAt: string
-  updatedAt: string
+  /** 검증을 통과한 서류 수. 서버가 세어 준다 */
+  completedCount: number
+  totalCount: number
 }
 
 /**
@@ -149,15 +147,34 @@ export interface CreateApplicationParams {
   programId: number
 }
 
-/** 최종 신청. 지원사업이면 applyAmount 는 null */
+/**
+ * 최종 신청 본문.
+ *
+ * 금액·계좌를 임시 저장하지 않고 제출할 때만 보낸다.
+ * '기타' 지원사업은 돈이 오가지 않아 둘 다 null 이다.
+ */
 export interface SubmitApplicationBody {
+  amount: number | null
+  /** account.id. 계좌번호가 아니다 */
+  accountId: number | null
+}
+
+/**
+ * 제출 결과.
+ *
+ * ⚠️ 제출하면 곧바로 끝난다. 금융망이 신청 즉시 심사 결과를 주고, 지원사업은 심사
+ *    없이 바로 지급된다. 그래서 status 는 PAID 아니면 REJECTED 다 —
+ *    SUBMITTED · REVIEWING · APPROVED 를 아무도 만들지 않는다.
+ *
+ * 거절도 200 이다. 오류가 아니라 결과라서 status 로 가른다.
+ */
+export interface SubmitApplicationResult {
   applicationId: number
-  applyAmount: number | null
-  /**
-   * 계좌번호로 가리킨다. GET /v1/account/list 가 id 없이 {bankName, accountNo} 만
-   * 주고, 상환 관리도 accountNo 로 계좌를 지목한다.
-   */
-  accountNo: string
+  status: ApplicationStatus
+  rejectReason: string | null
+  amount: number | null
+  /** 새로 열린 대출 계좌번호. 대출이 실행됐을 때만 온다 */
+  loanAccountNo: string | null
 }
 
 /** 서류 업로드. multipart 로 보낸다 */
@@ -169,6 +186,8 @@ export interface UploadDocumentParams {
 
 /** 출금 계좌 후보. 서버가 입출금(COMMON) 계좌만 걸러서 준다 */
 export interface PayoutAccount {
+  /** 제출할 때 이 값을 보낸다. 계좌번호로는 지목할 수 없다 */
+  accountId: number
   bankName: string
   accountNo: string
 }

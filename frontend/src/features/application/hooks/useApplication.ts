@@ -10,7 +10,7 @@ import {
   uploadDocument,
 } from '@/features/application/api/application'
 import { hasValidating } from '@/features/application/model/documents'
-import type { ApplicationDetail } from '@/features/application/model/types'
+import type { ApplicationDetail, SubmitApplicationBody } from '@/features/application/model/types'
 import { queryKeys } from '@/shared/api/queryKeys'
 
 /**
@@ -83,17 +83,22 @@ export function useCancelApplication() {
 }
 
 /** 최종 신청. 성공하면 status 가 바뀌므로 상세를 다시 받는다 */
-export function useSubmitApplication() {
+export function useSubmitApplication(applicationId: number) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: submitApplication,
-    onSuccess: (_data, body) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.application.detail(body.applicationId),
-      })
-      // 상태가 SUBMITTED 로 바뀜으니 목록의 배지도 달라진다
+    mutationFn: (body: SubmitApplicationBody) => submitApplication(applicationId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.application.detail(applicationId) })
+      // 제출하면 곧바로 PAID 나 REJECTED 라 목록의 배지도 달라진다
       queryClient.invalidateQueries({ queryKey: queryKeys.application.list })
+      /*
+       * 대출이 실행되면 그 상품의 상태가 ELIGIBLE 에서 PAID 로 바뀌고, 상환 목록에
+       * 새 대출 계좌가 생긴다. 그 화면들도 낡으므로 함께 버린다.
+       */
+      queryClient.invalidateQueries({ queryKey: queryKeys.loan.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.supportProgram.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.repayment.all })
     },
   })
 }

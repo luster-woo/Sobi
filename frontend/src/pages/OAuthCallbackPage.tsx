@@ -7,6 +7,7 @@ import { useSocialLink } from '@/features/auth/hooks/useSocialLink'
 import { consumeOAuthRequest } from '@/features/auth/model/googleOAuth'
 import { ERROR_CODE, getErrorCode, getErrorMessage } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
+import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import Spinner from '@/shared/ui/Spinner'
 
@@ -91,8 +92,22 @@ export function OAuthCallbackPage() {
       return
     }
 
-    // state 가 안 맞으면 intent 가 null 이다 — 내가 시작한 요청이 아니다
+    /*
+     * state 가 안 맞거나 만료됐으면 intent 가 null 이다 — 내가 시작한 요청이 아니거나
+     * 너무 오래된 요청이다.
+     *
+     * ⚠️ 이때 **로그인 상태면 로그인 화면으로 보내면 안 된다.** `/login` 은
+     *    PublicOnlyRoute 아래라 authenticated 면 곧바로 대시보드로 되튕기고, 그 과정에서
+     *    `state.authError` 문구까지 사라져 사용자는 아무 설명 없이 화면만 바뀐 것을 본다.
+     *    계정 연결(link)로 나갔다가 10분을 넘긴 경우가 여기 해당한다.
+     */
     if (intent === null) {
+      if (useAuthStore.getState().status === 'authenticated') {
+        showToast('요청이 만료됐어요. 마이페이지에서 다시 시도해주세요.', 'warning')
+        navigate(ROUTES.MYPAGE, { replace: true })
+        return
+      }
+
       backToLogin('잘못된 접근이에요. 로그인을 다시 시도해주세요.')
       return
     }

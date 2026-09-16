@@ -1,9 +1,9 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 
 import { changePassword, withdraw } from '@/features/mypage/api/user'
 import { ROUTES } from '@/shared/constants/routes'
+import { clearAuthState } from '@/shared/lib/clearAuthState'
 import { setPendingToast } from '@/shared/lib/pendingToast'
-import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 
 /**
  * 비밀번호 변경.
@@ -35,16 +35,17 @@ export function useChangePassword() {
  *    탈퇴된 줄 안다. 모달이 열린 채로 오류를 보여주도록 부르는 쪽에 맡긴다.
  */
 export function useWithdraw() {
-  const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: withdraw,
     onSuccess: () => {
+      /*
+       * 안내를 먼저 적어둔다. `clearAuthState` 는 pendingToast 를 건드리지 않지만,
+       * 순서를 뒤집으면 읽는 사람이 "지워지지 않나?" 하고 멈칫하게 된다.
+       */
       setPendingToast('탈퇴가 완료됐어요. 그동안 이용해 주셔서 고맙습니다.')
 
       // 이동 전에도 지운다. 이동이 막히는 환경에서도 세션은 남지 않아야 한다
-      useAuthStore.getState().clearSession()
-      queryClient.clear()
+      clearAuthState()
 
       window.location.replace(ROUTES.HOME)
     },

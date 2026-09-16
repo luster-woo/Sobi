@@ -24,6 +24,7 @@ import Modal from '@/shared/ui/Modal'
 import Panel from '@/shared/ui/Panel'
 import Skeleton from '@/shared/ui/Skeleton'
 import { toSafeExternalUrl } from '@/shared/utils/externalUrl'
+import { maskAccountNo } from '@/shared/utils/mask'
 
 /**
  * 대출·지원사업 신청 · 서류 제출 (S15P21D101-189 · 194)
@@ -263,7 +264,7 @@ export function ApplicationApplyPage() {
             <Panel title="승인되면 출금 계좌로">
               <div className="px-[15px] py-4">
                 <p className="text-body1 text-text font-semibold">
-                  {selectedAccount.bankName} {selectedAccount.accountNo}
+                  {selectedAccount.bankName} {maskAccountNo(selectedAccount.accountNo)}
                 </p>
                 <p className="text-body2 text-text-secondary mt-1 break-keep">
                   신청 화면에서 고른 출금 계좌예요. 실행금 입금과 자동상환에 사용돼요.

@@ -7,6 +7,7 @@ import PhoneVerifyPopup from '@/features/auth/components/PhoneVerifyPopup'
 import PreOwnerBranchCard from '@/features/auth/components/PreOwnerBranchCard'
 import { useBusinessRegister } from '@/features/auth/hooks/useBusinessRegister'
 import { useBusinessVerify } from '@/features/auth/hooks/useBusinessVerify'
+import { useBusinessSummary } from '@/features/business/hooks/useBusinessSummary'
 import { ERROR_CODE, getErrorCode, getErrorMessage, getErrorStatus } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
@@ -147,8 +148,27 @@ export function BusinessVerifyPage() {
     )
   }
 
+  /**
+   * 이미 업체가 등록된 계정인지.
+   *
+   * ⚠️ **두 번 등록되면 계정을 못 쓰게 된다.** 백엔드 `BusinessServiceImpl.business()`
+   *    에 user 당 1건 제약이 없어서, 다른 사업자번호로 등록하면 `business_info` 행이
+   *    둘 생긴다. 그러면 `BusinessReporitory.findByUserId` 가 단건을 못 골라
+   *    `GET /business/me` 와 `GET /insurance` 가 **영구 500** 이 된다.
+   *
+   *    같은 번호면 unique 제약(500)에 걸려 되돌릴 수는 있지만, 다른 번호는 되돌릴
+   *    방법이 없다. 서버가 막아주지 않으므로 화면에서 먼저 막는다.
+   */
+  const { data: registeredBusiness } = useBusinessSummary()
+
   const handleStartAsOwner = () => {
     if (verifiedBrn === null) return
+
+    if (registeredBusiness) {
+      showToast('이미 등록된 업체가 있어요. 변경이 필요하면 문의해 주세요.', 'warning')
+      return
+    }
+
     setIdentityOpen(true)
   }
 
@@ -169,7 +189,14 @@ export function BusinessVerifyPage() {
         navigate(ROUTES.MYDATA_CONSENT)
       },
       onError: (error) => {
-        // 팝업은 열어둔다. 인증번호가 그대로 있어 '인증 완료' 를 다시 누르면 재시도된다
+        /*
+         * 팝업은 열어둔다. 인증번호가 그대로 있어 '인증 완료' 를 다시 누르면 재시도된다.
+         *
+         * 500 은 여기서 직접 띄운다 — 인터셉터의 일반 문구('서버에 문제가 생겼습니다')
+         * 보다 `REGISTER_CONFLICT_MESSAGE`(이미 등록된 번호) 가 훨씬 구체적이라, 이
+         * 자리에서는 중복이 아깝지 않다. 같은 파일 `handleVerify` 가 5xx 를 거르는 것과
+         * 다른 판단이고, 그 이유가 이것이다.
+         */
         showToast(getErrorMessage(error, { 500: REGISTER_CONFLICT_MESSAGE }), 'danger')
       },
     })

@@ -60,18 +60,20 @@ export interface SessionUser {
    *
    * ⚠️ **구글 가입자는 null 이다.** 구글이 생일을 주지 않아 가입 시점에 채울 수 없다
    *    (V23 마이그레이션 주석: '소셜 가입 시 null, 온보딩에서 입력'). 로그인 직후
-   *    `PATCH /user/birth-date` 로 받아 채운다 — `BirthDateModal` 참고.
+   *    `PATCH /user/profile` 로 받아 채운다 — `ProfileSetupModal` 참고.
    *
    *    로컬 가입은 `SignupRequest.birthDate` 가 `@NotNull` 이라 항상 값이 있다.
    */
   birthDate: ISODate | null
   /**
-   * ⚠️ **null 일 수 있다.** 백엔드 `LoginResponse.UserInfo.from()` 이
-   * `user.getRole() != null ? ... : null` 로 넣는다.
+   * ⚠️ 타입상 null 이 가능하다. 백엔드 `LoginResponse.UserInfo.from()` 이
+   * `user.getRole() != null ? ... : null` 로 넣기 때문이다.
    *
-   * 로컬 가입은 `PREENTREPRENEUR` 로 시작하지만(`AuthServiceImpl.signup`) 구글 신규
-   * 가입은 role 을 넣지 않아 null 로 온다. **null 은 예비 창업자로 본다** — 직접
-   * 비교하지 말고 `isPreOwner()` 를 쓸 것.
+   * **다만 실제로 null 이 오는 경로는 현재 없다.** 로컬 가입(`AuthServiceImpl.signup`)
+   * 과 구글 신규 가입(`oauthLogin`) 둘 다 `PREENTREPRENEUR` 를 넣는다 — 예전에는
+   * 구글 쪽이 비어 있었으나 지금은 채운다.
+   *
+   * null 은 예비 창업자로 본다. 직접 비교하지 말고 `isPreOwner()` 를 쓸 것.
    */
   role: UserRole | null
 }

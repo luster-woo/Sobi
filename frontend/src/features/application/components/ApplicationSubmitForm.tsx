@@ -4,6 +4,7 @@ import Button from '@/shared/ui/Button'
 import Input from '@/shared/ui/Input'
 import Select from '@/shared/ui/Select'
 import { formatMoneyShort } from '@/shared/utils/formatters'
+import { maskAccountNo } from '@/shared/utils/mask'
 
 interface ApplicationSubmitFormProps {
   detail: ApplicationDetail
@@ -92,7 +93,8 @@ export default function ApplicationSubmitForm({
         <Select
           options={accounts.map((account) => ({
             value: account.accountNo,
-            label: `${account.bankName} ${account.accountNo}`,
+            // ⚠️ value 는 원본이어야 한다. 서버로 나가는 값이라 가리면 안 된다
+            label: `${account.bankName} ${maskAccountNo(account.accountNo)}`,
           }))}
           value={accountNo}
           onChange={(event) => onAccountNoChange(event.target.value)}

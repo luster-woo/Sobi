@@ -37,15 +37,14 @@ type Errors = Partial<Record<'name' | 'birthDate', string>>
  * 이때가 낫다 — 사용자가 가입 절차를 밟고 있다고 느끼는 유일한 구간이라, 같은 흐름에
  * 붙이면 한 단계로 읽힌다.
  *
- * ⚠️ **닫을 수 없다.** 입력을 마쳐야 다음으로 간다. X 버튼과 Escape 는 창을 닫는 대신
- *    경고 문구를 띄운다 — `Modal` 은 항상 닫기 버튼을 그리고 Escape 를 받으므로,
- *    없애는 대신 `onClose` 를 경고로 돌렸다.
+ * ⚠️ **평소에는 닫을 수 없다.** 입력을 마쳐야 다음으로 간다. X 버튼과 Escape 는 창을
+ *    닫는 대신 경고 문구를 띄운다 — `Modal` 은 항상 닫기 버튼을 그리고 Escape 를 받으므로,
+ *    없애는 대신 `onClose` 를 경고로 돌렸다. 버튼을 지우지 않은 이유: 누를 데가 없으면
+ *    사용자는 창이 고장난 줄 안다.
  *
- *    버튼을 지우지 않은 이유: 누를 데가 없으면 사용자는 창이 고장난 줄 안다. 눌렀을 때
- *    "왜 못 닫는지" 를 말해주는 편이 낫다.
- *
- *    갇히는 것이 걱정된다면 — 브라우저 뒤로가기는 살아 있다. 이 화면은 구글에서
- *    돌아온 자리라 뒤로 가면 로그인 전으로 빠진다.
+ *    **단, 서버 저장이 한 번이라도 실패하면 닫을 수 있게 열어준다**(`saveFailed`).
+ *    강제로 받는 것은 사용자가 마음만 먹으면 넘어갈 수 있을 때 이야기고, 서버가 값을
+ *    못 받는 상황까지 막으면 로그인 직후 화면에 갇혀 아무것도 못 하게 된다.
  */
 export default function ProfileSetupModal({ open, defaultName, onDone }: ProfileSetupModalProps) {
   // 초기화 함수는 첫 렌더에만 돈다. 창이 열려 있는 동안 구글 이름이 바뀔 일은 없다
@@ -55,6 +54,18 @@ export default function ProfileSetupModal({ open, defaultName, onDone }: Profile
 
   /** 닫으려고 시도했는지. 경고 문구를 띄울지 정한다 */
   const [dismissed, setDismissed] = useState(false)
+
+  /**
+   * 저장이 서버에서 실패한 적이 있는지.
+   *
+   * ⚠️ 이때는 닫기를 허용한다. 입력을 강제하는 것은 사용자가 마음만 먹으면 넘어갈 수
+   *    있을 때 이야기고, 서버가 저장을 못 받는 상황에서 창을 막으면 **아무것도 할 수
+   *    없게 된다** — 이 창은 로그인 직후 스피너 위에 떠서 뒤로 갈 곳도 없다.
+   *
+   *    실제로 `PATCH /user/profile` 은 아직 백엔드에 없어서(S15P21D101-395 대기) 지금은
+   *    항상 여기로 온다. 엔드포인트가 올라오면 이 경로는 진짜 장애일 때만 돈다.
+   */
+  const [saveFailed, setSaveFailed] = useState(false)
 
   const { mutate: submit, isPending } = useProfileSetup()
 
@@ -79,11 +90,20 @@ export default function ProfileSetupModal({ open, defaultName, onDone }: Profile
          * 값이 채워져 있고 생년월일이 직접 고른 값이라 그쪽이 의심스럽다.
          */
         onError: (error) => {
+          setSaveFailed(true)
+
+          /*
+           * 5xx·네트워크 실패도 칸 아래에 적는다. 인터셉터가 토스트를 띄우긴 하지만
+           * 토스트는 몇 초 뒤 사라지고, 이 창은 그대로 남아 사용자가 방금 무슨 일이
+           * 있었는지 알 수 없게 된다 — 다른 모달과 달리 여기는 빠져나갈 길이 없다.
+           */
           const status = getErrorStatus(error)
-          if (status === undefined || status >= 500) return
 
           setErrors({
-            birthDate: getErrorMessage(error, { 401: '다시 로그인한 뒤 시도해 주세요.' }),
+            birthDate:
+              status === undefined || status >= 500
+                ? '지금은 저장할 수 없어요. 아래 버튼으로 건너뛰고 나중에 다시 시도해 주세요.'
+                : getErrorMessage(error, { 401: '다시 로그인한 뒤 시도해 주세요.' }),
           })
         },
       },
@@ -93,16 +113,25 @@ export default function ProfileSetupModal({ open, defaultName, onDone }: Profile
   return (
     <Modal
       open={open}
-      // 닫지 않는다. X·Escape 둘 다 여기로 오고, 대신 왜 못 닫는지 알린다
-      onClose={() => setDismissed(true)}
+      // 저장이 실패한 적이 있으면 나갈 수 있다. 아니면 왜 못 닫는지만 알린다
+      onClose={saveFailed ? onDone : () => setDismissed(true)}
       title="시작하기 전에 확인해주세요"
       description="이름은 서류에 들어가고,
           생년월일은 나이 조건이 걸린 지원사업을 찾는 데 써요."
       closeOnOverlayClick={false}
       footer={
-        <Button className="w-full" onClick={handleSubmit} loading={isPending}>
-          저장하고 시작하기
-        </Button>
+        <div className="flex w-full flex-col gap-2">
+          <Button className="w-full" onClick={handleSubmit} loading={isPending}>
+            저장하고 시작하기
+          </Button>
+
+          {/* 서버가 못 받는 동안의 탈출구. 성공하면 다시 나타나지 않는다 */}
+          {saveFailed && (
+            <Button variant="outline" className="w-full" onClick={onDone}>
+              나중에 하기
+            </Button>
+          )}
+        </div>
       }
     >
       <div className="flex flex-col gap-4">

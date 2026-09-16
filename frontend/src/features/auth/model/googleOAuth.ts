@@ -34,6 +34,24 @@ const STATE_KEY = 'oauth:state'
  */
 const INTENT_KEY = 'oauth:intent'
 
+/**
+ * state 를 발급한 시각을 담는 키.
+ *
+ * 구글 동의 화면까지 갔다 오는 데 몇 분이면 충분한데, 시각을 안 남기면 그 state 가
+ * **탭이 열려 있는 내내 유효하다.** 사용자가 동의 화면에서 멈춘 채 탭을 며칠 두면
+ * 그 사이 공격자가 확보한 인가 코드를 흘려보낼 창이 그만큼 길어진다.
+ */
+const ISSUED_AT_KEY = 'oauth:issued-at'
+
+/**
+ * state 유효 시간.
+ *
+ * 동의 화면에서 계정을 고르고 돌아오는 데 5분이면 넉넉하다. 비밀번호를 다시 입력하거나
+ * 2단계 인증을 거치는 경우까지 감안해 10분으로 둔다 — 더 짧게 잡으면 정상 사용자가
+ * '잘못된 접근이에요' 를 만난다.
+ */
+const STATE_TTL_MS = 10 * 60 * 1000
+
 export type OAuthIntent = 'login' | 'link'
 
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
@@ -65,6 +83,7 @@ export function buildAuthorizeUrl(intent: OAuthIntent = 'login'): string {
   const state = createState()
   sessionStorage.setItem(STATE_KEY, state)
   sessionStorage.setItem(INTENT_KEY, intent)
+  sessionStorage.setItem(ISSUED_AT_KEY, String(Date.now()))
 
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
@@ -86,11 +105,32 @@ export function buildAuthorizeUrl(intent: OAuthIntent = 'login'): string {
 export function consumeOAuthRequest(received: string | null): OAuthIntent | null {
   const saved = sessionStorage.getItem(STATE_KEY)
   const intent = sessionStorage.getItem(INTENT_KEY)
+  const issuedAt = Number(sessionStorage.getItem(ISSUED_AT_KEY))
 
-  sessionStorage.removeItem(STATE_KEY)
-  sessionStorage.removeItem(INTENT_KEY)
+  clearOAuthRequest()
 
   if (saved === null || received === null || saved !== received) return null
 
+  /*
+   * 너무 오래된 요청은 버린다 (S15P21D101-395).
+   *
+   * 값이 맞아도 발급한 지 오래됐으면 사용자가 그 사이 무엇을 했는지 알 수 없다.
+   * `issuedAt` 이 숫자가 아니면(예전 형식·손상) 만료로 본다 — 모르면 막는 쪽이 맞다.
+   */
+  if (!Number.isFinite(issuedAt) || Date.now() - issuedAt > STATE_TTL_MS) return null
+
   return intent === 'link' ? 'link' : 'login'
+}
+
+/**
+ * 진행 중이던 OAuth 요청 기록을 버린다.
+ *
+ * 세션을 정리할 때 같이 불린다(`clearAuthState`). 동의 화면으로 나갔다가 돌아오지 못한
+ * 채 로그아웃·만료가 나면 state 가 남는데, 그 값이 살아 있으면 다음 사람이 같은 탭에서
+ * 시작한 로그인에 이전 사용자의 의도(`link`)가 섞일 수 있다.
+ */
+export function clearOAuthRequest() {
+  sessionStorage.removeItem(STATE_KEY)
+  sessionStorage.removeItem(INTENT_KEY)
+  sessionStorage.removeItem(ISSUED_AT_KEY)
 }

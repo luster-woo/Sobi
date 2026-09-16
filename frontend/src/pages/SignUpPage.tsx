@@ -9,7 +9,7 @@ import { useCountdown } from '@/features/auth/hooks/useCountdown'
 import { useLogin } from '@/features/auth/hooks/useLogin'
 import { useSendEmailCode, useSignUp, useVerifyEmailCode } from '@/features/auth/hooks/useSignUp'
 import { buildAuthorizeUrl, isGoogleOAuthConfigured } from '@/features/auth/model/googleOAuth'
-import { ERROR_CODE, getErrorCode, getErrorMessage } from '@/shared/api/errors'
+import { ERROR_CODE, getErrorCode, getErrorMessage, getErrorStatus } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
 import { VALIDATION_MESSAGE } from '@/shared/constants/validation'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
@@ -218,8 +218,14 @@ export function SignUpPage() {
             return
           }
 
-          // 금융망 가입(EXTERNAL_001) 실패 등. 어느 칸의 문제가 아니라 토스트가 맞다
-          showToast(getErrorMessage(error), 'danger')
+          /*
+           * 금융망 가입(EXTERNAL_001) 실패 등. 어느 칸의 문제가 아니라 토스트가 맞다.
+           *
+           * 4xx 만 띄운다 — 네트워크 끊김과 5xx 는 `client.ts` 인터셉터가 이미 토스트를
+           * 올려서, 여기서 또 부르면 같은 문구가 두 장 쌓인다.
+           */
+          const status = getErrorStatus(error)
+          if (status !== undefined && status < 500) showToast(getErrorMessage(error), 'danger')
         },
       },
     )

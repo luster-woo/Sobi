@@ -134,7 +134,7 @@ public class RepaymentServiceImpl implements RepaymentService {
 
         //response 생성
 
-        RecordResponse response = RecordResponse.from(ssafyResponseRecord, remainingLoanBalance, interestSaved);
+        RecordResponse response = RecordResponse.from(ssafyResponseRecord, totalPayoffAmount, interestSaved);
 
 
 

@@ -2,8 +2,8 @@ import { useState } from 'react'
 
 import LoanDetailModal from '@/features/loan/components/LoanDetailModal'
 import Breadcrumb from '@/features/mypage/components/Breadcrumb'
-import { MOCK_FAVORITES } from '@/features/mypage/model/mock'
-import { FAVORITE_KIND, type FavoriteKind } from '@/features/mypage/model/types'
+import { useBookmarks } from '@/features/mypage/hooks/useBookmarks'
+import { FAVORITE_KIND, type FavoriteItem, type FavoriteKind } from '@/features/mypage/model/types'
 import SupportProgramDetailModal from '@/features/support-program/components/SupportProgramDetailModal'
 import { LOAN_STATUS_LABEL, SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { ROUTES } from '@/shared/constants/routes'
@@ -11,6 +11,7 @@ import BookmarkIcon from '@/shared/ui/BookmarkIcon'
 import EmptyState from '@/shared/ui/EmptyState'
 import Panel from '@/shared/ui/Panel'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
+import Skeleton from '@/shared/ui/Skeleton'
 import { cn } from '@/shared/utils/cn'
 import { formatDeadlineDate, formatMoneyShort } from '@/shared/utils/formatters'
 
@@ -18,29 +19,78 @@ type Filter = 'ALL' | FavoriteKind
 
 const KIND_LABEL: Record<FavoriteKind, string> = {
   LOAN: '대출',
-  SUPPORT_PROGRAM: '지원사업',
+  SUPPORT: '지원사업',
 }
 
 const TABS: { value: Filter; label: string }[] = [
   { value: 'ALL', label: '전체' },
   { value: FAVORITE_KIND.LOAN, label: '대출' },
-  { value: FAVORITE_KIND.SUPPORT_PROGRAM, label: '지원사업' },
+  { value: FAVORITE_KIND.SUPPORT, label: '지원사업' },
 ]
 
-/**
- * 유형이 정하는 값의 이름. 항목이 들고 있으면 같은 대출인데 줄마다 다른 말이 될 수 있다.
- */
-const VALUE_LABEL: Record<FavoriteKind, string> = {
-  LOAN: '금리',
-  SUPPORT_PROGRAM: '지원 금액',
+/** 값 칸 하나. 위에 작은 라벨, 아래 값 */
+interface Cell {
+  label: string
+  text: string
 }
 
-/** 대출은 연 이율, 지원사업은 한도. 단위까지 유형이 정한다 */
-function toValueText(kind: FavoriteKind, amount: number) {
-  return kind === FAVORITE_KIND.LOAN
-    ? `연 ${amount.toFixed(1)}%`
-    : `최대 ${formatMoneyShort(amount)}`
+/**
+ * 가운데 두 칸에 무엇을 넣을지 유형이 정한다.
+ *
+ * 대출은 금리·한도, 지원사업은 지원 금액·마감일이다. 각자의 목록 화면
+ * (loanColumns · supportColumns)이 보여주는 것과 같은 값을 같은 문구로 쓴다 —
+ * 같은 상품이 화면을 옮길 때마다 다른 값으로 읽히면 저장해둔 것과 같은 것인지
+ * 확인해야 한다.
+ *
+ * 두 유형이 다른 값을 쓰므로 라벨을 값 위에 붙인다. 열 머리글 하나로는 한쪽이
+ * 반드시 틀린 말이 된다 ('금리' 열에 지원 금액이 들어가는 식).
+ *
+ * ⚠️ 대출에는 마감일이 없다. `loan` 테이블에 end_date 컬럼 자체가 없는 상시 접수
+ *    상품이라 서버가 줄 것이 없어서, 그 자리에 한도를 놓았다.
+ */
+function toCells(item: FavoriteItem): [Cell, Cell] {
+  if (item.kind === FAVORITE_KIND.LOAN) {
+    return [
+      // 소수점 한 자리로 맞춘다. 3 과 3.5 가 섞이면 자릿수가 흔들린다
+      { label: '금리', text: `연 ${item.interestRate.toFixed(1)}%` },
+      { label: '한도', text: `최대 ${formatMoneyShort(item.maxLoanBalance)}` },
+    ]
+  }
+
+  return [
+    // 공고에 금액이 안 적힌 건이 실제로 있다. 그때는 '최대 -' 대신 '-' 하나만 둔다
+    {
+      label: '지원 금액',
+      text: item.maxBalance === null ? '-' : `최대 ${formatMoneyShort(item.maxBalance)}`,
+    },
+    { label: '마감', text: formatDeadlineDate(item.endDate) },
+  ]
 }
+
+/**
+ * 이름 아래 한 줄. 유형과 기관은 공통이고 뒤에 붙는 것이 갈린다.
+ *
+ * 대출은 기간(36개월), 지원사업은 융자형일 때만 이율. 둘 다 값 칸에 넣기엔 덜
+ * 중요하지만 없으면 상품을 구분하기 어려운 것들이다.
+ */
+function toSubtitle(item: FavoriteItem): string {
+  const parts = [KIND_LABEL[item.kind], item.organization]
+
+  if (item.kind === FAVORITE_KIND.LOAN) {
+    parts.push(`${item.period}개월`)
+  } else if (item.interestRate !== null) {
+    // 보조금·바우처에는 이율이 없다. null 이면 통째로 뺀다
+    parts.push(`연 ${item.interestRate.toFixed(1)}%`)
+  }
+
+  return parts.join(' · ')
+}
+
+/** 이름 / 값 / 값 / 상태 / 해제. 로딩 자리도 같은 폭을 써야 레이아웃이 안 튄다 */
+const GRID_TEMPLATE = 'minmax(0,1fr) 112px 112px 84px 40px'
+
+/** 목록이 오기 전 자리를 잡아둔다. 저장 개수를 모르니 적당히 넷 */
+const SKELETON_ROWS = 4
 
 /**
  * 관심 목록 (시안 18-1).
@@ -49,17 +99,30 @@ function toValueText(kind: FavoriteKind, amount: number) {
  * 찾을 때마다 두 군데를 봐야 한다. 대신 위 칩으로 걸러낸다.
  *
  * 카드가 아니라 행으로 그리는 이유: 여기 오는 사람은 훑어보러 온 것이 아니라 저장해둔
- * 것 중 하나를 고르러 온다. 한 줄에 하나씩 놓아야 이름과 마감일을 세로로 비교한다.
+ * 것 중 하나를 고르러 온다. 한 줄에 하나씩 놓아야 이름과 값을 세로로 비교한다.
  *
- * ⚠️ 값은 목이다. `GET /bookmark/me` 가 붙으면 useQuery 로 바꾸고, 해제는
- *    `DELETE /bookmark/{programId}?type=` 을 부른다.
+ * 값은 `GET /bookmark/me` 에서 온다 (368). 담기·빼기는 아직 화면 안에서만 돈다 (367).
  */
 export function FavoritesPage() {
   const [filter, setFilter] = useState<Filter>('ALL')
-  // ⚠️ 해제를 화면 안에서만 기억한다. 새로고침하면 돌아온다
-  const [removed, setRemoved] = useState<Set<number>>(new Set())
 
-  const items = MOCK_FAVORITES.filter((item) => !removed.has(item.id))
+  const { data, isLoading, isError } = useBookmarks()
+
+  /*
+   * ⚠️ 해제를 화면 안에서만 기억한다. 새로고침하면 돌아온다.
+   *    367 에서 `DELETE /bookmark/{programId}?type=` 을 부르는 useMutation 으로 바꾸고
+   *    이 state 를 지운다. 되돌리기가 없는 동작이라 낙관적 갱신을 넣는다면 onMutate 에서
+   *    캐시를 직접 손대는 쪽이 맞다.
+   */
+  const [removed, setRemoved] = useState<Set<string>>(new Set())
+
+  /*
+   * 키에 유형을 섞는다. programId 가 대출 id 와 지원사업 id 를 겸해서 21번 대출을
+   * 빼면 21번 지원사업까지 같이 사라진다.
+   */
+  const keyOf = (item: FavoriteItem) => `${item.kind}-${item.id}`
+
+  const items = (data ?? []).filter((item) => !removed.has(keyOf(item)))
   const shown = filter === 'ALL' ? items : items.filter((item) => item.kind === filter)
 
   const countOf = (kind: FavoriteKind) => items.filter((item) => item.kind === kind).length
@@ -99,30 +162,68 @@ export function FavoritesPage() {
                   : 'border-border bg-surface text-text-secondary hover:border-border-strong',
               )}
             >
-              {tab.label} {count}
+              {/* 개수는 조회가 끝난 뒤에만 붙인다. 로딩 중 0 을 보여주면 비어 있는 것으로 읽힌다 */}
+              {tab.label}
+              {!isLoading && !isError && ` ${count}`}
             </button>
           )
         })}
       </div>
 
-      {shown.length === 0 ? (
+      {isLoading ? (
+        <Panel>
+          {/* 값이 올 자리를 같은 그리드로 잡아둔다. 안 그러면 로딩이 끝날 때 줄이 튄다 */}
+          <div role="status" aria-label="관심 목록을 불러오는 중">
+            {Array.from({ length: SKELETON_ROWS }, (_, index) => (
+              <div
+                key={index}
+                style={{ gridTemplateColumns: GRID_TEMPLATE }}
+                className="border-border-subtle grid items-center gap-3 border-b px-[15px] py-2.5 last:border-b-0"
+              >
+                <Skeleton variant="text" width="58%" height={16} />
+                <Skeleton variant="text" height={16} />
+                <Skeleton variant="text" height={16} />
+                <Skeleton variant="text" height={20} />
+                <Skeleton variant="text" height={16} />
+              </div>
+            ))}
+          </div>
+        </Panel>
+      ) : isError ? (
+        <Panel>
+          <EmptyState
+            title="관심 목록을 불러오지 못했어요"
+            description="잠시 후 다시 시도해주세요."
+          />
+        </Panel>
+      ) : shown.length === 0 ? (
         <EmptyState
-          title="저장해둔 상품이 없어요"
-          description="대출·지원사업 목록에서 북마크를 누르면 여기 모입니다."
+          title={
+            // 유형 탭을 좁혀서 빈 것과 아예 아무것도 저장 안 한 것은 다른 상황이다
+            items.length === 0
+              ? '저장해둔 상품이 없어요'
+              : `저장해둔 ${KIND_LABEL[filter as FavoriteKind]}이 없어요`
+          }
+          description={
+            items.length === 0
+              ? '대출·지원사업 목록에서 북마크를 누르면 여기 모입니다.'
+              : '위 탭에서 전체를 눌러 다른 유형도 확인해보세요.'
+          }
         />
       ) : (
         <Panel>
           {shown.map((item) => {
             const impossible = item.status === 'INELIGIBLE'
+            const [primary, secondary] = toCells(item)
 
             return (
               <div
-                key={`${item.kind}-${item.id}`}
+                key={keyOf(item)}
                 /*
                  * 열 너비를 style 로 준다. `grid-cols-[...]` 임의값은 Tailwind 가 이
                  * 조합을 클래스로 뽑아내지 못해 한 칸짜리 그리드가 됐다(실측).
                  */
-                style={{ gridTemplateColumns: 'minmax(0,1fr) 108px 84px 84px 40px' }}
+                style={{ gridTemplateColumns: GRID_TEMPLATE }}
                 className={cn(
                   'border-border-subtle grid items-center gap-3 border-b px-[15px] py-2.5 last:border-b-0',
                   // 자격이 안 되는 줄은 눌러도 신청할 수 없다. 흐리게 두어 먼저 걸러 보게 한다
@@ -143,31 +244,24 @@ export function FavoritesPage() {
                     {item.title}
                   </b>
                   <span className="text-text-muted block truncate text-[11px]">
-                    {KIND_LABEL[item.kind]} · {item.organization}
-                    {item.tag && ` · ${item.tag}`}
+                    {toSubtitle(item)}
                   </span>
                 </button>
 
-                <span className="text-right text-[12.5px] tabular-nums">
-                  <i className="text-text-muted block text-[10px] tracking-wide not-italic">
-                    {VALUE_LABEL[item.kind]}
-                  </i>
-                  <span className={impossible ? 'text-text-muted' : 'text-text'}>
-                    {toValueText(item.kind, item.amount)}
+                {/*
+                 * 두 칸이 같은 모양이다. 유형마다 들어가는 값만 다르고 정렬·자릿수는
+                 * 같아야 세로로 비교된다 (12.5px · tabular-nums · 오른쪽 정렬)
+                 */}
+                {[primary, secondary].map((cell) => (
+                  <span key={cell.label} className="text-right text-[12.5px] tabular-nums">
+                    <i className="text-text-muted block text-[10px] tracking-wide not-italic">
+                      {cell.label}
+                    </i>
+                    <span className={impossible ? 'text-text-muted' : 'text-text'}>
+                      {cell.text}
+                    </span>
                   </span>
-                </span>
-
-                {/* 마감일에 색을 넣지 않는다. 저장해둔 것을 훑는 자리라 급한 것을
-                    골라주기보다 네 줄이 같은 무게로 읽히는 편이 낫다.
-                    문구는 지원사업 목록과 같다 (shared 의 formatDeadlineDate) */}
-                <span
-                  className={cn(
-                    'text-right text-[12.5px] tabular-nums',
-                    impossible ? 'text-text-muted' : 'text-text-secondary',
-                  )}
-                >
-                  {formatDeadlineDate(item.endDate)}
-                </span>
+                ))}
 
                 {/*
                  * 배지 폭이 문구 길이만큼 제각각이라('불가' 대 '신청 완료') 가운데
@@ -185,7 +279,7 @@ export function FavoritesPage() {
                   <button
                     type="button"
                     aria-label={`${item.title} 관심 목록에서 제거`}
-                    onClick={() => setRemoved((previous) => new Set(previous).add(item.id))}
+                    onClick={() => setRemoved((previous) => new Set(previous).add(keyOf(item)))}
                     className="text-text hover:text-text-muted focus-visible:outline-primary rounded p-1 transition-colors focus-visible:outline focus-visible:outline-offset-1"
                   >
                     {/* 저장돼 있는 것만 모인 자리라 항상 채워진 리본이다 */}
@@ -203,7 +297,7 @@ export function FavoritesPage() {
         <LoanDetailModal loanId={openItem.id} onClose={() => setOpenItem(null)} />
       )}
 
-      {openItem?.kind === FAVORITE_KIND.SUPPORT_PROGRAM && (
+      {openItem?.kind === FAVORITE_KIND.SUPPORT && (
         <SupportProgramDetailModal
           supportProgramId={openItem.id}
           onClose={() => setOpenItem(null)}

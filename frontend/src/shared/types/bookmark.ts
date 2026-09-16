@@ -12,10 +12,17 @@ export interface Bookmark {
   createdAt: ISODateTime
 }
 
-/** 토글 API 에서 어느 쪽 즐겨찾기인지 지정할 때 쓴다 */
+/**
+ * 토글 API 의 `type` 쿼리에 그대로 실리는 값.
+ *
+ * ⚠️ 지원사업이 `SUPPORT_PROGRAM` 이 아니라 `SUPPORT` 다. 백엔드
+ *    `BookmarkServiceImpl` 이 `"LOAN"` · `"SUPPORT"` 문자열만 받고 그 외에는
+ *    400 TYPE_BAD_REQUEST 를 준다. 테이블·엔티티 이름은 support_program 이라
+ *    헷갈리기 쉬운데, 통신에 나가는 값은 이쪽이 맞다.
+ */
 export const BOOKMARK_TARGET = {
   LOAN: 'LOAN',
-  SUPPORT_PROGRAM: 'SUPPORT_PROGRAM',
+  SUPPORT: 'SUPPORT',
 } as const
 
 export type BookmarkTarget = (typeof BOOKMARK_TARGET)[keyof typeof BOOKMARK_TARGET]

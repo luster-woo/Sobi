@@ -41,8 +41,9 @@ export default function ComparisonBar({
       </span>
 
       <span className="bg-surface-muted h-2.5 flex-1 overflow-hidden rounded-[2px]">
+        {/* 최종 너비는 style 이 정하고, 애니메이션은 0 → 1 배율만 움직인다 */}
         <span
-          className={cn('block h-full', highlight ? 'bg-primary' : 'bg-[#cfd6d3]')}
+          className={cn('animate-grow-bar block h-full', highlight ? 'bg-primary' : 'bg-[#cfd6d3]')}
           style={{ width: `${percent}%` }}
         />
       </span>

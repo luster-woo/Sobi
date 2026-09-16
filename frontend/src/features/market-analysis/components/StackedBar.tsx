@@ -25,7 +25,7 @@ interface StackedBarProps {
  */
 export default function StackedBar({ segments, className }: StackedBarProps) {
   return (
-    <div className={cn('flex h-8 overflow-hidden rounded-md', className)}>
+    <div className={cn('animate-reveal-bar flex h-8 overflow-hidden rounded-md', className)}>
       {segments.map((segment, index) => (
         <div
           key={segment.label}

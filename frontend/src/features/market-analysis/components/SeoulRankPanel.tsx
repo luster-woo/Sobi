@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react'
+
 import MiniPanel from '@/features/market-analysis/components/MiniPanel'
 import { formatWonText } from '@/features/market-analysis/model/format'
 import type { MarketAnalysis } from '@/features/market-analysis/model/types'
@@ -31,10 +33,18 @@ export default function SeoulRankPanel({ business, summary, seoulRank }: SeoulRa
     <MiniPanel title="서울시 내 위치">
       <div className="pt-5">
         <div className="relative">
-          {/* 눈금 위 라벨. 눈금과 같은 자리에 두려고 절대 배치한다 */}
+          {/*
+            눈금 위 라벨. 눈금과 같은 자리에 두려고 절대 배치한다.
+
+            라벨과 마커가 도착 지점이 다르다(라벨은 양 끝에서 잘리지 않게 8~92% 로
+            눌러 둔다). 그래서 --marker-left 를 각자 갖고, keyframes 는 그 변수를
+            읽어 제자리까지 미끄러진다.
+          */}
           <span
-            className="text-text absolute -top-5 -translate-x-1/2 text-[11.5px] font-bold whitespace-nowrap tabular-nums"
-            style={{ left: `${labelPercent}%` }}
+            className="animate-slide-marker text-text absolute -top-5 -translate-x-1/2 text-[11.5px] font-bold whitespace-nowrap tabular-nums"
+            style={
+              { '--marker-left': `${labelPercent}%`, left: `${labelPercent}%` } as CSSProperties
+            }
           >
             상위 {seoulRank.topPercent}%
           </span>
@@ -42,8 +52,10 @@ export default function SeoulRankPanel({ business, summary, seoulRank }: SeoulRa
           <div className="bg-bg-canvas h-2.5 rounded-full" />
 
           <span
-            className="bg-text absolute top-1/2 h-4 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-sm"
-            style={{ left: `${markerPercent}%` }}
+            className="animate-slide-marker bg-text absolute top-1/2 h-4 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-sm"
+            style={
+              { '--marker-left': `${markerPercent}%`, left: `${markerPercent}%` } as CSSProperties
+            }
           />
         </div>
 

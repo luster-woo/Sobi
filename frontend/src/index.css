@@ -146,3 +146,110 @@
     @apply font-heading text-text;
   }
 }
+
+/*
+ * ---------- 진행 애니메이션 (S15P21D101-409) ----------
+ *
+ * 수치를 나타내는 막대·마커는 최종값으로 바로 나타나지 않고 0 에서 차오른다.
+ * 값이 얼마나 되는지보다 "어디까지 찼는지" 가 먼저 읽히게 하기 위함이다.
+ *
+ * width 가 아니라 transform 을 움직인다. width 를 애니메이션하면 매 프레임 레이아웃이
+ * 다시 계산돼 같은 화면에 막대가 여러 줄일 때 눈에 띄게 끊긴다. scaleX 는 합성 단계에서
+ * 처리돼 줄 수가 늘어도 비용이 같다.
+ *
+ * 최종 너비는 그대로 style 로 주고 여기서는 0 → 1 배율만 다룬다. 그래서 애니메이션이
+ * 꺼져도(prefers-reduced-motion) 막대는 제 길이로 멀쩡히 보인다.
+ */
+@keyframes grow-bar {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/*
+ * 조각 안에 글자가 들어가는 막대. scaleX 로 키우면 글자까지 가로로 늘어난다.
+ * clip-path 로 오른쪽을 덮었다가 걷어내면 내용은 그대로 두고 드러나기만 한다.
+ */
+@keyframes reveal-bar {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/*
+ * 눈금 위 마커처럼 위치로 값을 나타내는 것. 왼쪽 끝에서 제자리로 미끄러진다.
+ * 도착 지점은 요소에 --marker-left 로 넣는다 — keyframes 안의 var() 는 그 요소에서 읽힌다.
+ */
+@keyframes slide-marker {
+  from {
+    left: 0%;
+  }
+  to {
+    left: var(--marker-left);
+  }
+}
+
+/*
+ * 지금 어느 단계인지 알리는 박동. 원 자체가 아니라 뒤에 깔린 링이 커지며 사라진다.
+ * 원을 키우면 옆 단계와 간격이 흔들려 줄 전체가 들썩인다.
+ */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+@layer utilities {
+  /* 상권 분석은 한 화면에 막대가 여러 줄이라 짧게 끊는다 */
+  .animate-grow-bar {
+    transform-origin: left center;
+    animation: grow-bar 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* 상환 진행률은 화면에 하나뿐이라 천천히 차올라도 지루하지 않다 */
+  .animate-grow-bar-slow {
+    transform-origin: left center;
+    animation: grow-bar 1400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-reveal-bar {
+    animation: reveal-bar 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-slide-marker {
+    animation: slide-marker 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-pulse-ring {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /*
+   * 전정기관이 예민한 사용자에게는 움직임 자체가 불편이다. 애니메이션만 끄고
+   * 최종 모습은 그대로 두려고 forwards 가 아닌 both 를 썼다.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-grow-bar,
+    .animate-grow-bar-slow,
+    .animate-reveal-bar,
+    .animate-slide-marker,
+    .animate-pulse-ring {
+      animation: none;
+    }
+  }
+}

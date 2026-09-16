@@ -1,0 +1,164 @@
+{
+  "fields": [
+    {
+      "candidate_id": "candidate_001",
+      "semantic_type": "USER_INPUT",
+      "field_key": "business_name",
+      "value_type": "TEXT",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.95
+    },
+    {
+      "candidate_id": "candidate_002",
+      "semantic_type": "USER_INPUT",
+      "field_key": "representative_name",
+      "value_type": "TEXT",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.95
+    },
+    {
+      "candidate_id": "candidate_003",
+      "semantic_type": "USER_INPUT",
+      "field_key": "business_brn",
+      "value_type": "TEXT",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.95
+    },
+    {
+      "candidate_id": "candidate_004",
+      "semantic_type": "IGNORE",
+      "field_key": null,
+      "value_type": null,
+      "required": false,
+      "mapping_status": "UNSUPPORTED",
+      "sources": [],
+      "confidence": 0.8
+    },
+    {
+      "candidate_id": "candidate_005",
+      "semantic_type": "USER_INPUT",
+      "field_key": "business_address",
+      "value_type": "TEXT",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.95
+    },
+    {
+      "candidate_id": "candidate_006",
+      "semantic_type": "USER_INPUT",
+      "field_key": "open_date",
+      "value_type": "DATE",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.78
+    },
+    {
+      "candidate_id": "candidate_007",
+      "semantic_type": "USER_INPUT",
+      "field_key": "employee_count",
+      "value_type": "NUMBER",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.85
+    },
+    {
+      "candidate_id": "candidate_008",
+      "semantic_type": "USER_INPUT",
+      "field_key": "user_name",
+      "value_type": "TEXT",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.95
+    },
+    {
+      "candidate_id": "candidate_009",
+      "semantic_type": "USER_INPUT",
+      "field_key": "birth_date",
+      "value_type": "TEXT",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.95
+    },
+    {
+      "candidate_id": "candidate_010",
+      "semantic_type": "USER_INPUT",
+      "field_key": "user_email",
+      "value_type": "TEXT",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.95
+    },
+    {
+      "candidate_id": "candidate_011",
+      "semantic_type": "USER_INPUT",
+      "field_key": "revenue_2025",
+      "value_type": "NUMBER",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.85
+    },
+    {
+      "candidate_id": "candidate_012",
+      "semantic_type": "USER_INPUT",
+      "field_key": "card_revenue_2025",
+      "value_type": "NUMBER",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.85
+    },
+    {
+      "candidate_id": "candidate_013",
+      "semantic_type": "USER_INPUT",
+      "field_key": "agreement_consent",
+      "value_type": "TEXT",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.95
+    },
+    {
+      "candidate_id": "candidate_014",
+      "semantic_type": "USER_INPUT",
+      "field_key": "agreement_non_consent",
+      "value_type": "TEXT",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.95
+    },
+    {
+      "candidate_id": "candidate_015",
+      "semantic_type": "USER_INPUT",
+      "field_key": "agreement_consent_duplicate",
+      "value_type": "TEXT",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.95
+    },
+    {
+      "candidate_id": "candidate_016",
+      "semantic_type": "USER_INPUT",
+      "field_key": "agreement_non_consent_duplicate",
+      "value_type": "TEXT",
+      "required": false,
+      "mapping_status": "USER_INPUT",
+      "sources": [],
+      "confidence": 0.95
+    }
+  ]
+}

@@ -6,6 +6,13 @@ ENV PYTHONUNBUFFERED=1 \
     TZ=Asia/Seoul \
     HF_HOME=/models
 
+# 문서 정규화: HWP -> HWPX(Java), DOC -> DOCX(LibreOffice), 한글 폰트
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    default-jre-headless \
+    libreoffice-writer \
+    fonts-nanum \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 
 # torch는 반드시 CPU 버전으로. 그냥 설치하면 CUDA가 딸려와 이미지가 6GB를 넘습니다.

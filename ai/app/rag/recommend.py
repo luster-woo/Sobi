@@ -1,8 +1,13 @@
-"""검색 결과를 LLM으로 검증한다. 공고 여러 건을 한 번의 호출로 판정."""
+"""검색 결과를 LLM으로 검증한다.
+
+판정 범위는 사업자 프로필로 대조할 수 있는 조건으로 한정한다.
+설계 근거는 docs/04_judgement_design.md.
+"""
 
 from __future__ import annotations
 
 import json
+import re
 import logging
 from datetime import date
 
@@ -13,78 +18,111 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """\
 너는 소상공인 정부지원사업 자격 심사관이다.
-주어진 사업자 정보로 각 공고의 신청 자격을 판정한다.
+사업자 정보와 공고별 조건을 대조해 신청 자격을 판정한다.
 
-판정 규칙:
-1. "eligible" — 공고의 필수 조건을 모두 충족한다고 확인됨
-2. "ineligible" — 필수 조건 중 하나라도 명확히 어긋남
-3. "unknown" — 사업자 정보만으로는 확인할 수 없는 필수 조건이 있음
-   (대표자 연령·성별, 신용점수, 대출·보험 가입 여부, 매출 감소율,
-    휴폐업·체납 여부, 중복 수혜 이력 등)
+## 판정 범위
+사업자 정보로 대조할 수 있는 조건만 판정한다.
 
-## 조건 해석
-추출된 조건 중에는 "지원 제외 대상"이 필수 조건처럼 적힌 것이 섞여 있다.
-문장이 결격 사유를 서술하면(휴업·폐업, 체납, 중복 수혜, 브로커 개입 등)
-"해당하면 탈락"으로 읽어라. "그 상태여야 한다"로 읽지 마라.
-  예) "신청일 현재 사업자등록을 하지 않거나 휴업 또는 폐업"
-      → 정상 영업 중인 사업자는 이 조건에 걸리지 않는다. 탈락 사유가 아니다.
+판정에 사용
+  region   시도·시군구·읍면동 → 사업자 주소와 대조
+  "제목에 표기된 지역"은 기업마당이 제목 앞에 붙인 표기다. 참고 정보이며
+  조건 목록보다 우선하지 않는다.
+    - 조건 목록에 지역 조건이 있으면 그것을 따른다
+    - 조건 목록에 지역 조건이 없을 때만, 지자체 공고는 그 지역 사업자
+      한정일 가능성이 높다고 보고 판단에 참고한다
+    - 사업명에 들어간 지명이 지원 시설·센터의 위치일 수 있다는 점도 함께 고려한다
+  industry 업종·표준 융자제외업종 → 사업자 업종과 대조
+  owner    대표자 연령, 예비창업자 여부 → 생년월일·개업일과 대조
+  track    1인 사업장 등 규모 → 상시근로자 수와 대조
 
-## 확인 불가 조건
-사업자 정보로 확인할 수 없는 조건은 두 종류로 나눠 처리한다.
+판정하지 않음 — 전부 check_items로 옮긴다
+  self_report  체납, 휴·폐업, 중복 수혜, 위반건축물 등 본인 신고 사항
+  other        그 밖의 조건
 
-1. 결격사유형 — 체납, 휴·폐업, 중복 수혜, 세무 미신고처럼 "해당하지 않으면 통과"
-   대부분의 사업자가 충족하므로 충족한 것으로 보고 판정하되 check_items에 적는다.
+## mode 해석
+  필수 — 충족하지 않으면 ineligible
+  제외 — 해당하면 ineligible. 해당 여부를 확인할 수 없으면
+         해당하지 않는 것으로 보고 check_items에 적는다
+  우대 — 판정에 쓰지 않는다. benefits에 넣는다
 
-2. 적극요건형 — 대표자 연령·성별, 특정 지위(새출발기금 약정, 백년소상공인),
-   보험·대출 가입처럼 "해당해야만 통과". 이때만 unknown이다.
+## status
+  "ineligible" — 판정 범위 안의 조건이 명확히 어긋남이 확인됨
+  "unknown"    — 확인할 수 없는 필수 조건이 "해당해야만 통과"하는 종류일 때만.
+                 성별(여성기업), 신용점수, 특정 지위(새출발기금 약정,
+                 백년소상공인), 보험·대출 가입, 매출 감소율이 여기 해당한다
+  "eligible"   — 그 외. 확인 불가 조건이 결격사유형(체납·휴폐업·중복수혜)
+                 뿐이면 eligible이다
 
-확인 불가를 이유로 ineligible을 주지 마라. ineligible은 제공된 정보로
-명확히 어긋남이 확인될 때만 쓴다.
+확인 불가를 이유로 ineligible을 주지 마라.
+공고에 없는 조건을 지어내지 마라. 근거는 제공된 조건 목록에서만 찾는다.
 
-주의:
-- 시군구·읍면동 조건은 사업자 주소와 대조한다. 시도만 같고 시군구가 다르면 ineligible.
-- 공고에 없는 조건을 지어내지 마라. 근거는 반드시 제공된 본문에서 찾는다.
-- 우대 조건은 충족하지 않아도 eligible이다. 필수 조건만 판정에 쓴다.
-- check_items에는 신청 전 사업자가 직접 확인해야 할 항목을 적는다.
+## 출력
+아래 JSON 형식으로만 답한다. 설명을 덧붙이지 않는다.
+{"results": [{"program_id": 1, "status": "eligible",
+  "reason": "한 문장", "check_items": ["..."], "benefits": ["..."]}]}
 
-반드시 아래 JSON 형식으로만 답한다:
-{"results": [{"program_id": 1, "status": "eligible", "reason": "한 문장", "check_items": ["..."]}]}
+reason은 판정 근거를 한 문장으로. ineligible이면 무엇이 어긋났는지 밝힌다.
+check_items는 신청 전 사업자가 직접 확인해야 할 항목이다.
+benefits는 우대 조건을 그대로 옮긴다. 없으면 빈 배열.
 """
+
+JUDGED = ("region", "industry", "owner", "track")
+
+
+
+# 기업마당 제목 규칙: "[경북] 구미시 2026년 ..." — 태그 뒤 첫 토큰이 시군구다.
+TITLE_SIGUNGU = re.compile(r"^\s*\[[^\]]+\]\s*([가-힣]+[시군구])\s")
+
+
+def _sigungu(title: str) -> str | None:
+    m = TITLE_SIGUNGU.match(title)
+    return m.group(1) if m else None
 
 
 def _build_user_prompt(
     *,
     address: str,
     industry_name: str,
+    std_excluded: bool,
     employee_count: int,
     open_date: date,
     annual_revenue: int | None,
+    birth_date: date | None,
     hits: list[search.ProgramHit],
 ) -> str:
     months = profile.biz_months(open_date)
-    revenue = f"{annual_revenue / 100_000_000:.1f}억원" if annual_revenue else "정보 없음"
-
     lines = [
         "# 사업자 정보",
         f"- 주소: {address}",
-        f"- 업종: {industry_name}",
+        f"- 업종: {industry_name}"
+        + (" (표준 융자제외업종에 해당)" if std_excluded else " (표준 융자제외업종 아님)"),
         f"- 상시근로자: {employee_count}명",
-        f"- 개업일: {open_date} (업력 {months}개월)",
-        f"- 연매출: {revenue}",
-        "",
-        "# 판정할 공고",
+        f"- 개업일: {open_date} (업력 {months}개월, 이미 사업자등록을 마쳤으므로 예비창업자가 아님)",
     ]
+    if annual_revenue:
+        lines.append(f"- 연매출: {annual_revenue / 100_000_000:.1f}억원")
+    if birth_date:
+        lines.append(f"- 대표자: 만 {profile.age(birth_date)}세 ({birth_date})")
+    else:
+        lines.append("- 대표자 연령: 정보 없음")
+
+    lines.append("\n# 판정할 공고")
     for hit in hits:
         lines.append(f"\n## program_id: {hit.program_id}")
-        lines.append(f"제목: {hit.title}")
+        lines.append(hit.title)
+
+        sigungu = _sigungu(hit.title)          # ← 여기
+        if sigungu:
+            lines.append(f"- (참고) 제목에 표기된 지역: {sigungu}")
+
         conditions = (hit.llm_conditions or {}).get("conditions", [])
-        if conditions:
-            lines.append("추출된 조건:")
-            for c in conditions:
-                lines.append(f"- [{c.get('mode', '필수')}] {c.get('text', '')}")
-        lines.append("본문:")
-        for chunk in hit.chunks:
-            lines.append(chunk)
+        if not conditions:
+            lines.append("- (추출된 조건 없음)")
+            continue
+        for c in conditions:
+            mode = c.get("mode", "필수")
+            category = c.get("category", "other")
+            lines.append(f"- [{mode}/{category}] {c.get('text', '')}")
     return "\n".join(lines)
 
 
@@ -96,6 +134,7 @@ async def recommend(
     employee_count: int,
     open_date: date,
     annual_revenue: int | None = None,
+    birth_date: date | None = None,
 ) -> dict:
     result = await search.search(
         region=region,
@@ -105,16 +144,17 @@ async def recommend(
         open_date=open_date,
         annual_revenue=annual_revenue,
     )
-
     if not result.hits:
         return {"query": result.query_text, "results": []}
 
     user_prompt = _build_user_prompt(
         address=address,
         industry_name=result.industry_name,
+        std_excluded=result.std_excluded,
         employee_count=employee_count,
         open_date=open_date,
         annual_revenue=annual_revenue,
+        birth_date=birth_date,
         hits=result.hits,
     )
 
@@ -142,10 +182,10 @@ async def recommend(
             "pblanc_id": hit.pblanc_id,
             "title": hit.title,
             "distance": round(hit.best_distance, 4),
-            # 판정이 없으면 탈락시키지 않고 unknown으로 둔다.
             "status": v.get("status", "unknown"),
             "reason": v.get("reason", "LLM 판정 실패"),
             "check_items": v.get("check_items", []),
+            "benefits": v.get("benefits", []),
         })
 
     logger.info("검증: %d공고, 토큰 %s", len(results), completion.usage.total_tokens)

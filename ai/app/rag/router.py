@@ -27,6 +27,7 @@ class SearchRequest(BaseModel):
     business_code: str
     employee_count: int
     open_date: date
+    birth_date: date | None = None
     annual_revenue: int | None = None
 
 

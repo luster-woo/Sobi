@@ -66,6 +66,7 @@ class ProgramHit:
 class SearchResult:
     query_text: str
     industry_name: str
+    std_excluded : bool
     hits: list[ProgramHit]
 
 async def lookup_industry(business_code: str) -> tuple[str, bool]:
@@ -141,5 +142,6 @@ async def search(
     return SearchResult(
         query_text=query_text,
         industry_name=industry_name,
+        std_excluded=std_excluded,
         hits=list(hits.values()),
     )

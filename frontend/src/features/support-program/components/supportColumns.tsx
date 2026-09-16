@@ -1,7 +1,8 @@
 import type { SupportProgramListItem } from '@/features/support-program/model/types'
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
 import { PRODUCT_STATUS, SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
-import BookmarkIcon from '@/shared/ui/BookmarkIcon'
+import { BOOKMARK_TARGET } from '@/shared/types'
+import BookmarkToggle from '@/shared/ui/BookmarkToggle'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
 import type { Column } from '@/shared/ui/Table'
 import { cn } from '@/shared/utils/cn'
@@ -109,13 +110,14 @@ export const supportColumns: Column<SupportProgramListItem>[] = [
     width: '70px',
     align: 'center',
     render: (program) => (
-      <span
-        className={cn(
-          'flex justify-center',
-          program.isBookmark ? 'text-text' : 'text-text-disabled',
-        )}
-      >
-        <BookmarkIcon filled={program.isBookmark} />
+      <span className="flex justify-center">
+        <BookmarkToggle
+          programId={program.supportProgramId}
+          type={BOOKMARK_TARGET.SUPPORT}
+          /* ⚠️ 지원사업만 아직 isBookmark 다. 명세가 확정되면 bookmarked 로 바뀐다 */
+          bookmarked={program.isBookmark}
+          label={program.pblancNm}
+        />
       </span>
     ),
   },

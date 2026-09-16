@@ -1,6 +1,7 @@
 import type { LoanListItem } from '@/features/loan/model/types'
 import { LOAN_STATUS_LABEL, PRODUCT_STATUS } from '@/shared/constants/productStatus'
-import BookmarkIcon from '@/shared/ui/BookmarkIcon'
+import { BOOKMARK_TARGET } from '@/shared/types'
+import BookmarkToggle from '@/shared/ui/BookmarkToggle'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
 import type { Column } from '@/shared/ui/Table'
 import { cn } from '@/shared/utils/cn'
@@ -94,10 +95,13 @@ export const loanColumns: Column<LoanListItem>[] = [
     width: '70px',
     align: 'center',
     render: (loan) => (
-      <span
-        className={cn('flex justify-center', loan.bookmarked ? 'text-text' : 'text-text-disabled')}
-      >
-        <BookmarkIcon filled={loan.bookmarked} />
+      <span className="flex justify-center">
+        <BookmarkToggle
+          programId={loan.loanId}
+          type={BOOKMARK_TARGET.LOAN}
+          bookmarked={loan.bookmarked}
+          label={loan.accountName}
+        />
       </span>
     ),
   },

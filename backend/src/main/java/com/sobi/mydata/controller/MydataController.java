@@ -41,4 +41,26 @@ public class MydataController {
                         request
                 ));
     }
+
+    /**
+     * 마이데이터 갱신. 다시 수집하고 자격을 재판정한다.
+     * 판정 1회에 GMS 크레딧이 약 100 나가므로 쿨다운이 걸려 있다.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<MydataLinkResponse>> refresh(
+            @AuthenticationPrincipal Long userId,
+            HttpServletRequest request
+    ) {
+
+        MydataLinkResponse response = mydataService.refresh(userId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "마이데이터 갱신과 자격 재판정을 완료했습니다.",
+                        response,
+                        request
+                ));
+    }
 }

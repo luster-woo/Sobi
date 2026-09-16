@@ -32,8 +32,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 마이데이터 연동의 DB 작업을 모아둔다.
@@ -119,6 +122,12 @@ public class MydataStore {
                 .build();
     }
 
+    /** 마지막 판정 시각. 갱신 쿨다운 판단용. */
+    @Transactional(readOnly = true)
+    public Optional<LocalDateTime> findLastJudgedAt(Long businessId) {
+        return suggestSupportProgramRepository.findLastJudgedAt(businessId);
+    }
+
     /**
      * 수집한 값을 적재한다. 매출은 지우고 다시 넣고, 계좌는 없는 것만 더한다.
      */
@@ -132,6 +141,23 @@ public class MydataStore {
 
         saveTaxes(business, snapshot);
         saveInsuranceChecklist(business, snapshot);
+        saveAccounts(user, accounts);
+        saveCreditRating(user, creditRatingName);
+    }
+
+    /**
+     * 갱신용. 보험 체크리스트만 다르게 다루고 나머지는 최초 연동과 같다.
+     */
+    @Transactional
+    public void refreshCollected(MydataSnapshot snapshot,
+                                 List<SsafyDemandDepositAccountRecord> accounts,
+                                 String creditRatingName) {
+
+        BusinessInfo business = businessRepository.getReferenceById(snapshot.getBusinessId());
+        User user = userRepository.getReferenceById(snapshot.getUserId());
+
+        saveTaxes(business, snapshot);
+        upgradeInsuranceChecklist(business, snapshot);
         saveAccounts(user, accounts);
         saveCreditRating(user, creditRatingName);
     }
@@ -221,6 +247,49 @@ public class MydataStore {
 
         log.info("보험 체크리스트 생성 - businessId: {}, 대상 {}건 중 가입 {}건",
                 business.getId(), rows.size(), joined.size());
+    }
+
+    /**
+     * 체크리스트를 한 방향으로만 갱신한다.
+     *
+     * 마이데이터에 가입 기록이 있으면 COMPLETED 로 올리고, 없는 보험은 손대지 않는다.
+     * 마이데이터 목이 실제 가입 현황을 전부 담고 있지 않아서, "없다"를 "해지했다"로
+     * 읽으면 사용자가 직접 바꿔둔 값을 되돌리게 된다.
+     */
+    private void upgradeInsuranceChecklist(BusinessInfo business, MydataSnapshot snapshot) {
+
+        Set<Long> joined = Set.copyOf(snapshot.getJoinedInsuranceIds());
+        List<InsuranceChecklist> existing =
+                insuranceChecklistRepository.findAllByBusinessId(business.getId());
+
+        int upgraded = 0;
+        for (InsuranceChecklist checklist : existing) {
+            if (joined.contains(checklist.getInsurance().getId())
+                    && checklist.getStatus() != InsuranceStatus.COMPLETED) {
+                checklist.changeStatus(InsuranceStatus.COMPLETED);
+                upgraded++;
+            }
+        }
+
+        // 업종이 바뀌어 대상 보험이 늘었을 수 있다. 행이 없는 것만 새로 만든다.
+        Set<Long> existingInsuranceIds = existing.stream()
+                .map(c -> c.getInsurance().getId())
+                .collect(Collectors.toSet());
+
+        List<InsuranceChecklist> added =
+                insuranceRepository.findAllForBusinessCode(snapshot.getBusinessCodeId()).stream()
+                        .filter(i -> !existingInsuranceIds.contains(i.getId()))
+                        .map(i -> InsuranceChecklist.of(
+                                business,
+                                i,
+                                joined.contains(i.getId())
+                                        ? InsuranceStatus.COMPLETED
+                                        : NOT_JOINED_STATUS))
+                        .toList();
+        insuranceChecklistRepository.saveAll(added);
+
+        log.info("보험 체크리스트 갱신 - businessId: {}, 상태 상향 {}건, 신규 {}건",
+                business.getId(), upgraded, added.size());
     }
 
     private void saveAccounts(User user, List<SsafyDemandDepositAccountRecord> accounts) {

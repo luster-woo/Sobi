@@ -80,6 +80,10 @@ public class User {
         this.password = encodedPassword;
     }
 
+    public void updateBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
     // 로컬 계정 → 소셜 계정 완전 전환. 이후 이메일+비밀번호 로그인 불가
     public void convertToSocial(Provider provider, String providerId) {
         this.provider = provider;

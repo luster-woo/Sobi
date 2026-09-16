@@ -133,11 +133,21 @@ export const endpoints = {
    * ⚠️ programId 가 대출 id 와 지원사업 id 를 겸한다. 21번 대출과 21번 지원사업이
    *    둘 다 있을 수 있어 `type` 을 빠뜨리면 엉뚱한 것이 담긴다 — 호출부에서
    *    반드시 같이 보낼 것.
+   *
+   * ⚠️ `type` 에 보내는 값은 `SUPPORT` 다. 백엔드 `BookmarkServiceImpl` 이
+   *    `"LOAN"` · `"SUPPORT"` 두 문자열만 받고 나머지는 400 을 준다.
    */
   bookmark: {
+    /** query `type`. 이미 담긴 것을 또 담으면 400 BOOKMARK_ALREADY_EXISTS */
     add: (programId: number) => `/bookmark/${programId}`,
+    /** query `type`. 담기지 않은 것을 빼면 404 BOOKMARK_NOT_FOUND */
     remove: (programId: number) => `/bookmark/${programId}`,
-    /** 내 관심 목록. `sort` `page` `size` */
+    /**
+     * 내 관심 목록. 대출과 지원사업을 `{ loanList, supportProgramList }` 두 배열로 나눠 준다.
+     *
+     * 페이징·정렬이 없다. 저장해둔 것 전부가 한 번에 온다 — `BookmarkController.getBookmark`
+     * 가 파라미터를 하나도 받지 않는다. 저장 개수가 많아져 잘라야 하면 백엔드부터 고쳐야 한다.
+     */
     me: '/bookmark/me',
   },
 

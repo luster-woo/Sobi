@@ -1,18 +1,13 @@
-import {
-  FAVORITE_KIND,
-  type FavoriteItem,
-  type LinkedAccountsData,
-  type MyPageData,
-} from '@/features/mypage/model/types'
-import { PRODUCT_STATUS } from '@/shared/constants/productStatus'
+import type { LinkedAccountsData, MyPageData } from '@/features/mypage/model/types'
 import { AUTH_PROVIDER } from '@/shared/types'
 
 /**
- * 마이페이지 목 데이터. 리디자인 시안 18 · 18-1 · 18-3 의 값을 옮겼다.
+ * 마이페이지 목 데이터. 리디자인 시안 18 · 18-3 의 값을 옮겼다.
  *
- * ⚠️ 삭제 대상. `GET /user/me` · `GET /bookmark/me` · 계좌 API 가 붙으면 이 파일을
- *    지우고 useQuery 로 바꾼다. 그때 지울 것이 이 파일 하나로 끝나도록 컴포넌트에는
- *    값을 남기지 않았다.
+ * ⚠️ 삭제 대상. `GET /user/me` · 계좌 API 가 붙으면 이 파일을 지우고 useQuery 로
+ *    바꾼다. 그때 지울 것이 이 파일 하나로 끝나도록 컴포넌트에는 값을 남기지 않았다.
+ *
+ * 관심 목록(18-1)은 빠졌다 — `GET /bookmark/me` 가 붙어서 `useBookmarks` 가 대신한다 (368).
  */
 
 const DAY_MS = 86_400_000
@@ -101,50 +96,6 @@ export const MOCK_MYPAGE_PRE_OWNER: MyPageData = {
     nextRepaymentDate: null,
   },
 }
-
-export const MOCK_FAVORITES: FavoriteItem[] = [
-  {
-    id: 4,
-    kind: FAVORITE_KIND.SUPPORT_PROGRAM,
-    title: '소상공인 스마트상점 기술보급',
-    organization: '소상공인시장진흥공단',
-    tag: '바우처',
-    amount: 5_000_000,
-    endDate: daysFromNow(5),
-    status: PRODUCT_STATUS.SUBMITTED,
-  },
-  {
-    id: 2,
-    kind: FAVORITE_KIND.LOAN,
-    title: '소진공 일반경영안정자금',
-    organization: '소상공인시장진흥공단',
-    tag: '운전자금',
-    amount: 3.4,
-    endDate: daysFromNow(28),
-    status: PRODUCT_STATUS.SUBMITTED,
-  },
-  {
-    id: 3,
-    kind: FAVORITE_KIND.LOAN,
-    title: '지역신보 보증부 대출',
-    organization: '대구신용보증재단',
-    tag: '운전자금',
-    amount: 4.1,
-    endDate: null,
-    status: PRODUCT_STATUS.APPROVED,
-  },
-  {
-    // 자격이 안 되는 것도 저장해둘 수 있다. 조건이 바뀌면 신청 가능해진다
-    id: 7,
-    kind: FAVORITE_KIND.SUPPORT_PROGRAM,
-    title: '지역 상권 활성화 지원',
-    organization: '대구광역시',
-    tag: '보조금',
-    amount: 8_000_000,
-    endDate: daysFromNow(64),
-    status: PRODUCT_STATUS.INELIGIBLE,
-  },
-]
 
 export const MOCK_LINKED_ACCOUNTS: LinkedAccountsData = {
   updatedAt: hoursAgo(20),

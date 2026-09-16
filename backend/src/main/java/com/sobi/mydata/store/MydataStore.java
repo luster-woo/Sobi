@@ -8,6 +8,7 @@ import com.sobi.business.repository.BusinessReporitory;
 import com.sobi.business.repository.BusinessTaxRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.global.external.ai.clientDto.RagResult;
 import com.sobi.insurance.entity.Insurance;
 import com.sobi.insurance.entity.InsuranceChecklist;
 import com.sobi.insurance.entity.InsuranceStatus;
@@ -18,6 +19,9 @@ import com.sobi.mydata.entity.Mydata;
 import com.sobi.mydata.repository.MydataInsuranceRepository;
 import com.sobi.mydata.repository.MydataRepository;
 import com.sobi.mydata.repository.MydataTaxRepository;
+import com.sobi.support.entity.SuggestSupportProgram;
+import com.sobi.support.repository.SuggestSupportProgramRepository;
+import com.sobi.support.repository.SupportProgramRepository;
 import com.sobi.user.clientDto.SsafyDemandDepositAccountRecord;
 import com.sobi.user.entity.CreditRating;
 import com.sobi.user.entity.User;
@@ -49,6 +53,12 @@ public class MydataStore {
     /** 마이데이터에 가입 기록이 없는 보험의 초기 상태 */
     private static final InsuranceStatus NOT_JOINED_STATUS = InsuranceStatus.NEEDS_VERIFICATION;
 
+    /** suggest_support_program.reason 컬럼 길이 */
+    private static final int REASON_MAX_LENGTH = 500;
+
+    /** status CHECK 제약이 허용하는 값 */
+    private static final Set<String> VALID_STATUS = Set.of("eligible", "unknown", "ineligible");
+
     private final UserRepository userRepository;
     private final BusinessReporitory businessRepository;
     private final BusinessTaxRepository businessTaxRepository;
@@ -58,6 +68,8 @@ public class MydataStore {
     private final InsuranceRepository insuranceRepository;
     private final InsuranceChecklistRepository insuranceChecklistRepository;
     private final AccountRepository accountRepository;
+    private final SupportProgramRepository supportProgramRepository;
+    private final SuggestSupportProgramRepository suggestSupportProgramRepository;
 
     /**
      * 연동에 필요한 값을 한 번에 읽는다.
@@ -123,6 +135,57 @@ public class MydataStore {
         saveAccounts(user, accounts);
         saveCreditRating(user, creditRatingName);
     }
+
+    /**
+     * AI 판정 결과 222건을 저장한다. 기존 행은 지우고 다시 넣는다.
+     *
+     * upsert 가 아니라 삭제 후 재삽입인 이유: 공고가 청킹 전이거나 삭제되면
+     * 응답에서 빠지는데, upsert 면 예전 판정이 유령으로 남는다.
+     */
+    @Transactional
+    public void saveJudgements(Long businessId, List<RagResult> results) {
+
+        suggestSupportProgramRepository.deleteAllByBusinessId(businessId);
+
+        BusinessInfo business = businessRepository.getReferenceById(businessId);
+
+        List<SuggestSupportProgram> rows = results.stream()
+                .map(r -> SuggestSupportProgram.of(
+                        supportProgramRepository.getReferenceById(r.getProgramId()),
+                        business,
+                        normalizeStatus(r),
+                        truncateReason(r.getReason()),
+                        r.getCheckItems(),
+                        r.getBenefits(),
+                        r.getDistance(),
+                        r.getJudgedBy()))
+                .toList();
+        suggestSupportProgramRepository.saveAll(rows);
+
+        log.info("판정 저장 - businessId: {}, {}건", businessId, rows.size());
+    }
+
+    /**
+     * AI 응답에 스키마 검증이 없어 LLM 이 엉뚱한 값을 뱉을 수 있다.
+     * CHECK 제약에 걸려 222건 전체가 날아가는 것보다 unknown 으로 두는 편이 낫다.
+     */
+    private String normalizeStatus(RagResult result) {
+        String status = result.getStatus();
+        if (status != null && VALID_STATUS.contains(status)) {
+            return status;
+        }
+        log.warn("알 수 없는 판정 상태 - programId: {}, status: {}", result.getProgramId(), status);
+        return "unknown";
+    }
+
+    private String truncateReason(String reason) {
+        if (reason == null || reason.length() <= REASON_MAX_LENGTH) {
+            return reason;
+        }
+        log.warn("판정 사유가 {}자를 넘어 잘랐다", REASON_MAX_LENGTH);
+        return reason.substring(0, REASON_MAX_LENGTH);
+    }
+
 
     private void saveTaxes(BusinessInfo business, MydataSnapshot snapshot) {
         businessTaxRepository.deleteByBusinessId(business.getId());

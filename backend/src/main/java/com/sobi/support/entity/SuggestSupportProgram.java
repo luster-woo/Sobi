@@ -82,6 +82,8 @@ public class SuggestSupportProgram {
             String judgedBy
     ) {
         SuggestSupportProgram entity = new SuggestSupportProgram();
+        // @MapsId 가 채워주려면 복합키 객체가 미리 있어야 한다. null 이면 세터 호출에서 NPE 가 난다.
+        entity.id = new SuggestSupportProgramId(supportProgram.getId(), business.getId());
         entity.supportProgram = supportProgram;
         entity.business = business;
         entity.status = status;

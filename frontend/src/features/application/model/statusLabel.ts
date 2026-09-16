@@ -12,9 +12,10 @@ import { APPLICATION_STATUS_LABEL, type ApplicationStatus } from '@/shared/types
  */
 export function applicationStatusLabel(
   status: ApplicationStatus,
-  sourceType: ApplicationSource,
+  /** 상품·공고가 지워진 신청은 종류를 모른다. 그때는 도메인 공용 문구로 떨어진다 */
+  sourceType: ApplicationSource | null,
 ): string {
-  if (status === 'PAID') {
+  if (status === 'PAID' && sourceType !== null) {
     return sourceType === 'LOAN' ? '실행 완료' : '지급 완료'
   }
 

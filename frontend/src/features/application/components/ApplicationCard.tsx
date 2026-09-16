@@ -40,29 +40,24 @@ export default function ApplicationCard({
   children,
 }: ApplicationCardProps) {
   const navigate = useNavigate()
-  const {
-    applicationId,
-    sourceType,
-    status,
-    productName,
-    organization,
-    applyAmount,
-    subjectAt,
-    rejectReason,
-  } = application
+  const { applicationId, type, status, programName, amount, subjectAt, rejectReason } = application
 
   /*
    * 신청 화면은 대출·지원사업이 경로만 다르고 화면은 같다. 여기서 가르는 이유는
    * 그 화면이 '목록으로' 링크를 그릴 때 경로로 출처를 판단하기 때문이다.
    */
   const continueTo =
-    sourceType === 'LOAN'
-      ? routeTo.loanApply(applicationId)
-      : routeTo.supportProgramApply(applicationId)
+    type === 'LOAN' ? routeTo.loanApply(applicationId) : routeTo.supportProgramApply(applicationId)
 
+  /*
+   * 상품·공고가 지워지면 type 과 programName 이 없다(FK 가 ON DELETE SET NULL).
+   * 신청 기록 자체는 남아 있어 진행 상황은 볼 수 있어야 하므로 카드를 숨기지 않고
+   * 이름 자리만 메운다. 종류를 모르면 '대출'·'지원금' 줄은 아예 뺀다 — 둘 중 하나로
+   * 찍으면 틀린 정보가 된다.
+   */
   const meta = [
-    sourceType === 'LOAN' ? '대출' : '지원금',
-    applyAmount !== null ? `${formatMoneyShort(applyAmount)} 신청` : null,
+    type === null ? null : type === 'LOAN' ? '대출' : '지원금',
+    amount !== null ? `${formatMoneyShort(amount)} 신청` : null,
     `${formatApplicationDate(subjectAt)} 접수`,
   ].filter(Boolean)
 
@@ -75,11 +70,10 @@ export default function ApplicationCard({
       {/* items-center 다. 상품명이 두 줄로 넘어가도 배지·버튼이 글 블록 한가운데 선다 */}
       <div className="flex flex-wrap items-center gap-3 px-5 py-4">
         <div className="min-w-[200px] flex-1">
-          <p className="text-body1 text-text font-semibold break-keep">{productName}</p>
-          <p className="text-body2 text-text-secondary mt-1">
-            {meta.join(' · ')}
-            {organization && ` · ${organization}`}
+          <p className="text-body1 text-text font-semibold break-keep">
+            {programName ?? '삭제된 상품'}
           </p>
+          <p className="text-body2 text-text-secondary mt-1">{meta.join(' · ')}</p>
         </div>
 
         {/*
@@ -92,7 +86,7 @@ export default function ApplicationCard({
         */}
         <div className="flex shrink-0 items-center gap-2">
           <Badge variant={APPLICATION_STATUS_VARIANT[status]} className="w-[92px] justify-center">
-            {applicationStatusLabel(status, sourceType)}
+            {applicationStatusLabel(status, type)}
           </Badge>
 
           {status === 'PREPARING' ? (

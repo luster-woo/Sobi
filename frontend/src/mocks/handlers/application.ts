@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 
+import { isSettled } from '@/features/application/model/statusLabel'
 import type {
   ApplicationDetail,
   ApplicationDocument,
@@ -517,23 +518,20 @@ function awakenSeed(app: MockApplication) {
 }
 
 /**
- * 목록용 변환. 서류는 안 담고 화면에 바로 필요한 상품명·기관명을 펼쳐서 내려준다.
+ * 목록용 변환. 서류는 안 담고 화면에 바로 필요한 것만 펼쳐서 내려준다.
  *
- * ⚠️ subjectAt 은 createdAt 을 그대로 넣는다. ERD 는 subject_at / complete_at 인데
- *    명세 예시는 createdAt / updatedAt 이라 이름이 갈렸다. 백엔드에 정리를
- *    요청해 둔 상태라, 확정되면 이 함수와 타입만 고치면 된다.
+ * 기관명(organization)은 확정 응답에 없어 빠졌다. 카드 부제에서도 함께 지웠다.
  */
 function toListItem(app: MockApplication): ApplicationListItem {
   const isLoan = app.loanId !== null
 
   return {
     applicationId: app.applicationId,
-    sourceType: isLoan ? 'LOAN' : 'SUPPORT_PROGRAM',
-    programId: (isLoan ? app.loanId : app.supportProgramId) ?? 0,
-    productName: app.product.name,
-    organization: app.product.organization,
+    type: isLoan ? 'LOAN' : 'SUPPORT',
+    programId: isLoan ? app.loanId : app.supportProgramId,
+    programName: app.product.name,
     status: app.status,
-    applyAmount: app.applyAmount,
+    amount: app.applyAmount,
     subjectAt: app.createdAt,
     completeAt: app.completeAt,
     rejectReason: app.rejectReason,
@@ -548,16 +546,24 @@ export const applicationHandlers = [
    * 돌아갈 길이 없었다. 자금 조합이 한 번에 여러 건을 만들기 시작하면 갈 곳 없는
    * 신청서가 더 늘어난다.
    *
+   * status 파라미터(IN_PROGRESS / DONE)를 받지만 화면이 안 보낸다. 화면 탭은 준비 중을
+   * 진행 중에서 떼어 네 갈래라 서버의 2분류로는 못 맞춘다. 그래서 목도 거르지 않는다.
+   *
+   * 개수는 필터 적용 전 전체 기준이다. 서버가 그렇게 준다.
+   *
    * 최신 신청이 위로 온다.
    */
   http.get('/api/v1/application', () => {
-    const applications_ = [...applications.values()]
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .map(toListItem)
+    const all = [...applications.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+    const inProgressCount = all.filter((app) => !isSettled(app.status)).length
 
     return HttpResponse.json(
       success('/api/v1/application', '신청 목록 조회에 성공하였습니다.', {
-        applications: applications_,
+        totalCount: all.length,
+        inProgressCount,
+        doneCount: all.length - inProgressCount,
+        applications: all.map(toListItem),
       }),
     )
   }),

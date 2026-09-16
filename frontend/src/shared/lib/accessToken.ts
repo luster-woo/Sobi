@@ -77,5 +77,14 @@ export function sessionUserFromToken(token: string): SessionUser | null {
     email: claims.email,
     name: claims.email.split('@')[0],
     role: toUserRole(claims.role),
+    /*
+     * ⚠️ 여기서의 null 은 '비어 있다' 가 아니라 **'모른다'** 다. JWT claim 에 생년월일이
+     *    없어서 복원할 방법이 없다.
+     *
+     *    생년월일이 비었는지로 무언가를 판단하는 코드는 이 값을 믿으면 안 된다.
+     *    지금 그렇게 쓰는 곳은 `OAuthCallbackPage` 하나인데, 거기는 로그인 응답
+     *    (`LoginResponse.user.birthDate`)을 직접 보므로 이 폴백을 타지 않는다.
+     */
+    birthDate: null,
   }
 }

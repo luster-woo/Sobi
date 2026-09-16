@@ -44,18 +44,27 @@ export interface TokenResponse {
 }
 
 /**
- * 로그인 응답에 실려오는 사용자 정보. **네 필드뿐이다.**
+ * 로그인 응답에 실려오는 사용자 정보. 백엔드 `LoginResponse.UserInfo` 와 1:1.
  *
  * `shared/types/user.ts` 의 `User`(테이블 전체)와 다르다. 신용등급·가입 경로·알림 설정
  * 같은 나머지는 `GET /user/me` 가 주기로 되어 있는데 백엔드에 아직 없다.
  *
- * 화면이 세션에서 실제로 읽는 값은 `role` 과 `name` 뿐이라 이 네 개로 충분하다.
  * 키가 `id` 가 아니라 **`userId`** 다.
  */
 export interface SessionUser {
   userId: number
   email: string
   name: string
+  /**
+   * 생년월일 'YYYY-MM-DD'.
+   *
+   * ⚠️ **구글 가입자는 null 이다.** 구글이 생일을 주지 않아 가입 시점에 채울 수 없다
+   *    (V23 마이그레이션 주석: '소셜 가입 시 null, 온보딩에서 입력'). 로그인 직후
+   *    `PATCH /user/birth-date` 로 받아 채운다 — `BirthDateModal` 참고.
+   *
+   *    로컬 가입은 `SignupRequest.birthDate` 가 `@NotNull` 이라 항상 값이 있다.
+   */
+  birthDate: ISODate | null
   /**
    * ⚠️ **null 일 수 있다.** 백엔드 `LoginResponse.UserInfo.from()` 이
    * `user.getRole() != null ? ... : null` 로 넣는다.

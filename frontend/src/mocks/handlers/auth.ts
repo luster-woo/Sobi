@@ -30,12 +30,13 @@ function hasSession() {
 /** 다른 도메인 핸들러가 '인증 필요' 를 흉내 낼 때 쓴다 */
 export const hasMockSession = hasSession
 
-/** 실제 로그인 응답이 주는 네 필드뿐이다 */
+/** 실제 로그인 응답(`LoginResponse.UserInfo`)이 주는 것과 같은 필드다 */
 const ENTREPRENEUR_USER: SessionUser = {
   userId: 1,
   email: 'owner@sogong.com',
   name: '김소상',
   role: USER_ROLE.ENTREPRENEUR,
+  birthDate: '1988-04-12',
 }
 
 const PREENTREPRENEUR_USER: SessionUser = {
@@ -43,6 +44,7 @@ const PREENTREPRENEUR_USER: SessionUser = {
   email: 'pre@sogong.com',
   name: '박예비',
   role: USER_ROLE.PREENTREPRENEUR,
+  birthDate: '1995-11-03',
 }
 
 interface MockAccount {
@@ -98,12 +100,12 @@ function findAccount(email: string): MockAccount | undefined {
  * role 은 `PREENTREPRENEUR` 다. 백엔드 `AuthServiceImpl.signup()` 이 그렇게 넣는다 —
  * 사업자가 되려면 `POST /business` 로 업체를 등록해야 한다.
  */
-function addAccount(email: string, password: string, name: string) {
+function addAccount(email: string, password: string, name: string, birthDate: string) {
   const accounts = loadAccounts()
 
   accounts[email] = {
     password,
-    user: { userId: Date.now(), email, name, role: USER_ROLE.PREENTREPRENEUR },
+    user: { userId: Date.now(), email, name, role: USER_ROLE.PREENTREPRENEUR, birthDate },
   }
 
   sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
@@ -215,7 +217,9 @@ const usedResetTokens = new Set<string>()
  *
  * ⚠️ 남은 계약 불일치
  *    - 로그인 응답이 `refreshToken` 을 바디로 준다. 실제로는 httpOnly 쿠키다
- *    - `/user/me` 는 백엔드 미구현이라 목이 유일한 구현이다 — S15P21D101-377
+ *    - `GET /user/me` 는 백엔드 미구현이라 목이 유일한 구현이다 — S15P21D101-377.
+ *      같은 경로의 **DELETE(탈퇴)와 `PATCH /user/password` 는 백엔드에 있다** —
+ *      그쪽은 실서버가 뜨면 실서버 우선 규칙에 따라 목이 비켜선다 (S15P21D101-379)
  *
  * 가입 흐름은 목에서도 순서를 지켜야 통과한다.
  *    중복 확인 → 발송(쿨다운) → 검증(123456) → 가입
@@ -409,7 +413,7 @@ export const authHandlers = [
     }
 
     // 가입한 계정으로 바로 로그인할 수 있어야 흐름이 이어진다
-    addAccount(email, password, name)
+    addAccount(email, password, name, birthDate)
 
     clearVerified(email)
     return ok(null, '회원가입 성공', { path })
@@ -469,7 +473,14 @@ export const authHandlers = [
     })
   }),
 
-  // GET /api/v1/user/me — 백엔드 미구현이라 목이 유일한 구현이다
+  /*
+   * GET /api/v1/user/me — 백엔드 미구현이라 목이 유일한 구현이다 (S15P21D101-377).
+   *
+   * ⚠️ `lib/serverFirst.ts` 의 `MOCK_ONLY` 에 올려서 실서버를 아예 안 물어본다.
+   *    매핑이 없는데도 `GlobalExceptionHandler` 의 캐치올이 500 + 공통 봉투를 만들어
+   *    내서, 그냥 두면 '백엔드가 응답했다' 로 판정돼 이 목이 안 탄다. 백엔드에 조회가
+   *    생기면 그 목록에서 빼야 한다 — 저절로 빠지지 않는다.
+   */
   http.get('/api/v1/user/me', () => {
     const user = hasSession() ? currentUser() : null
 
@@ -478,6 +489,112 @@ export const authHandlers = [
     }
 
     return ok(user, '내 정보 조회 성공', { path: '/api/v1/user/me' })
+  }),
+
+  /*
+   * PATCH /api/v1/user/password
+   *
+   * ⚠️ body 가 `{ password }` 하나다. **현재 비밀번호를 받지 않는다** —
+   *    백엔드 `PasswordChangeReqeust` 가 그렇다. 목도 똑같이 안 받아야 화면이
+   *    잘못 보내는 것을 실서버로 바꾸기 전에 알 수 있다.
+   *
+   * 바꾼 값을 실제로 저장한다. 그래야 로그아웃 후 새 비밀번호로 다시 들어가 보는
+   * 확인까지 목에서 된다.
+   */
+  http.patch('/api/v1/user/password', async ({ request }) => {
+    const path = '/api/v1/user/password'
+    const { password } = (await request.json()) as { password?: string }
+
+    const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
+    if (!hasSession() || !email) {
+      return fail(401, 'AUTH_010', '인증이 필요합니다.', path)
+    }
+
+    // 백엔드 @Size(min = 8, max = 20)
+    if (!password || password.length < 8 || password.length > 20) {
+      return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
+    }
+
+    updatePassword(email, password)
+
+    return ok(null, '비밀번호 변경 완료', { path })
+  }),
+
+  /*
+   * PATCH /api/v1/user/profile
+   *
+   * 구글 가입자가 로그인 직후 이름·생년월일을 채우는 자리다. 저장된 값을 되돌려 준다.
+   *
+   * ⚠️ 백엔드에는 아직 생년월일만 받는 `/user/birth-date` 뿐이라, 이 경로는 목이 유일한
+   *    구현이다 — `lib/serverFirst.ts` 의 `MOCK_ONLY` 에 올려서 실서버를 안 물어본다.
+   *    백엔드가 만들면 그 목록에서 빼야 한다.
+   *
+   * ⚠️ `@NotBlank`·`@Past` 를 흉내 낸다. 목에서 느슨하게 두면 화면 검증이 새도 여기서는
+   *    통과해서, 실서버로 바꾼 뒤에야 저장이 안 되는 것을 알게 된다.
+   */
+  http.patch('/api/v1/user/profile', async ({ request }) => {
+    const path = '/api/v1/user/profile'
+    const { name, birthDate } = (await request.json()) as { name?: string; birthDate?: string }
+
+    const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
+    if (!hasSession() || !email) {
+      return fail(401, 'AUTH_010', '인증이 필요합니다.', path)
+    }
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const nameOk = Boolean(name?.trim()) && (name?.length ?? 0) <= 100
+    const birthOk = Boolean(birthDate) && new Date(`${birthDate}T00:00:00`) < today
+
+    if (!nameOk || !birthOk) {
+      return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
+    }
+
+    /*
+     * 실제로 계정에 저장한다. 그래야 로그아웃 후 같은 구글 계정으로 다시 들어왔을 때
+     * 창이 **안 뜨는** 것까지 목에서 확인된다 — 판단 기준이 `birthDate === null` 이라
+     * 저장이 안 되면 매번 다시 묻는 것처럼 보인다.
+     */
+    const saved = { name: name!.trim(), birthDate: birthDate! }
+
+    const accounts = loadAccounts()
+    const account = accounts[email]
+    if (account) {
+      accounts[email] = { ...account, user: { ...account.user, ...saved } }
+      sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
+    }
+
+    return ok(saved, '프로필이 저장되었습니다.', { path })
+  }),
+
+  /*
+   * DELETE /api/v1/user/me
+   *
+   * ⚠️ 경로가 `GET /user/me` 와 같고 메서드만 다르다. 명세에는 POST 로 적혀 있는데
+   *    `UserController` 구현이 DELETE 라 구현을 따랐다.
+   *
+   * 실제로 계정을 지운다. 탈퇴한 이메일로 다시 로그인하면 실패해야 흐름이 맞고,
+   * 같은 주소로 재가입해 보는 것도 목에서 확인된다 (서버는 deleted_at 을 채울 뿐이라
+   * 재가입 가능 여부가 다를 수 있다 — 거기까지는 흉내 내지 않는다).
+   */
+  http.delete('/api/v1/user/me', () => {
+    const path = '/api/v1/user/me'
+    const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
+
+    if (!hasSession() || !email) {
+      return fail(401, 'AUTH_010', '인증이 필요합니다.', path)
+    }
+
+    const accounts = loadAccounts()
+    delete accounts[email]
+    sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
+
+    // 서버도 refreshToken 을 지운다. 목에서는 세션 플래그를 치우는 것이 그 자리다
+    sessionStorage.removeItem(SESSION_KEY)
+    sessionStorage.removeItem(SESSION_EMAIL_KEY)
+
+    return ok(null, '회원 탈퇴 완료', { path })
   }),
 
   // POST /api/v1/auth/oauth/:provider
@@ -509,6 +626,12 @@ export const authHandlers = [
       email: GOOGLE_EMAIL,
       name: '구글가입',
       role: null,
+      /*
+       * ⚠️ **null 이 맞다.** 구글이 생일을 주지 않아 소셜 가입은 비어 있다
+       *    (V23 마이그레이션 주석). 이 값이어야 로그인 직후 생년월일 창이 뜨는 흐름을
+       *    목에서도 볼 수 있다 — 채워 넣으면 그 화면을 영영 못 본다.
+       */
+      birthDate: null,
     }
 
     if (!existing) {

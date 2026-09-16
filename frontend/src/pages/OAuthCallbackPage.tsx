@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 
+import ProfileSetupModal from '@/features/auth/components/ProfileSetupModal'
 import { useOAuthLogin } from '@/features/auth/hooks/useOAuthLogin'
 import { useSocialLink } from '@/features/auth/hooks/useSocialLink'
 import { consumeOAuthRequest } from '@/features/auth/model/googleOAuth'
@@ -34,6 +35,14 @@ export function OAuthCallbackPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const showToast = useUiStore((s) => s.showToast)
+
+  /*
+   * 이름·생년월일을 받고 나서 갈 곳과, 이름 칸에 채워둘 구글 이름. null 이면 안 띄운다.
+   *
+   * 목적지를 여기 담아두는 이유: 창을 닫든 저장하든 원래 가려던 곳으로 보내야 하는데,
+   * 그 판단(`isNewUser`)은 교환이 끝난 시점에만 할 수 있다.
+   */
+  const [setup, setSetup] = useState<{ next: string; name: string } | null>(null)
 
   const { mutate: exchange } = useOAuthLogin()
   const { mutate: link } = useSocialLink()
@@ -94,8 +103,25 @@ export function OAuthCallbackPage() {
     }
 
     exchange(code, {
-      onSuccess: ({ isNewUser }) => {
-        navigate(isNewUser ? ROUTES.BUSINESS_VERIFY : ROUTES.DASHBOARD, { replace: true })
+      onSuccess: ({ isNewUser, user }) => {
+        const next = isNewUser ? ROUTES.BUSINESS_VERIFY : ROUTES.DASHBOARD
+
+        /*
+         * 구글 로그인은 이름·생년월일이 둘 다 미덥지 않다. 생년월일은 구글이 주지 않아
+         * 비어 있고, 이름은 구글 프로필 이름이라 실명이 아닐 수 있다. 여기서 확인받는다 —
+         * 로컬 가입은 `SignupRequest` 가 둘 다 `@NotNull` 이라, 메우지 않으면 가입 경로에
+         * 따라 데이터가 갈린다.
+         *
+         * `isNewUser` 가 아니라 **생년월일이 비었는지**로 가른다. 최초 가입 때 창을
+         * 닫아버린 사람도 다음 로그인에 다시 물을 수 있어야 한다. 이름은 값이 항상
+         * 있어서(구글 것) 이 판단에 못 쓴다.
+         */
+        if (user.birthDate === null) {
+          setSetup({ next, name: user.name })
+          return
+        }
+
+        navigate(next, { replace: true })
       },
       onError: (error) => backToLogin(toMessage(error)),
     })
@@ -105,6 +131,18 @@ export function OAuthCallbackPage() {
     <div className="flex min-h-[240px] flex-col items-center justify-center gap-3">
       <Spinner />
       <p className="text-body2 text-text-secondary">구글 계정을 확인하고 있어요…</p>
+
+      {/*
+       * 뒤에 스피너가 계속 돈다. 창이 닫히면 곧바로 이동하므로 그 사이 화면이 비지 않고,
+       * 아직 볼 것이 남았다는 느낌도 유지된다.
+       */}
+      {setup !== null && (
+        <ProfileSetupModal
+          open
+          defaultName={setup.name}
+          onDone={() => navigate(setup.next, { replace: true })}
+        />
+      )}
     </div>
   )
 }

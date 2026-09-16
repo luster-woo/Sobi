@@ -1,4 +1,5 @@
 import { getApplicationProgress } from '@/features/application/model/progress'
+import { isSettled } from '@/features/application/model/statusLabel'
 import type { ApplicationListItem } from '@/features/application/model/types'
 import ProgressStepper from '@/shared/ui/ProgressStepper'
 
@@ -13,11 +14,21 @@ interface ApplicationProgressStepperProps {
  * model/progress 가 하고, 여기서는 공용 스텝퍼에 넘기기만 한다.
  *
  * 반려돼도 스텝퍼를 그린다. 어디까지 갔다가 막혔는지가 사유만큼 중요하다.
+ *
+ * 끝난 건(지급 완료·반려)인지 함께 넘긴다. 스텝퍼는 지금 어느 단계인지 박동으로
+ * 알리는데, 다 끝난 건에서 계속 뛰면 아직 진행 중으로 읽힌다.
  */
 export default function ApplicationProgressStepper({
   application,
 }: ApplicationProgressStepperProps) {
   const { steps, doneCount, failedIndex } = getApplicationProgress(application)
 
-  return <ProgressStepper steps={steps} doneCount={doneCount} failedIndex={failedIndex} />
+  return (
+    <ProgressStepper
+      steps={steps}
+      doneCount={doneCount}
+      failedIndex={failedIndex}
+      settled={isSettled(application.status)}
+    />
+  )
 }

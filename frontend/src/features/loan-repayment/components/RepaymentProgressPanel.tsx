@@ -21,8 +21,9 @@ export default function RepaymentProgressPanel({ progress }: RepaymentProgressPa
     >
       <div className="flex flex-col gap-2.5 px-[15px] py-3.5">
         <div className="bg-bg-canvas h-1.5 overflow-hidden rounded-full">
+          {/* 상권 분석 막대보다 느리게 찬다. 화면에 하나뿐이라 끝까지 볼 여유가 있다 */}
           <div
-            className="bg-primary h-full rounded-full transition-[width]"
+            className="bg-primary animate-grow-bar-slow h-full rounded-full"
             style={{ width: `${progress.percent}%` }}
           />
         </div>

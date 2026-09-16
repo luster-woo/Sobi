@@ -129,14 +129,15 @@ export interface ApplicationDetail {
 }
 
 /**
- * 신청 대상. 쿼리 파라미터로 붙인다.
+ * 신청 대상. 신청 생성의 쿼리 파라미터이자 목록 응답의 type 이다.
  *
- * ⚠️ 명세는 소문자(loan/support)인데 다른 API 는 전부 대문자 상수라 통일을 요청했다.
- *    소문자로 확정되면 값만 바꾸면 된다.
+ * 서버 enum(ApplicationType)과 같은 값이어야 한다. SUPPORT_PROGRAM 으로 보내면
+ * APPLICATION_TYPE_BAD_REQUEST(400) 가 온다 — 테이블 이름이 support_program 이라
+ * 헷갈리기 쉬운데 통신에 나가는 값은 SUPPORT 다.
  */
 export const APPLICATION_SOURCE = {
   LOAN: 'LOAN',
-  SUPPORT_PROGRAM: 'SUPPORT_PROGRAM',
+  SUPPORT: 'SUPPORT',
 } as const
 
 export type ApplicationSource = (typeof APPLICATION_SOURCE)[keyof typeof APPLICATION_SOURCE]
@@ -180,15 +181,20 @@ export interface PayoutAccount {
  */
 export interface ApplicationListItem {
   applicationId: number
-  /** 카드에 '대출' / '지원금' 으로 표시하고, 어느 도메인 상세로 갈지도 이걸로 가른다 */
-  sourceType: ApplicationSource
-  /** loanId 또는 supportProgramId */
-  programId: number
-  productName: string
-  organization: string | null
+  /**
+   * 카드에 '대출' / '지원금' 으로 표시하고, 어느 도메인 상세로 갈지도 이걸로 가른다.
+   *
+   * 상품·공고가 DB 에서 지워지면 null 이다(FK 가 ON DELETE SET NULL). 대출은 마감이
+   * 없어 행이 계속 남으므로 실제로는 안 나온다. 지원사업은 나중에 만료 공고를
+   * 정리하기 시작하면 나올 수 있다 — 그때 화면을 제대로 만든다.
+   */
+  type: ApplicationSource | null
+  /** loanId 또는 supportProgramId. type 과 같은 이유로 null 일 수 있다 */
+  programId: number | null
+  programName: string | null
   status: ApplicationStatus
-  /** 대출만 값이 있다. 지원사업은 금액을 입력받지 않아 null */
-  applyAmount: number | null
+  /** 최종 신청 전에는 null. 지원사업은 금액을 입력받지 않아 계속 null */
+  amount: number | null
   /** 접수 시각(subject_at). 신청을 만든 시점이라 항상 있다 */
   subjectAt: string
   /** 승인·반려가 확정된 시각(complete_at). 진행 중이면 null. */
@@ -197,6 +203,18 @@ export interface ApplicationListItem {
   rejectReason: string | null
 }
 
+/**
+ * 신청 목록 응답.
+ *
+ * 페이지네이션이 없다. 한 사람의 신청 건수가 많아야 수십 건이라 서버가 한 번에 준다.
+ *
+ * inProgressCount·doneCount 는 서버의 2분류(IN_PROGRESS / DONE) 기준이라 화면 탭과
+ * 맞지 않는다. 화면은 준비 중을 진행 중에서 떼어 네 갈래로 나누므로 개수도 직접 센다.
+ * status 파라미터를 보내지 않고 전체를 받는 이유도 같다.
+ */
 export interface ApplicationListData {
+  totalCount: number
+  inProgressCount: number
+  doneCount: number
   applications: ApplicationListItem[]
 }

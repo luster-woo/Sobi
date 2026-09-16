@@ -85,7 +85,7 @@ export default function SupportProgramDetailModal({
 
   const handleApply = () => {
     createApplication.mutate(
-      { type: APPLICATION_SOURCE.SUPPORT_PROGRAM, programId: supportProgramId },
+      { type: APPLICATION_SOURCE.SUPPORT, programId: supportProgramId },
       {
         onSuccess: (application) =>
           navigate(routeTo.supportProgramApply(application.applicationId)),

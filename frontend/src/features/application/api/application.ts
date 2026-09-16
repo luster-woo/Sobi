@@ -69,7 +69,15 @@ export async function uploadDocument({ applicationDocumentId, file }: UploadDocu
   await api.post<null>(endpoints.application.uploadDocument, formData)
 }
 
-/** 내 신청 목록. 상태 필터는 화면에서 거른다 — 건수가 많지 않고 탭 전환이 즉시 반응해야 한다 */
+/**
+ * 내 신청 목록.
+ *
+ * status 파라미터를 보내지 않는다. 서버는 IN_PROGRESS / DONE 둘로만 거르는데 화면은
+ * 준비 중을 진행 중에서 떼어 네 갈래로 나눈다. 건수가 많지 않고 탭 전환이 즉시
+ * 반응해야 해서 전체를 한 번 받아 화면에서 거른다.
+ *
+ * 함께 오는 totalCount·inProgressCount·doneCount 도 같은 이유로 쓰지 않는다.
+ */
 export async function getApplications() {
   const { data } = await api.get<ApplicationListData>(endpoints.application.list)
   return data.applications

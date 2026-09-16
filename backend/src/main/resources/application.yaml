@@ -69,6 +69,10 @@ ssafy:
     institution-code: "00100"
     fintech-app-no: "001"
 
+ai:
+  base-url: ${AI_BASE_URL:http://localhost:8000}
+  read-timeout: 120s
+
 loan:
   product-sync:
     enabled: ${LOAN_PRODUCT_SYNC_ENABLED:true}   # 부팅 시 미등록 대출 상품을 금융망에 등록

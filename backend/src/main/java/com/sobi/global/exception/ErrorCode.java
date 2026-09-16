@@ -54,6 +54,9 @@ public enum ErrorCode {
     // 외부 API
     FINANCE_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_001", "금융망 API 호출에 실패했습니다."),
 
+    // 외부 API - AI 서버
+    AI_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_002", "지원사업 추천 서버 호출에 실패했습니다."),
+
     // funding 관련
     TARGET_AMOUNT_ERROR(HttpStatus.BAD_REQUEST, "FUNDING_001", "목표 금액은 0보다 커야합니다."),
 

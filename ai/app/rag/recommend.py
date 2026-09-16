@@ -146,6 +146,7 @@ async def recommend(
     open_date: date,
     annual_revenue: int | None = None,
     birth_date: date | None = None,
+    model: str = gms.DEFAULT_MODEL,
 ) -> dict:
     result = await search.search(
         region=region,
@@ -170,7 +171,7 @@ async def recommend(
     )
 
     completion = await gms.get_client().chat.completions.create(
-        model=gms.DEFAULT_MODEL,
+        model=model,
         response_format={"type": "json_object"},
         temperature=0,
         messages=[

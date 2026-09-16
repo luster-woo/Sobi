@@ -24,6 +24,9 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       SSAFY_FINANCE_BASE_URL: ${SSAFY_FINANCE_BASE_URL}
       SSAFY_FINANCE_API_KEY: ${SSAFY_FINANCE_API_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      LOAN_PRODUCT_SYNC_ENABLED: "${LOAN_PRODUCT_SYNC_ENABLED:-true}"
     networks: [backend, data]
     restart: unless-stopped
     healthcheck:

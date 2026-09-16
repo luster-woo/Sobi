@@ -41,4 +41,13 @@ public class InsuranceChecklist {
     public void changeStatus(InsuranceStatus next) {
         this.status = next;
     }
+
+    public static InsuranceChecklist of(BusinessInfo business, Insurance insurance,
+                                        InsuranceStatus status) {
+        InsuranceChecklist entity = new InsuranceChecklist();
+        entity.business = business;
+        entity.insurance = insurance;
+        entity.status = status;
+        return entity;
+    }
 }

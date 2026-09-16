@@ -8,10 +8,9 @@ import { describeConditions } from '@/features/loan/model/conditions'
 import type { ProductStatus } from '@/shared/constants/productStatus'
 import { LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { ROUTES, routeTo } from '@/shared/constants/routes'
-import { useBookmarkToggle } from '@/shared/hooks/useBookmarkToggle'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import { BOOKMARK_TARGET } from '@/shared/types'
-import BookmarkButton from '@/shared/ui/BookmarkButton'
+import BookmarkToggle from '@/shared/ui/BookmarkToggle'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
@@ -102,20 +101,6 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
     )
   }
 
-  /*
-   * 관심 목록 담기·빼기 (367). 낙관적 갱신을 하지 않는 대신, 요청이 도는 동안에는
-   * 방금 누른 값(`variables.next`)을 보여준다 — 그러지 않으면 응답이 올 때까지
-   * 리본이 안 바뀌어서 버튼이 고장난 것으로 보인다.
-   *
-   * 끝나면 무효화가 돌아 상세를 다시 받아오므로 그때부터는 서버 값이 이긴다.
-   * state 를 따로 두지 않는 이유: effect 로 서버 값과 동기화하면
-   * react-hooks/set-state-in-effect 에 걸리고 렌더가 한 번 더 돈다.
-   */
-  const toggleBookmark = useBookmarkToggle()
-  const bookmarked = toggleBookmark.isPending
-    ? toggleBookmark.variables.next
-    : (data?.bookmarked ?? false)
-
   const handleFooterClick = () => {
     if (trackedApplicationId !== null) {
       navigate(ROUTES.APPLICATIONS)
@@ -136,15 +121,15 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
       headerRight={data && <ProductStatusBadge status={data.status} labels={LOAN_STATUS_LABEL} />}
       headerAction={
         data && (
-          <BookmarkButton
-            bookmarked={bookmarked}
-            onToggle={() =>
-              toggleBookmark.mutate({
-                programId: loanId,
-                type: BOOKMARK_TARGET.LOAN,
-                next: !bookmarked,
-              })
-            }
+          /*
+           * 관심 목록 담기·빼기 (367). 요청이 도는 동안 방금 누른 값을 보여주고
+           * 끝나면 무효화가 돌아 서버 값이 이긴다 — 그 처리는 BookmarkToggle 안에 있다.
+           * 목록의 표도 같은 컴포넌트를 쓴다.
+           */
+          <BookmarkToggle
+            programId={loanId}
+            type={BOOKMARK_TARGET.LOAN}
+            bookmarked={data.bookmarked}
             label={data.accountName}
           />
         )

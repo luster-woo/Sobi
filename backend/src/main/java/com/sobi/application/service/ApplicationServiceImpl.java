@@ -2,9 +2,12 @@ package com.sobi.application.service;
 
 import com.sobi.application.dto.ApplicationCreateResponse;
 import com.sobi.application.dto.ApplicationDetailResponse;
+import com.sobi.application.dto.ApplicationListResponse;
+import com.sobi.application.dto.ApplicationSummaryResponse;
 import com.sobi.application.entity.Application;
 import com.sobi.application.entity.ApplicationDocument;
 import com.sobi.application.entity.ApplicationStatus;
+import com.sobi.application.entity.ApplicationStatusFilter;
 import com.sobi.application.entity.ApplicationType;
 import com.sobi.application.repository.ApplicationDocumentRepository;
 import com.sobi.application.repository.ApplicationRepository;
@@ -84,7 +87,64 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     /**
-     * 대출 신청 생성. 모집 기간 개념이 없어 기간 검증은 하지 않음
+     * 신청 현황 목록. 개수는 필터와 상관없이 전체 기준이라 진행 중 / 완료 탭 숫자로 바로 쓸 수 있다
+     */
+    @Override
+    public ApplicationListResponse getApplications(Long userId, String status) {
+
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 잘못된 값이면 여기서 400 (컨트롤러에서 enum 으로 받으면 500 이 나간다). 값이 없으면 null = 전체
+        ApplicationStatusFilter filter = ApplicationStatusFilter.from(status);
+
+        // 상품명을 함께 쓰므로 대출 상품·지원사업까지 한 번에 조회 (최신순)
+        List<Application> applications = applicationRepository.findAllWithProgramByUserId(userId);
+
+        // 탭 숫자는 필터와 상관없이 전체 기준이라 필터 전 목록에서 센다
+        int inProgressCount = (int) applications.stream()
+                .filter(application -> ApplicationStatusFilter.IN_PROGRESS.contains(
+                        ApplicationStatus.valueOf(application.getStatus())))
+                .count();
+
+        // 신청 건수가 적어 DB 대신 메모리에서 필터링 (페이지네이션 없음)
+        List<ApplicationSummaryResponse> filtered = applications.stream()
+                .filter(application -> filter == null
+                        || filter.contains(ApplicationStatus.valueOf(application.getStatus())))
+                .map(ApplicationSummaryResponse::from)
+                .toList();
+
+        return ApplicationListResponse.of(applications.size(), inProgressCount, filtered);
+    }
+
+    /**
+     * 신청 취소. 서류 제출 페이지의 [취소] 버튼
+     * 작성 중일 때만 허용한다. 제출 이후에는 금융망 심사·가입이 진행돼 지우면 기록이 어긋난다
+     */
+    @Override
+    @Transactional
+    public void cancel(Long userId, Long applicationId) {
+
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
+        Application application = applicationRepository.findByIdAndUser_Id(applicationId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.APPLICATION_NOT_FOUND));
+
+        // 제출(SUBMITTED) 이후에는 금융망 심사·가입 기록이 있어 삭제하면 어긋난다
+        if (ApplicationStatus.valueOf(application.getStatus()) != ApplicationStatus.PREPARING) {
+            throw new BusinessException(ErrorCode.APPLICATION_CANCEL_NOT_ALLOWED);
+        }
+
+        // 서류 행은 application_document 의 ON DELETE CASCADE 로 함께 삭제
+        // 업로드된 실제 파일(stored_path)은 업로드 기능 구현 시 함께 정리
+        applicationRepository.delete(application);
+    }
+
+    /**
+     * 대출 신청 생성. 
      * 1. 금융망에 등록된 상품인지 확인 → 2. 최근 신청 확인 → 3. 신청 생성 → 4. 필수 서류 행 생성
      */
     private ApplicationCreateResponse createLoanApplication(Long userId, User user, Long loanId) {

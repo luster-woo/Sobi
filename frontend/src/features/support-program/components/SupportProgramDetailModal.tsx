@@ -8,10 +8,9 @@ import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/typ
 import type { ProductStatus } from '@/shared/constants/productStatus'
 import { SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { routeTo } from '@/shared/constants/routes'
-import { useBookmarkToggle } from '@/shared/hooks/useBookmarkToggle'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import { BOOKMARK_TARGET } from '@/shared/types'
-import BookmarkButton from '@/shared/ui/BookmarkButton'
+import BookmarkToggle from '@/shared/ui/BookmarkToggle'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
@@ -95,17 +94,6 @@ export default function SupportProgramDetailModal({
     )
   }
 
-  /*
-   * 관심 목록 담기·빼기 (367). 대출 상세와 같은 처리다 — 요청이 도는 동안에는 방금
-   * 누른 값을 보여주고, 끝나면 무효화가 돌아 서버 값이 이긴다. 자세한 건 그쪽 주석에.
-   *
-   * ⚠️ 응답 필드가 `bookmarked` 가 아니라 `isBookmark` 다. 대출과 이름이 다르다.
-   */
-  const toggleBookmark = useBookmarkToggle()
-  const bookmarked = toggleBookmark.isPending
-    ? toggleBookmark.variables.next
-    : (data?.isBookmark ?? false)
-
   return (
     <Modal
       open
@@ -119,15 +107,11 @@ export default function SupportProgramDetailModal({
       }
       headerAction={
         data && (
-          <BookmarkButton
-            bookmarked={bookmarked}
-            onToggle={() =>
-              toggleBookmark.mutate({
-                programId: supportProgramId,
-                type: BOOKMARK_TARGET.SUPPORT,
-                next: !bookmarked,
-              })
-            }
+          /* ⚠️ 응답 필드가 `bookmarked` 가 아니라 `isBookmark` 다. 대출과 이름이 다르다 */
+          <BookmarkToggle
+            programId={supportProgramId}
+            type={BOOKMARK_TARGET.SUPPORT}
+            bookmarked={data.isBookmark}
             label={data.pblancNm}
           />
         )

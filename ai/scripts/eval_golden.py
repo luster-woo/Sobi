@@ -43,8 +43,12 @@ async def evaluate(profiles: list[dict], use_llm: bool) -> None:
         user = dict(p["user"])
         user["open_date"] = date.fromisoformat(user["open_date"])
 
-        # 전체 공고에 순위를 매긴다. 후보 절단의 영향을 배제하고 순위 품질만 본다.
-        result = await rag_search.search(**user, limit=1000, chunk_limit=6000)
+        if user.get("birth_date"):
+            user["birth_date"] = date.fromisoformat(user["birth_date"])
+
+        search_args = {k: v for k, v in user.items() if k != "birth_date"}
+        result = await rag_search.search(**search_args, limit=1000, chunk_limit=6000)
+
         ranked = [h.pblanc_id for h in result.hits]
         rank_of = {pid: i + 1 for i, pid in enumerate(ranked)}
 
@@ -106,12 +110,14 @@ async def evaluate_llm(profiles: list[dict]) -> None:
     """검색된 공고 중 골든셋에 라벨이 있는 것만 판정 정확도를 본다."""
     correct = total = 0
     confusion: dict[tuple[str, str], int] = {}
-    mistakes: list[str] = []          # ← 여기
+    mistakes: list[str] = []
 
     for p in profiles:
         print(f"  {p['id']} 판정 중...", flush=True)
         user = dict(p["user"])
         user["open_date"] = date.fromisoformat(user["open_date"])
+        if user.get("birth_date"):
+            user["birth_date"] = date.fromisoformat(user["birth_date"])
 
         truth = {e["pblancId"]: "eligible" for e in p["expected"]}
         truth |= {h["pblancId"]: h["label"] for h in p["hard_negatives"]}

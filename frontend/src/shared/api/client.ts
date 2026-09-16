@@ -13,6 +13,11 @@ const TIMEOUT_MS = 10_000
  *
  * `withCredentials` 는 refreshToken 쿠키를 보내기 위해 필요하다. 서버가 httpOnly 로
  * 내려주므로 프론트가 값을 읽거나 헤더에 실을 수 없고, 브라우저가 자동으로 붙인다.
+ *
+ * ⚠️ 이 값이 true 라고 모든 요청에 쿠키가 실리는 것은 아니다. 쿠키를 어디로 보낼지는
+ *    쿠키 자신의 `path` 가 정하고, 서버가 `path=/api/v1/auth` 로 굽는다
+ *    (`AuthController.createRefreshCookie`). 그래서 대출·신청 같은 요청에는 애초에
+ *    실리지 않는다 — 프론트에서 경로별로 끄고 켤 이유가 없다 (S15P21D101-394 점검).
  */
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -32,12 +37,41 @@ const reissueClient = axios.create({
   withCredentials: true,
 })
 
+/**
+ * CSRF 표식 (S15P21D101-394).
+ *
+ * CSRF 공격은 공격자 페이지의 `<form>` 이 우리 API 로 요청을 쏘는 방식인데, 폼은
+ * **커스텀 헤더를 붙일 수 없다.** 그래서 이 헤더의 유무가 '우리 JS 가 보낸 요청인가'
+ * 를 가르는 표식이 된다.
+ *
+ * ⚠️ **이 헤더를 붙이는 것만으로는 아무것도 막지 못한다.** 막는 것은 서버의
+ *    "이 헤더가 없으면 거부" 검사이고, 프론트는 그 검사를 통과하기 위해 붙일 뿐이다.
+ *    백엔드에 검사를 요청해 둔 상태다.
+ *
+ * 지금 당장 깨질 일은 없다 — 요청이 `/api/v1/...` 상대경로라 브라우저가 같은 출처로
+ * 보고 preflight 를 걸지 않는다. 다만 프론트를 다른 호스트의 API 로 붙이게 되면
+ * 백엔드 `SecurityConfig` 의 CORS `allowedHeaders` 에 이 이름이 있어야 한다.
+ *
+ * 참고로 지금도 대부분의 API 는 CSRF 에 면역이다. 인증을 쿠키가 아니라
+ * `Authorization` 헤더로 하기 때문이다 — 폼은 그 헤더도 못 붙인다. 쿠키로 인증하는
+ * 것은 `/auth/refresh` 하나뿐이고 그쪽은 SameSite=Strict 가 막는다.
+ */
+const CSRF_HEADER = 'X-Requested-With'
+
 api.interceptors.request.use((config) => {
   const { accessToken } = useAuthStore.getState()
 
   // 비로그인 상태에서 `Bearer null` 을 보내면 서버가 401 대신 400 을 줄 수 있다
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
 
+  config.headers[CSRF_HEADER] = 'XMLHttpRequest'
+
+  return config
+})
+
+// 재발급도 같은 표식을 단다. 서버가 검사를 켜면 이 경로만 빠져서 401 이 나면 안 된다
+reissueClient.interceptors.request.use((config) => {
+  config.headers[CSRF_HEADER] = 'XMLHttpRequest'
   return config
 })
 

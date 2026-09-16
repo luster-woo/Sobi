@@ -13,6 +13,8 @@ import lombok.Setter;
 
 public class AccountList {
 
+    private Long accountId;
+
     private String bankName;
 
     private String accountNo;
@@ -20,6 +22,7 @@ public class AccountList {
 
     public static AccountList from(Account account){
         return AccountList.builder()
+                .accountId(account.getId())
                 .bankName(account.getBankName())
                 .accountNo(account.getAccountNo())
                 .build();

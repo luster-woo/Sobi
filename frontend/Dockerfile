@@ -43,6 +43,9 @@ RUN mkdir -p /out && \
 FROM nginx:1.27-alpine
 COPY --from=build /out /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+# conf.d 가 아니라 그 위에 둔다. conf.d/*.conf 는 nginx 가 server 블록으로 자동
+# include 하는데, 이 파일은 add_header 묶음이라 거기 들어가면 기동이 실패한다
+COPY security-headers.conf /etc/nginx/security-headers.conf
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD wget -q --spider http://127.0.0.1/ || exit 1

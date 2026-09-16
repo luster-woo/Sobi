@@ -1,7 +1,8 @@
 """골든셋 평가. Recall@k와 LLM 판정 정확도를 잰다.
 
-    python scripts/eval_golden.py                 # 검색만
-    python scripts/eval_golden.py --llm           # LLM 검증까지 (GMS 비용 발생)
+    python scripts/eval_golden.py                            # 검색만
+    python scripts/eval_golden.py --llm                      # LLM 검증까지 (GMS 비용 발생)
+    python scripts/eval_golden.py --llm --model gpt-5.4-mini # 판정 모델 지정
 """
 
 import argparse
@@ -30,7 +31,16 @@ KS = (10, 30)
 NOT_FOUND = 9999
 
 
-async def evaluate(profiles: list[dict], use_llm: bool) -> None:
+def _user_of(profile: dict) -> dict:
+    """골든셋의 user를 날짜 타입으로 변환한다."""
+    user = dict(profile["user"])
+    user["open_date"] = date.fromisoformat(user["open_date"])
+    if user.get("birth_date"):
+        user["birth_date"] = date.fromisoformat(user["birth_date"])
+    return user
+
+
+async def evaluate(profiles: list[dict], use_llm: bool, model: str | None) -> None:
     await db.open_pool()
 
     recall = {k: [0, 0] for k in KS}          # k → [적중, 전체]
@@ -40,11 +50,11 @@ async def evaluate(profiles: list[dict], use_llm: bool) -> None:
     all_ranks = []
 
     for p in profiles:
-        user = dict(p["user"])
-        user["open_date"] = date.fromisoformat(user["open_date"])
+        user = _user_of(p)
+        # 검색은 연령을 쓰지 않는다. 판정에서만 쓴다.
+        search_args = {k: v for k, v in user.items() if k != "birth_date"}
+        result = await rag_search.search(**search_args)
 
-        # 전체 공고에 순위를 매긴다. 후보 절단의 영향을 배제하고 순위 품질만 본다.
-        result = await rag_search.search(**user, limit=1000, chunk_limit=6000)
         ranked = [h.pblanc_id for h in result.hits]
         rank_of = {pid: i + 1 for i, pid in enumerate(ranked)}
 
@@ -97,30 +107,30 @@ async def evaluate(profiles: list[dict], use_llm: bool) -> None:
             print(f"  {label:>10} {'#' * n} {n}")
 
     if use_llm:
-        await evaluate_llm(profiles)
+        await evaluate_llm(profiles, model)
 
     await db.close_pool()
 
 
-async def evaluate_llm(profiles: list[dict]) -> None:
+async def evaluate_llm(profiles: list[dict], model: str | None) -> None:
     """검색된 공고 중 골든셋에 라벨이 있는 것만 판정 정확도를 본다."""
     correct = total = 0
     confusion: dict[tuple[str, str], int] = {}
-    mistakes: list[str] = []          # ← 여기
+    mistakes: list[str] = []
+    kwargs = {"model": model} if model else {}
 
     for p in profiles:
         print(f"  {p['id']} 판정 중...", flush=True)
-        user = dict(p["user"])
-        user["open_date"] = date.fromisoformat(user["open_date"])
+        user = _user_of(p)
 
         truth = {e["pblancId"]: "eligible" for e in p["expected"]}
         truth |= {h["pblancId"]: h["label"] for h in p["hard_negatives"]}
 
-        out = await rag_recommend.recommend(**user)
+        out = await rag_recommend.recommend(**user, include_rejected=False, **kwargs)
         for r in out["results"]:
             gold = truth.get(r["pblanc_id"])
             if gold is None:
-                continue
+                continue  # 골든셋에 없는 공고는 정답을 모른다
             total += 1
             correct += gold == r["status"]
             key = (gold, r["status"])
@@ -129,12 +139,13 @@ async def evaluate_llm(profiles: list[dict]) -> None:
                 mistakes.append(
                     f"  {p['id']} {r['pblanc_id'][-6:]} {gold}→{r['status']}\n"
                     f"      공고: {r['title'][:50]}\n"
-                    f"      사유: {r['reason'][:100]}"
+                    f"      사유: {r['reason'][:150]}"
                 )
 
     if not total:
         print("\n판정 대상 없음")
         return
+
     print(f"\nLLM 판정 정확도 {correct}/{total} = {correct / total:.3f}")
     for (gold, pred), n in sorted(confusion.items()):
         mark = "  " if gold == pred else "X "
@@ -148,10 +159,11 @@ async def evaluate_llm(profiles: list[dict]) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--llm", action="store_true", help="LLM 검증 정확도까지 측정")
+    ap.add_argument("--model", default=None, help="판정 모델 (기본: gms.DEFAULT_MODEL)")
     args = ap.parse_args()
 
     golden = json.loads((ROOT / "data/eval/golden_set.json").read_text(encoding="utf-8"))
-    asyncio.run(evaluate(golden["profiles"], args.llm))
+    asyncio.run(evaluate(golden["profiles"], args.llm, args.model))
 
 
 if __name__ == "__main__":

@@ -56,7 +56,15 @@ public enum SsafyFinanceApi {
             "updateRepaymentLoanBalanceInFull",
             "updateRepaymentLoanBalanceInFull",
             SsafyAuthType.BOTH
+    ),
+
+    INQUIRE_ACCOUNT_LIST(
+            "inquireDemandDepositAccountList",
+            "inquireDemandDepositAccountList",
+            SsafyAuthType.BOTH
     );
+
+
 
     private final String apiName;
     private final String apiServiceCode;

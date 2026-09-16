@@ -376,14 +376,27 @@ export const authHandlers = [
    * 응답에 토큰이 없다. 서버가 인증 완료 여부를 따로 들고 있다가 확인한다.
    */
   http.post('/api/v1/auth/signup', async ({ request }) => {
-    const { email, password, name } = (await request.json()) as {
+    const { email, password, name, birthDate } = (await request.json()) as {
       email?: string
       password?: string
       name?: string
+      birthDate?: string
     }
     const path = '/api/v1/auth/signup'
 
-    if (!email || !password || !name) {
+    if (!email || !password || !name || !birthDate) {
+      return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
+    }
+
+    /*
+     * 백엔드 `@Past` 를 흉내 낸다. 오늘·미래 생년월일은 400 이다.
+     *
+     * 목에서 이걸 빼면 화면 검증이 느슨해져도 목에서는 통과해서, 실서버로 바꾼 뒤에야
+     * 가입이 안 되는 것을 알게 된다.
+     */
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (!(new Date(`${birthDate}T00:00:00`) < today)) {
       return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
     }
 

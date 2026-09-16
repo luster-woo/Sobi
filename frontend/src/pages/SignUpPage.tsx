@@ -6,16 +6,20 @@ import GoogleAuthButton from '@/features/auth/components/GoogleAuthButton'
 import OrDivider from '@/features/auth/components/OrDivider'
 import PasswordStrengthMeter from '@/features/auth/components/PasswordStrengthMeter'
 import { useCountdown } from '@/features/auth/hooks/useCountdown'
+import { useLogin } from '@/features/auth/hooks/useLogin'
 import { useSendEmailCode, useSignUp, useVerifyEmailCode } from '@/features/auth/hooks/useSignUp'
 import { buildAuthorizeUrl, isGoogleOAuthConfigured } from '@/features/auth/model/googleOAuth'
 import { ERROR_CODE, getErrorCode, getErrorMessage } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
 import { VALIDATION_MESSAGE } from '@/shared/constants/validation'
+import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import Button from '@/shared/ui/Button'
+import DatePicker from '@/shared/ui/DatePicker'
 import Input from '@/shared/ui/Input'
 import {
   validateAuthCode,
+  validateBirthDate,
   validateEmail,
   validatePassword,
   validatePasswordConfirm,
@@ -32,13 +36,32 @@ const MESSAGE = {
   needVerify: '이메일 인증을 완료해 주세요.',
 } as const
 
-type Errors = Partial<Record<'name' | 'email' | 'code' | 'password' | 'passwordConfirm', string>>
+type Errors = Partial<
+  Record<'name' | 'birthDate' | 'email' | 'code' | 'password' | 'passwordConfirm', string>
+>
+
+/**
+ * 생년월일로 고를 수 있는 가장 늦은 날. 백엔드가 `@Past` 라 오늘은 안 된다.
+ *
+ * DatePicker 의 `max` 기본값이 오늘이라 그대로 두면 달력에서 오늘을 고를 수 있고,
+ * 그 값은 서버에서 400 이 된다 — 화면이 막는 편이 낫다.
+ */
+function yesterdayIso(): string {
+  const date = new Date()
+  date.setDate(date.getDate() - 1)
+
+  // 로컬 기준 날짜여야 한다. toISOString 은 UTC 로 바꿔서 한국 시간 오전에 하루가 밀린다
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
 
 export function SignUpPage() {
   const navigate = useNavigate()
   const emailFieldId = useId()
 
   const [name, setName] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
@@ -50,10 +73,14 @@ export function SignUpPage() {
 
   const { remaining, running, start, stop } = useCountdown()
   const showToast = useUiStore((s) => s.showToast)
+  const setPostAuthRedirect = useAuthStore((s) => s.setPostAuthRedirect)
 
   const { mutate: sendCode, isPending: sending } = useSendEmailCode()
   const { mutate: verifyCode, isPending: verifying } = useVerifyEmailCode()
-  const { mutate: submitSignUp, isPending: submitting } = useSignUp()
+  const { mutate: submitSignUp, isPending: signingUp } = useSignUp()
+  /* 가입 직후 자동 로그인. 사용자에게는 가입 버튼 하나의 동작이라 로딩도 같이 묶는다 */
+  const { mutate: submitLogin, isPending: loggingIn } = useLogin()
+  const submitting = signingUp || loggingIn
 
   const clearError = (field: keyof Errors) =>
     setErrors((previous) => ({ ...previous, [field]: undefined }))
@@ -137,6 +164,7 @@ export function SignUpPage() {
 
     const next: Errors = {
       name: validateRequired(name) ?? undefined,
+      birthDate: validateBirthDate(birthDate) ?? undefined,
       email: validateEmail(email) ?? undefined,
       password: validatePassword(password) ?? undefined,
       passwordConfirm: validatePasswordConfirm(passwordConfirm, password) ?? undefined,
@@ -147,12 +175,42 @@ export function SignUpPage() {
     if (Object.values(next).some(Boolean)) return
 
     submitSignUp(
-      { email, password, name },
+      { email, password, name, birthDate },
       {
-        // 응답에 토큰이 없어 자동 로그인이 안 된다. 로그인 화면으로 보낸다
+        /*
+         * 가입이 끝나면 사업자 인증으로 바로 보낸다. 거기서 사업자·예비 창업자를 고른다.
+         *
+         * ⚠️ 그 전에 로그인을 한 번 더 태워야 한다. `POST /auth/signup` 응답이
+         *    `ApiResponse<Void>` 라 토큰이 없고, `/verify` 는 ProtectedRoute 아래라
+         *    토큰 없이 들어가면 로그인 화면으로 튕긴다. 백엔드가 가입 응답에
+         *    LoginResponse 를 주게 되면 이 호출을 지우면 된다.
+         *
+         * 사용자에게는 한 단계로 보인다 — 방금 적은 값을 그대로 쓰므로 다시 물을 게 없다.
+         */
         onSuccess: () => {
-          showToast('가입이 완료됐어요. 로그인해 주세요.')
-          navigate(ROUTES.LOGIN, { replace: true })
+          /*
+           * 갈 곳을 미리 적어두고 로그인을 태운다. 여기서 navigate 를 부르지 않는 이유:
+           * 로그인이 성공하는 순간 PublicOnlyRoute 가 authenticated 를 보고 대시보드로
+           * 밀어버리는데, `/verify` 는 lazy 라 청크를 받는 동안 라우터가 아직 `/signup`
+           * 에 있어서 가드가 이긴다. 이동은 가드 한 곳에서만 일어나게 둔다.
+           */
+          setPostAuthRedirect(ROUTES.BUSINESS_VERIFY)
+
+          submitLogin(
+            { email, password },
+            {
+              /*
+               * 가입은 됐는데 로그인만 실패한 경우다. 가입을 되돌릴 수 없으니
+               * 실패로 안내하면 안 된다 — 계정은 있다고 알리고 로그인 화면으로 보낸다.
+               */
+              onError: () => {
+                // 로그인을 못 했으니 예약도 거둔다. 안 그러면 다음 로그인이 /verify 로 샌다
+                setPostAuthRedirect(null)
+                showToast('가입이 완료됐어요. 로그인해 주세요.')
+                navigate(ROUTES.LOGIN, { replace: true })
+              },
+            },
+          )
         },
         onError: (error) => {
           const errorCode = getErrorCode(error)
@@ -187,18 +245,49 @@ export function SignUpPage() {
       <h1 className="font-heading text-text mb-5 text-[20px] font-bold">회원가입</h1>
 
       <form onSubmit={handleSubmit} noValidate>
-        <Input
-          label="이름"
-          required
-          autoComplete="name"
-          placeholder="실명을 입력해 주세요"
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value)
-            clearError('name')
-          }}
-          error={errors.name}
-        />
+        {/*
+         * 이름과 생년월일을 한 줄에 둔다. 둘 다 본인 확인용이라 묶어 읽히고, 세로로
+         * 쌓으면 이메일 인증까지 가기 전에 스크롤이 생긴다.
+         *
+         * 폭은 반씩 나눈다. 이름이 길이가 제각각이라 처음엔 3:2 로 넓게 줬는데,
+         * 그러면 생년월일 칸이 150px 아래로 내려가 달력 버튼이 'YYYY-MM-DD' 를 밀어낸다.
+         * 이름은 넘쳐도 잘려 보일 뿐이지만 날짜 칸은 눌러야 하는 버튼이 가려진다.
+         *
+         * 카드가 424px 라 좁다. 한 칸이 180px 밑으로 내려가면 달력 버튼이 값을 가리므로
+         * 그 아래로는 세로로 쌓는다.
+         */}
+        <div className="flex flex-col gap-4 min-[380px]:flex-row min-[380px]:gap-3">
+          <div className="min-w-0 min-[380px]:flex-1">
+            <Input
+              label="이름"
+              required
+              autoComplete="name"
+              placeholder="실명을 입력해 주세요"
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value)
+                clearError('name')
+              }}
+              error={errors.name}
+            />
+          </div>
+
+          <div className="min-w-0 min-[380px]:flex-1">
+            {/* 사업자 인증의 개업연월일과 같은 컴포넌트다. 연 → 월 → 일 순으로 좁혀 고른다 */}
+            <DatePicker
+              label="생년월일"
+              required
+              value={birthDate}
+              onChange={(value) => {
+                setBirthDate(value)
+                clearError('birthDate')
+              }}
+              // 백엔드가 @Past 라 오늘은 못 고르게 막는다
+              max={yesterdayIso()}
+              error={errors.birthDate}
+            />
+          </div>
+        </div>
 
         {/* 라벨을 Input 에 넘기면 오른쪽 버튼이 라벨 높이까지 포함해 어긋난다 */}
         <div className="mt-4">

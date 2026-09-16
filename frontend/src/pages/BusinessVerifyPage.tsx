@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import type { BizVerifyData } from '@/features/auth/api/businessVerify'
@@ -9,6 +9,7 @@ import { useBusinessRegister } from '@/features/auth/hooks/useBusinessRegister'
 import { useBusinessVerify } from '@/features/auth/hooks/useBusinessVerify'
 import { ERROR_CODE, getErrorCode, getErrorMessage, getErrorStatus } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
+import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import Button from '@/shared/ui/Button'
 import DatePicker from '@/shared/ui/DatePicker'
@@ -173,6 +174,18 @@ export function BusinessVerifyPage() {
       },
     })
   }
+
+  /*
+   * 가입 흐름이 여기로 보내려고 남겨둔 예약을 거둔다. 도착했으니 볼일이 끝났다.
+   *
+   * 안 지우면 나중에 로그아웃 없이 로그인 화면이나 랜딩에 들렀을 때 PublicOnlyRoute 가
+   * 대시보드 대신 여기로 또 보낸다. 이미 인증을 마친 사람에게는 엉뚱한 화면이다.
+   */
+  const setPostAuthRedirect = useAuthStore((s) => s.setPostAuthRedirect)
+
+  useEffect(() => {
+    setPostAuthRedirect(null)
+  }, [setPostAuthRedirect])
 
   const handleStartAsPreOwner = () => {
     // 업체를 등록하지 않는 것이 곧 예비 창업자다. 호출할 API 가 없다

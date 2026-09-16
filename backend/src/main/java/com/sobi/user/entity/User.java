@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -26,6 +27,9 @@ public class User {
 
     @Column(name = "name", length = 100, nullable = false)
     private String name;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", length = 20)
@@ -59,11 +63,12 @@ public class User {
 
     // 가입 시 필요한 값들만 builder로 노출
     @Builder
-    private User(String email, String password, String name, Role role,
+    private User(String email, String password, String name, LocalDate birthDate, Role role,
                  Provider provider, String providerId, String userKey) {
         this.email = email;
         this.password = password;
         this.name = name;
+        this.birthDate = birthDate;
         this.role = role;
         this.provider = provider;
         this.providerId = providerId;

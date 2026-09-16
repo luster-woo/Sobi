@@ -1,13 +1,12 @@
 from datetime import date
 
-
 from fastapi import APIRouter
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
-from app.rag.embedding import koe5
-from app.rag import search as rag_search
 from app.rag import recommend as rag_recommend
+from app.rag import search as rag_search
+from app.rag.embedding import koe5
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 
@@ -21,14 +20,15 @@ class EmbedResponse(BaseModel):
     dim: int
     vectors: list[list[float]]
 
+
 class SearchRequest(BaseModel):
     region: str
     address: str
     business_code: str
     employee_count: int
     open_date: date
-    birth_date: date | None = None
     annual_revenue: int | None = None
+    birth_date: date | None = None
 
 
 @router.post("/embed", response_model=EmbedResponse)
@@ -40,9 +40,12 @@ async def embed(req: EmbedRequest):
         vectors = await run_in_threadpool(koe5.embed_passages, req.texts)
     return EmbedResponse(dim=koe5.EMBEDDING_DIM, vectors=vectors)
 
+
 @router.post("/search")
 async def search(req: SearchRequest):
-    result = await rag_search.search(**req.model_dump())
+    """검색 단계만. 내부 디버깅·평가용."""
+    # 검색은 연령을 쓰지 않는다. 판정에서만 쓴다.
+    result = await rag_search.search(**req.model_dump(exclude={"birth_date"}))
     return {
         "query": result.query_text,
         "programs": [
@@ -56,6 +59,7 @@ async def search(req: SearchRequest):
             for h in result.hits
         ],
     }
+
 
 @router.post("/recommend")
 async def recommend(req: SearchRequest):

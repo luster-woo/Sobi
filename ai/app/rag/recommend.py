@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import re
 import logging
+import asyncio
 from datetime import date
 
 from app.core import gms
@@ -54,13 +55,23 @@ SYSTEM_PROMPT = """\
   "eligible"   — 그 외. 확인 불가 조건이 결격사유형(체납·휴폐업·중복수혜)
                  뿐이면 eligible이다
 
-## 정보가 없는 항목
+## 확인할 수 없는 조건
+사업자 정보로 확인할 수 없는 조건은 방향에 따라 다르게 처리한다.
+
+"해당하지 않으면 통과"하는 조건 — 체납, 휴·폐업, 중복 수혜, 위반건축물,
+제외업종, 브로커 개입
+  → 충족한 것으로 보고 check_items에 적는다. status에 영향을 주지 않는다.
+
+"해당해야만 통과"하는 조건 — 특정 상품·설비 보유, 지위 지정(백년소상공인 등),
+보험·대출 가입, 약정 체결, 자녀·가족 요건, 신용점수, 성별, 트랙 선택
+  → status를 unknown으로 한다. check_items에도 적는다.
+
 제공되지 않은 정보를 "없다" 또는 "있다"로 단정하지 마라.
-사업자 정보에 나오지 않는 항목은 모르는 것이다.
   틀림: "대표자에게 만 2세 미만 자녀가 없으므로 부적합"
   틀림: "육아휴직 대상자 조건 충족 가능"
-  옳음: status를 unknown으로 두고 reason에 "만 2세 미만 자녀 보유 여부를
-        확인할 수 없음"이라고 적는다
+
+확인 불가를 이유로 ineligible을 주지 마라.
+공고에 없는 조건을 지어내지 마라. 근거는 제공된 조건 목록에서만 찾는다.
 
 적극요건형(해당해야만 통과하는 조건)을 확인할 수 없으면 반드시 unknown이다.
 자녀 유무, 특정 지위(새출발기금 약정, 백년소상공인), 보험·대출 가입,
@@ -137,6 +148,41 @@ def _build_user_prompt(
     return "\n".join(lines)
 
 
+import asyncio
+
+BATCH_SIZE = 10  # 한 번에 판정할 공고 수. 출력 잘림을 막는다
+
+
+async def _judge(hits: list[search.ProgramHit], *, model: str,
+                 **profile_args) -> tuple[dict[int, dict], int]:
+    """공고 묶음 하나를 판정한다. (program_id → 판정, 토큰)."""
+    user_prompt = _build_user_prompt(hits=hits, **profile_args)
+    completion = await gms.get_client().chat.completions.create(
+        model=model,
+        response_format={"type": "json_object"},
+        temperature=0,
+        max_completion_tokens=4000,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+    tokens = completion.usage.total_tokens if completion.usage else 0
+    if completion.choices[0].finish_reason == "length":
+        logger.warning("응답 잘림 — 공고 %d건 중 일부가 누락됐을 수 있음", len(hits))
+
+    raw = completion.choices[0].message.content
+    try:
+        parsed = {v["program_id"]: v for v in json.loads(raw).get("results", [])}
+    except (json.JSONDecodeError, KeyError, TypeError):
+        logger.exception("LLM 응답 파싱 실패: %s", raw[:500])
+        parsed = {}
+
+    missing = {h.program_id for h in hits} - parsed.keys()
+    if missing:
+        logger.warning("판정 누락 %d건: %s", len(missing), sorted(missing))
+    return parsed, tokens
+
 async def recommend(
     *,
     region: str,
@@ -147,6 +193,7 @@ async def recommend(
     annual_revenue: int | None = None,
     birth_date: date | None = None,
     model: str = gms.DEFAULT_MODEL,
+    include_rejected: bool = True,
 ) -> dict:
     result = await search.search(
         region=region,
@@ -155,36 +202,31 @@ async def recommend(
         employee_count=employee_count,
         open_date=open_date,
         annual_revenue=annual_revenue,
-    )
-    if not result.hits:
-        return {"query": result.query_text, "results": []}
-
-    user_prompt = _build_user_prompt(
-        address=address,
-        industry_name=result.industry_name,
-        std_excluded=result.std_excluded,
-        employee_count=employee_count,
-        open_date=open_date,
-        annual_revenue=annual_revenue,
-        birth_date=birth_date,
-        hits=result.hits,
+        with_rejected=include_rejected,
     )
 
-    completion = await gms.get_client().chat.completions.create(
-        model=model,
-        response_format={"type": "json_object"},
-        temperature=0,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
-    raw = completion.choices[0].message.content
-    try:
-        verdicts = {v["program_id"]: v for v in json.loads(raw).get("results", [])}
-    except (json.JSONDecodeError, KeyError, TypeError):
-        logger.exception("LLM 응답 파싱 실패: %s", raw[:500])
-        verdicts = {}
+    verdicts: dict[int, dict] = {}
+    tokens = 0
+
+    if result.hits:
+        profile_args = {
+            "address": address,
+            "industry_name": result.industry_name,
+            "std_excluded": result.std_excluded,
+            "employee_count": employee_count,
+            "open_date": open_date,
+            "annual_revenue": annual_revenue,
+            "birth_date": birth_date,
+        }
+        # 한 번에 많이 넣으면 응답이 잘려 뒤쪽 공고가 누락된다.
+        batches = [result.hits[i:i + BATCH_SIZE]
+                   for i in range(0, len(result.hits), BATCH_SIZE)]
+        outcomes = await asyncio.gather(
+            *(_judge(b, model=model, **profile_args) for b in batches)
+        )
+        for parsed, used in outcomes:
+            verdicts |= parsed
+            tokens += used
 
     results = []
     for hit in result.hits:
@@ -198,7 +240,27 @@ async def recommend(
             "reason": v.get("reason", "LLM 판정 실패"),
             "check_items": v.get("check_items", []),
             "benefits": v.get("benefits", []),
+            "judged_by": "llm",
         })
 
-    logger.info("검증: %d공고, 토큰 %s", len(results), completion.usage.total_tokens)
+    # SQL에서 걸러진 공고. 사유가 결정론적이라 LLM을 부르지 않는다.
+    for rej in result.rejected:
+        results.append({
+            "program_id": rej.program_id,
+            "pblanc_id": rej.pblanc_id,
+            "title": rej.title,
+            "distance": None,
+            "status": "ineligible",
+            "reason": rej.reason,
+            "check_items": [],
+            "benefits": [],
+            "judged_by": "sql",
+        })
+
+    order = {"eligible": 0, "unknown": 1, "ineligible": 2}
+    results.sort(key=lambda r: (order.get(r["status"], 3),
+                                r["distance"] if r["distance"] is not None else 99))
+
+    logger.info("판정: 후보 %d / 탈락 %d / 토큰 %d",
+                len(result.hits), len(result.rejected), tokens)
     return {"query": result.query_text, "results": results}

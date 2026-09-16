@@ -53,7 +53,7 @@ async def evaluate(profiles: list[dict], use_llm: bool, model: str | None) -> No
         user = _user_of(p)
         # 검색은 연령을 쓰지 않는다. 판정에서만 쓴다.
         search_args = {k: v for k, v in user.items() if k != "birth_date"}
-        result = await rag_search.search(**search_args, limit=1000, chunk_limit=6000)
+        result = await rag_search.search(**search_args)
 
         ranked = [h.pblanc_id for h in result.hits]
         rank_of = {pid: i + 1 for i, pid in enumerate(ranked)}
@@ -126,7 +126,7 @@ async def evaluate_llm(profiles: list[dict], model: str | None) -> None:
         truth = {e["pblancId"]: "eligible" for e in p["expected"]}
         truth |= {h["pblancId"]: h["label"] for h in p["hard_negatives"]}
 
-        out = await rag_recommend.recommend(**user, **kwargs)
+        out = await rag_recommend.recommend(**user, include_rejected=False, **kwargs)
         for r in out["results"]:
             gold = truth.get(r["pblanc_id"])
             if gold is None:

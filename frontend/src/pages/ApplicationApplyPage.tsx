@@ -23,6 +23,7 @@ import EmptyState from '@/shared/ui/EmptyState'
 import Modal from '@/shared/ui/Modal'
 import Panel from '@/shared/ui/Panel'
 import Skeleton from '@/shared/ui/Skeleton'
+import { toSafeExternalUrl } from '@/shared/utils/externalUrl'
 
 /**
  * 대출·지원사업 신청 · 서류 제출 (S15P21D101-189 · 194)
@@ -124,9 +125,24 @@ export function ApplicationApplyPage() {
   /*
    * 새 탭으로 열어 브라우저가 받게 한다. a[download] 를 쓰면 다른 출처의 파일에는
    * 속성이 무시되어 내려받기 대신 이동이 되는데, 그럴 바엔 처음부터 열어 주는 편이 낫다.
+   *
+   * ⚠️ 여는 주소를 먼저 거른다. `templateUrl`·`draftUrl` 은 공공데이터에서 흘러온
+   *    값이라 서버가 줬다고 안전하지 않다. `javascript:` 가 섞여 있으면 window.open 이
+   *    **우리 출처 권한으로 실행해 버린다** — 메모리에 둔 토큰도 같은 페이지 스크립트라
+   *    그대로 꺼내 간다.
+   *
+   *    noreferrer 를 같이 준다. noopener 만 있으면 새 탭이 우리 주소를 referrer 로
+   *    가져간다 — 신청 화면 주소에는 applicationId 가 들어 있다.
    */
   const handleDownload = (url: string) => {
-    window.open(url, '_blank', 'noopener')
+    const safe = toSafeExternalUrl(url)
+
+    if (!safe) {
+      showToast('열 수 없는 주소예요. 담당 기관에 문의해 주세요.', 'danger')
+      return
+    }
+
+    window.open(safe, '_blank', 'noopener,noreferrer')
   }
 
   /**

@@ -98,7 +98,7 @@ status       VARCHAR(10)  -- eligible | unknown | ineligible
 reason       VARCHAR(500)
 check_items  JSONB
 benefits     JSONB
-score        DOUBLE PRECISION  -- 벡터 거리. SQL 탈락 건은 NULL
+distance     DOUBLE PRECISION  -- 코사인 거리. 0에 가까울수록 유사. SQL 탈락 건은 NULL
 judged_by    VARCHAR(3)   -- sql | llm
 ```
 

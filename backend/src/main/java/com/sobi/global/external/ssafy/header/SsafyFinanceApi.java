@@ -7,6 +7,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum SsafyFinanceApi {
 
+    // 내 신용등급 조회 (LOAN_04) - 사용자별 자산 기준이므로 userKey 필요
+    INQUIRE_MY_CREDIT_RATING(
+            "inquireMyCreditRating",
+            "inquireMyCreditRating",
+            SsafyAuthType.BOTH
+    ),
+
     // 대출 상품 (2.7.1 ~ 2.7.3) - 사용자와 무관하므로 apiKey 만 사용
     INQUIRE_ASSET_BASED_CREDIT_RATING_LIST(
             "inquireAssetBasedCreditRatingList",

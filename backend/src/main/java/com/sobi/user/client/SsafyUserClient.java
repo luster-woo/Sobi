@@ -7,6 +7,7 @@ import com.sobi.global.external.ssafy.header.SsafyRequestHeader;
 import com.sobi.repayment.clientDto.SsafyInquireLoanAccountListRequest;
 import com.sobi.repayment.clientDto.SsafyInquireLoanAccountListResponse;
 import com.sobi.user.clientDto.SsafyInquireDemandDepositAccountListResponse;
+import com.sobi.user.clientDto.SsafyInquireMyCreditRatingResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -38,4 +39,23 @@ public class SsafyUserClient {
         );
     }
 
+    public SsafyInquireMyCreditRatingResponse inquireMyCreditRating(String userKey) {
+
+        SsafyRequestHeader header =
+                headerFactory.create(
+                        SsafyFinanceApi.INQUIRE_MY_CREDIT_RATING,
+                        userKey
+                );
+
+        SsafyInquireLoanAccountListRequest request =
+                SsafyInquireLoanAccountListRequest.builder()
+                        .header(header)
+                        .build();
+
+        return financeClient.post(
+                "/edu/loan/inquireMyCreditRating",
+                request,
+                SsafyInquireMyCreditRatingResponse.class
+        );
+    }
 }

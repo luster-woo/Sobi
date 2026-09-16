@@ -108,6 +108,11 @@ public class User {
         this.role = newRole;
     }
 
+    // 마이데이터 연동 시 금융망에서 조회한 신용등급 반영
+    public void changeCreditRating(CreditRating creditRating) {
+        this.creditRating = creditRating;
+    }
+
     // INSERT 직전 JPA가 자동 호출 -> 가입일 자동 기록
     @PrePersist
     private void prePersist() {

@@ -7,24 +7,33 @@ import type { ApplicationDocument } from '@/features/application/model/types'
  * 진행률, 폴링을 계속할지 여부. 각자 계산하면 조건이 갈라지므로 여기 모은다.
  */
 
-/** 더 손댈 게 없는 서류. '완료' 의 정의는 여기 하나뿐이다 */
+/**
+ * 더 손댈 게 없는 서류.
+ *
+ * 종류를 가리지 않고 검증 통과만 본다. 서버가 그렇게 센다 —
+ * validateDocumentsPassed 가 모든 서류의 validationStatus 를 PASSED 로 요구하고,
+ * completedCount 도 같은 기준이다. 작성 서류도 초안을 손봐서 올린 뒤 검증을 받는다.
+ *
+ * 그래서 draftStatus 는 완료 판정에 안 쓴다. 초안이 나왔다는 것(WRITTEN)은
+ * 사용자가 아직 올리지 않았다는 뜻이기도 하다.
+ */
 export function isDone(doc: ApplicationDocument): boolean {
-  return doc.documentType === 'WRITE' ? doc.status === 'WRITTEN' : doc.status === 'PASSED'
+  return doc.validationStatus === 'PASSED'
 }
 
 /**
- * 서버가 검증을 돌리는 중인 서류.
+ * 서버가 일하고 있는 서류.
  *
  * 하나라도 있으면 화면이 가만히 있어도 상태가 바뀐다는 뜻이라, 폴링을 계속해야 한다.
+ * 검증과 초안 생성 둘 다 서버가 비동기로 돈다.
  */
 export function isValidating(doc: ApplicationDocument): boolean {
-  if (doc.documentType === 'VERIFY') {
-    return doc.status === 'PENDING' || doc.status === 'VALIDATING'
+  if (doc.validationStatus === 'PENDING' || doc.validationStatus === 'VALIDATING') {
+    return true
   }
 
-  // 작성 서류는 서버가 초안을 만드는 동안만 기다린다.
-  // 초안이 나오면(draftUrl) 다음은 사용자 차례라 더 물어볼 이유가 없다
-  return doc.status === 'WRITING' && doc.draftUrl === null
+  // 초안이 나오면 다음은 사용자 차례라 더 물어볼 이유가 없다
+  return doc.draftStatus === 'WRITING'
 }
 
 /** 사용자가 지금 뭔가 해야 하는 서류. 올리거나, 다시 올리거나, 작성하거나 */
@@ -49,7 +58,7 @@ export function hasValidating(documents: ApplicationDocument[]): boolean {
 /** 제출 서류와 작성 서류는 화면에서 따로 묶여 보인다 */
 export function splitByType(documents: ApplicationDocument[]) {
   return {
-    verify: documents.filter((doc) => doc.documentType === 'VERIFY'),
+    submit: documents.filter((doc) => doc.documentType === 'SUBMIT'),
     write: documents.filter((doc) => doc.documentType === 'WRITE'),
   }
 }

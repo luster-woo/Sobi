@@ -36,6 +36,7 @@ public enum ErrorCode {
 
     // 마이데이터
     MYDATA_NOT_FOUND(HttpStatus.NOT_FOUND, "MYDATA_001", "마이데이터에 등록되지 않은 사업자입니다."),
+    MYDATA_REFRESH_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS, "MYDATA_002", "마이데이터를 다시 불러오기까지 시간이 남았습니다."),
 
     // business 관련
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_001", "사업자 번호가 일치하는 사업자 정보를 찾을 수 없습니다."),

@@ -26,7 +26,11 @@ services:
       SSAFY_FINANCE_API_KEY: ${SSAFY_FINANCE_API_KEY}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      FILE_UPLOAD_DIR: /app/uploads
       LOAN_PRODUCT_SYNC_ENABLED: "${LOAN_PRODUCT_SYNC_ENABLED:-true}"
+    # 신청 서류 파일. 볼륨이 없으면 재배포마다 사라진다. 호스트에 디렉터리를 미리 만들어 둘 것
+    volumes:
+      - /home/ubuntu/app/uploads:/app/uploads
     networks: [backend, data]
     restart: unless-stopped
     healthcheck:

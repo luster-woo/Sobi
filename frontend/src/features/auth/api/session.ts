@@ -16,7 +16,12 @@ export async function reissue() {
   return data
 }
 
-/** ⚠️ 백엔드 `GET /user/me` 미구현. 지금은 MSW 만 응답한다 (BE-02) */
+/**
+ * 세션 복구용 본인 정보. 백엔드 `UserMeResponse` 와 1:1 이다 (S15P21D101-262).
+ *
+ * 여섯 필드뿐이라 가볍다 — 사업자 정보·계좌는 `GET /user/mypage` 가 준다.
+ * 응답에 `provider` 도 실리지만 `SessionUser` 가 아직 안 들고 있어 버려진다.
+ */
 export async function getMe() {
   const { data } = await api.get<SessionUser>(endpoints.user.me)
   return data

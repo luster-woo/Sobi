@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-import type { AuthProvider, SessionUser } from '@/shared/types'
+import type { SessionUser } from '@/shared/types'
 
 /**
  * 세션 복구 단계.
@@ -16,15 +16,6 @@ interface AuthStore {
   accessToken: string | null
   /** 로그인 응답이 주는 네 필드뿐이다. 나머지는 마이페이지가 따로 조회한다 */
   user: SessionUser | null
-
-  /**
-   * 가입 경로. 소셜 전환 직후 화면을 바꾸려고 들고 있다.
-   *
-   * ⚠️ 로그인 응답에 이 값이 없어서 처음에는 null 이다. `GET /user/me` 가 붙으면
-   *    거기서 받아 채우고, 그때 이 필드는 `user` 안으로 들어가야 한다 (BE-02).
-   *    null 이면 화면이 자기 기본값을 쓴다.
-   */
-  provider: AuthProvider | null
 
   /**
    * 로그인 직후 갈 곳. null 이면 대시보드다.
@@ -48,8 +39,6 @@ interface AuthStore {
   setAccessToken: (accessToken: string) => void
   /** 프로필 수정 후 서버 응답으로 갱신할 때 */
   setUser: (user: SessionUser) => void
-  /** 소셜 전환 성공 시 */
-  setProvider: (provider: AuthProvider) => void
   /** 로그인 직후 갈 곳을 예약한다. 도착한 화면이 볼일을 마치면 null 로 지운다 */
   setPostAuthRedirect: (path: string | null) => void
   /** 로그아웃, 재발급 실패, 복구 실패 모두 여기로 모인다 */
@@ -70,20 +59,17 @@ export const useAuthStore = create<AuthStore>((set) => ({
   status: 'loading',
   accessToken: null,
   user: null,
-  provider: null,
   postAuthRedirect: null,
 
   setSession: (accessToken, user) => set({ status: 'authenticated', accessToken, user }),
   setAccessToken: (accessToken) => set({ accessToken }),
   setUser: (user) => set({ user }),
-  setProvider: (provider) => set({ provider }),
   setPostAuthRedirect: (postAuthRedirect) => set({ postAuthRedirect }),
   clearSession: () =>
     set({
       status: 'unauthenticated',
       accessToken: null,
       user: null,
-      provider: null,
       // 남겨두면 다음에 로그인한 사람이 엉뚱한 화면으로 간다
       postAuthRedirect: null,
     }),

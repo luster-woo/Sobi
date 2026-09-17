@@ -25,6 +25,7 @@ import Panel from '@/shared/ui/Panel'
 import Skeleton from '@/shared/ui/Skeleton'
 import { toSafeExternalUrl } from '@/shared/utils/externalUrl'
 import { formatMoneyShort } from '@/shared/utils/formatters'
+import { maskAccountNo } from '@/shared/utils/mask'
 
 /**
  * 대출·지원사업 신청 · 서류 제출 (S15P21D101-189 · 194)

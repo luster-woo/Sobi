@@ -134,6 +134,107 @@ export function promoteToOwner() {
   sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
 }
 
+/* ---------- 내 정보 조회 (S15P21D101-377) ---------- */
+
+/** 알림 수신 여부. ERD 기본값이 true 라 기록이 없으면 켜진 것으로 본다 */
+const NOTIFICATION_KEY = 'msw:notification:'
+
+function isNotificationOn(email: string) {
+  return sessionStorage.getItem(NOTIFICATION_KEY + email) !== 'false'
+}
+
+/** 서버처럼 현재 값을 뒤집고 바뀐 값을 돌려준다 */
+function flipNotification(email: string) {
+  const next = !isNotificationOn(email)
+  sessionStorage.setItem(NOTIFICATION_KEY + email, String(next))
+  return next
+}
+
+const DAY_MS = 86_400_000
+
+function daysAgo(days: number) {
+  return new Date(Date.now() - days * DAY_MS).toISOString().slice(0, 19)
+}
+
+/**
+ * 사업자 계정이 보는 값. 리디자인 시안 18 · 18-3 의 숫자를 옮겼다.
+ *
+ * 예비창업자는 이 셋이 전부 null 이다 — 사업자등록이 없으면 마이데이터를 연동할 근거가
+ * 없고, 연동이 없으면 계좌도 없다. '연동 전' 이 아니라 '연동할 수 없음' 이다.
+ */
+const OWNER_EXTRA = {
+  businessInfo: {
+    business_name: '한상차림',
+    bsn: '123-45-67890',
+    name: '김소상',
+    business_type: '음식점업 (한식)',
+    address: '대구광역시 북구 산격동 1287-1',
+    openDate: '2023-04-10',
+  },
+  myData: { creditRating: 'AA', createdAt: daysAgo(1) },
+  withdrawAccount: [
+    { bankName: '대구은행', accountNo: '0324003842123412', balance: 12_400_000 },
+    { bankName: '국민은행', accountNo: '0324003842122251', balance: 6_100_000 },
+    { bankName: '대구은행', accountNo: '0324003842128907', balance: 3_200_000 },
+  ],
+  linkedAccount: { balanceSum: 21_700_000, loanSum: 55_200_000, accountNum: 3 },
+}
+
+const PRE_OWNER_EXTRA = {
+  businessInfo: null,
+  myData: null,
+  withdrawAccount: [],
+  linkedAccount: null,
+}
+
+/**
+ * 소셜로 전환된 계정. `POST /auth/social/google` 이 여기 적는다.
+ *
+ * 서버는 `users.provider` 를 GOOGLE 로 바꾸고 password 를 지운다. 목도 저장해야
+ * 새로고침 후에도 '연결됨' 이 유지되는지 확인할 수 있다 — 응답만 돌려주면 화면이
+ * 잠깐 바뀌었다가 조회 한 번에 되돌아간다.
+ */
+const SOCIAL_KEY = 'msw:social:'
+
+function markSocialLinked(email: string) {
+  sessionStorage.setItem(SOCIAL_KEY + email, 'GOOGLE')
+}
+
+/** 목 계정의 가입 경로. 구글로 가입했거나 전환한 계정이 GOOGLE 이다 */
+function providerOf(email: string) {
+  if (email === GOOGLE_EMAIL) return 'GOOGLE'
+  return sessionStorage.getItem(SOCIAL_KEY + email) === 'GOOGLE' ? 'GOOGLE' : 'LOCAL'
+}
+
+/**
+ * `GET /user/me` 응답. 백엔드 `UserMeResponse` 와 1:1 이다.
+ *
+ * ⚠️ **가볍다.** 여섯 필드뿐이고 사업자 정보·계좌는 없다. 그쪽은 `/user/mypage` 가
+ *    맡는다 — 이 엔드포인트는 앱 진입마다 불려서 무겁게 만들 수 없다.
+ */
+function meResponse(user: SessionUser) {
+  return { ...user, provider: providerOf(user.email) }
+}
+
+/**
+ * `GET /user/mypage` 응답. 마이페이지 한 화면 분량을 한 번에 준다.
+ *
+ * ⚠️ 백엔드 미구현이라 목이 유일한 구현이다 (S15P21D101-377).
+ */
+function myPageResponse(user: SessionUser) {
+  const extra = user.role === USER_ROLE.ENTREPRENEUR ? OWNER_EXTRA : PRE_OWNER_EXTRA
+
+  return {
+    userId: user.userId,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    provider: providerOf(user.email),
+    notification: isNotificationOn(user.email),
+    ...extra,
+  }
+}
+
 /** 비밀번호 재설정. 시드 계정도 덮어쓸 수 있게 저장본에 기록한다 */
 function updatePassword(email: string, password: string) {
   const accounts = loadAccounts()
@@ -474,12 +575,9 @@ export const authHandlers = [
   }),
 
   /*
-   * GET /api/v1/user/me — 백엔드 미구현이라 목이 유일한 구현이다 (S15P21D101-377).
+   * GET /api/v1/user/me — 백엔드에 구현돼 있다(S15P21D101-262). 실서버가 뜨면 목이 비켜선다.
    *
-   * ⚠️ `lib/serverFirst.ts` 의 `MOCK_ONLY` 에 올려서 실서버를 아예 안 물어본다.
-   *    매핑이 없는데도 `GlobalExceptionHandler` 의 캐치올이 500 + 공통 봉투를 만들어
-   *    내서, 그냥 두면 '백엔드가 응답했다' 로 판정돼 이 목이 안 탄다. 백엔드에 조회가
-   *    생기면 그 목록에서 빼야 한다 — 저절로 빠지지 않는다.
+   * 세션 복구(`useSession`)가 쓰는 가벼운 조회다. 사업자 정보·계좌는 아래 `/user/mypage` 다.
    */
   http.get('/api/v1/user/me', () => {
     const user = hasSession() ? currentUser() : null
@@ -488,7 +586,45 @@ export const authHandlers = [
       return fail(401, 'AUTH_010', '인증이 필요합니다.', '/api/v1/user/me')
     }
 
-    return ok(user, '내 정보 조회 성공', { path: '/api/v1/user/me' })
+    return ok(meResponse(user), '내 정보 조회에 성공했습니다.', { path: '/api/v1/user/me' })
+  }),
+
+  /*
+   * GET /api/v1/user/mypage — 백엔드 미구현이라 목이 유일한 구현이다 (S15P21D101-377).
+   *
+   * ⚠️ `lib/serverFirst.ts` 의 `MOCK_ONLY` 에 올려서 실서버를 아예 안 물어본다.
+   *    매핑이 없는데도 `GlobalExceptionHandler` 의 캐치올이 500 + 공통 봉투를 만들어
+   *    내서, 그냥 두면 '백엔드가 응답했다' 로 판정돼 이 목이 안 탄다. 백엔드에 조회가
+   *    올라오면 그 목록에서 빼야 한다 — 저절로 빠지지 않는다.
+   */
+  http.get('/api/v1/user/mypage', () => {
+    const user = hasSession() ? currentUser() : null
+
+    if (!user) {
+      return fail(401, 'AUTH_010', '인증이 필요합니다.', '/api/v1/user/mypage')
+    }
+
+    return ok(myPageResponse(user), '마이페이지 조회에 성공했습니다.', {
+      path: '/api/v1/user/mypage',
+    })
+  }),
+
+  /*
+   * PATCH /api/v1/user/notification
+   *
+   * ⚠️ 본문이 없다. 켤지 끌지를 받는 것이 아니라 **서버가 현재 값을 뒤집는다**
+   *    (`UserServiceImpl.toggleNotification`). 목도 그래야 화면이 낙관적 갱신을
+   *    잘못 짰을 때 여기서 드러난다.
+   */
+  http.patch('/api/v1/user/notification', () => {
+    const path = '/api/v1/user/notification'
+    const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
+
+    if (!hasSession() || !email) {
+      return fail(401, 'AUTH_010', '인증이 필요합니다.', path)
+    }
+
+    return ok({ notification: flipNotification(email) }, '알림 설정 변경 완료', { path })
   }),
 
   /*
@@ -684,6 +820,9 @@ export const authHandlers = [
     if (code.includes('mismatch')) {
       return fail(400, 'AUTH_016', '계정 이메일과 일치하는 구글 계정만 연결할 수 있습니다.', path)
     }
+
+    // 실제로 바꿔 둔다. 새로고침해도 '연결됨' 이 유지되는지까지 목에서 확인된다
+    markSocialLinked(user.email)
 
     return ok(
       { userId: user.userId, email: user.email, provider: 'GOOGLE' },

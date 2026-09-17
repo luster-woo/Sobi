@@ -63,7 +63,7 @@ export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
  * 서버도 code 를 교환할 때 같은 값을 쓰므로 `POST /auth/oauth/google` 에 함께 보낸다.
  */
 export const GOOGLE_REDIRECT_URI =
-  import.meta.env.VITE_GOOGLE_REDIRECT_URI ?? `${window.location.origin}${ROUTES.OAUTH_CALLBACK}`
+  import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}${ROUTES.OAUTH_CALLBACK}`
 
 export function isGoogleOAuthConfigured(): boolean {
   return GOOGLE_CLIENT_ID !== ''

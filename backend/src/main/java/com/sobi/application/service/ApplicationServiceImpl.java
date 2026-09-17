@@ -19,6 +19,7 @@ import com.sobi.application.repository.ApplicationDocumentRepository;
 import com.sobi.application.repository.ApplicationRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.global.storage.LocalFileStorage;
 import com.sobi.loan.client.SsafyLoanClient;
 import com.sobi.loan.clientDto.SsafyLoanAccount;
 import com.sobi.loan.dto.EligibilityResult;
@@ -36,6 +37,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -68,6 +71,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final BusinessReporitory businessReporitory;
     private final LoanEligibilityChecker eligibilityChecker;
     private final SsafyLoanClient loanClient;
+    private final LocalFileStorage fileStorage;
 
     /**
      * [신청] 클릭 시 호출. 작성 중(PREPARING) 신청이 있으면 새로 만들지 않고 그 신청을 반환
@@ -161,8 +165,24 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
 
         // 서류 행은 application_document 의 ON DELETE CASCADE 로 함께 삭제
-        // 업로드된 실제 파일(stored_path)은 업로드 기능 구현 시 함께 정리
         applicationRepository.delete(application);
+
+        // 업로드된 실제 파일은 신청 폴더째 지운다. 삭제가 롤백되면 파일이 남아 있어야 하므로 커밋 후에
+        runAfterCommit(() -> fileStorage.deleteApplicationQuietly(applicationId));
+    }
+
+    // 트랜잭션 커밋 후 실행한다. 트랜잭션 밖(단위 테스트 등)에서는 바로 실행한다
+    private void runAfterCommit(Runnable action) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            action.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                action.run();
+            }
+        });
     }
 
     /**

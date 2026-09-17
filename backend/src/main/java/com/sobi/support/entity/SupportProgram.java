@@ -18,10 +18,14 @@ public class SupportProgram {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** 기업마당 공고ID (upsert 키) */
+    @Column(name = "pblanc_id", length = 30, unique = true)
+    private String pblancId;
+
     @Column(
             name = "pblanc_nm",
             nullable = false,
-            length = 100
+            length = 300
     )
     private String pblancNm;
 

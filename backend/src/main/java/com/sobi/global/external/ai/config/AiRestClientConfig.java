@@ -18,10 +18,25 @@ public class AiRestClientConfig {
             RestClient.Builder builder,
             AiProperties properties
     ) {
+        return build(builder, properties, properties.getReadTimeout());
+    }
+
+    // OCR 서류 검증 전용. 읽기 타임아웃만 다르다 (ai.ocr-read-timeout)
+    @Bean
+    @Qualifier("aiOcrRestClient")
+    public RestClient aiOcrRestClient(
+            RestClient.Builder builder,
+            AiProperties properties
+    ) {
+        return build(builder, properties, properties.getOcrReadTimeout());
+    }
+
+    // RestClient.Builder 빈은 프로토타입이라 빈마다 새 빌더가 주입된다
+    private RestClient build(RestClient.Builder builder, AiProperties properties, Duration readTimeout) {
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));
-        factory.setReadTimeout(properties.getReadTimeout());
+        factory.setReadTimeout(readTimeout);
 
         return builder
                 .baseUrl(properties.getBaseUrl())

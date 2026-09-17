@@ -19,6 +19,18 @@ export const queryKeys = {
     me: ['auth', 'me'] as const,
   },
 
+  /**
+   * 마이페이지 한 화면 분량(`GET /user/mypage`).
+   *
+   * `auth.me` 와 다르다. 저쪽은 세션 복구용 `GET /user/me` 로 여섯 필드뿐이고 앱 진입
+   * 시 한 번 돌고 끝이다(`staleTime: Infinity`). 이쪽은 사업자 정보·계좌까지 모아
+   * 받고 마이페이지를 열 때마다 최신을 본다.
+   */
+  user: {
+    all: ['user'] as const,
+    mypage: ['user', 'mypage'] as const,
+  },
+
   business: {
     all: ['business'] as const,
     /** 사이드바 하단 업체 요약. 업체 정보를 수정하면 여기를 무효화한다 */
@@ -80,6 +92,18 @@ export const queryKeys = {
   account: {
     all: ['account'] as const,
     list: ['account', 'list'] as const,
+  },
+
+  /**
+   * 마이데이터. 조회 API 가 없어 `link` 는 쿼리 키가 아니라 **뮤테이션 키**로도 쓴다.
+   *
+   * 연동은 동의 화면에서 쏘고 결과는 수집·판정 화면이 읽는다. 화면이 갈려 있어
+   * 뮤테이션 상태를 키로 찾아야 하고(`useMutationState`), 결과 요약은 같은 키로
+   * 캐시에 얹어 판정 화면이 꺼내 쓴다.
+   */
+  mydata: {
+    all: ['mydata'] as const,
+    link: ['mydata', 'link'] as const,
   },
 
   application: {

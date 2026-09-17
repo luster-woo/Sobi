@@ -1,10 +1,7 @@
 package com.sobi.user.controller;
 
 import com.sobi.global.response.ApiResponse;
-import com.sobi.user.dto.BirthDateRequest;
-import com.sobi.user.dto.BirthDateResponse;
-import com.sobi.user.dto.NotificationResponse;
-import com.sobi.user.dto.PasswordChangeReqeust;
+import com.sobi.user.dto.*;
 import com.sobi.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -96,6 +93,27 @@ public class UserController {
                 .body(ApiResponse.success(
                         HttpStatus.OK,
                         "생년월일이 저장되었습니다.",
+                        response,
+                        request
+                ));
+    }
+
+    /**
+     * 로그인한 본인 정보. 세션 복구에서 재발급 직후 호출한다.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserMeResponse>> me(
+            @AuthenticationPrincipal Long userId,
+            HttpServletRequest request
+    ) {
+
+        UserMeResponse response = userService.getMe(userId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "내 정보 조회에 성공했습니다.",
                         response,
                         request
                 ));

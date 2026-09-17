@@ -1,9 +1,6 @@
 package com.sobi.user.service;
 
-import com.sobi.user.dto.BirthDateRequest;
-import com.sobi.user.dto.BirthDateResponse;
-import com.sobi.user.dto.NotificationResponse;
-import com.sobi.user.dto.PasswordChangeReqeust;
+import com.sobi.user.dto.*;
 
 public interface UserService {
 
@@ -14,4 +11,6 @@ public interface UserService {
     void withdraw(Long userId);
 
     BirthDateResponse updateBirthDate(Long userId, BirthDateRequest request);
+
+    UserMeResponse getMe(Long userId);
 }

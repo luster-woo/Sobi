@@ -88,10 +88,11 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 로컬 프론트 개발 서버
+        // 로컬 프론트 개발 서버 + 배포 주소
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "http://localhost:5174"
+                "http://localhost:5174",
+                "https://j15d101.p.ssafy.io"
         ));
 
         configuration.setAllowedMethods(List.of(
@@ -106,7 +107,8 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
-                "Accept"
+                "Accept",
+                "X-Requested-With"
         ));
 
         configuration.setExposedHeaders(List.of(

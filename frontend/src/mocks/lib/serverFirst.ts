@@ -40,7 +40,17 @@ const AMBIGUOUS_STATUS = new Set([404, 405, 500, 501, 502, 503, 504])
  * 요청이 스프링까지 못 갔다는 뜻이고, 404·405 는 매핑이 없다는 뜻이라 둘 다 안전하다.
  * 그래서 500·501 에서만 목을 막는다 — 안전한 쪽은 그대로 두어 백엔드 없이도 화면이 돈다.
  */
-const DESTRUCTIVE = new Set(['DELETE /api/v1/user/me', 'PATCH /api/v1/user/password'])
+const DESTRUCTIVE = new Set([
+  'DELETE /api/v1/user/me',
+  'PATCH /api/v1/user/password',
+  /*
+   * 마이데이터는 지울 것이 없지만 되돌릴 수 없는 건 같다. 판정 1회에 GMS 크레딧이
+   * 약 100 나가고, 갱신은 성공하면 쿨다운 시계가 돌아간다. 실서버가 돌다가 500 을
+   * 냈는데 목이 200 을 덮어쓰면 "성공했다는데 다음 갱신이 막혀 있는" 상태가 된다.
+   */
+  'POST /api/v1/mydata/link',
+  'POST /api/v1/mydata/refresh',
+])
 
 /** 실행됐을 수도 있는 애매한 실패. 되돌릴 수 없는 동작에서는 목으로 넘기지 않는다 */
 const MAY_HAVE_RUN = new Set([500, 501])
@@ -62,8 +72,11 @@ const MAY_HAVE_RUN = new Set([500, 501])
  *    그게 이 목록의 대가다. 그래서 티켓 번호를 같이 적어 둔다.
  */
 const MOCK_ONLY = new Set([
-  // 조회는 매핑이 없다. 같은 경로의 DELETE(탈퇴)는 백엔드에 있다 — S15P21D101-377
-  'GET /api/v1/user/me',
+  /*
+   * 마이페이지 한 화면 분량(사업자 정보·마이데이터·계좌·알림). 백엔드 작업 대기 중이다.
+   * 같은 user 도메인이지만 `GET /user/me` 는 구현돼 있어서 여기 없다 — S15P21D101-377
+   */
+  'GET /api/v1/user/mypage',
   /*
    * 구글 가입자의 이름·생년월일. 백엔드에는 생년월일만 받는 `PATCH /user/birth-date` 가
    * 있고, 이름까지 받는 이 경로는 요청해 둔 상태다. 올라오면 이 줄을 지운다.

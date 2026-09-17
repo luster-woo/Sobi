@@ -14,11 +14,20 @@ import com.sobi.insurance.entity.InsuranceChecklist;
 import com.sobi.insurance.entity.InsuranceStatus;
 import com.sobi.insurance.repository.InsuranceChecklistRepository;
 import com.sobi.insurance.repository.InsuranceRepository;
+import com.sobi.loan.dto.LoanEligibility;
+import com.sobi.loan.entity.Loan;
+import com.sobi.loan.entity.SuggestLoan;
+import com.sobi.loan.repository.LoanRepository;
+import com.sobi.loan.repository.SuggestLoanRepository;
+import com.sobi.loan.service.LoanEligibilityChecker;
+import com.sobi.mydata.dto.FinanceSnapshot;
 import com.sobi.mydata.dto.MydataSnapshot;
 import com.sobi.mydata.entity.Mydata;
 import com.sobi.mydata.repository.MydataInsuranceRepository;
 import com.sobi.mydata.repository.MydataRepository;
 import com.sobi.mydata.repository.MydataTaxRepository;
+import com.sobi.repayment.clientDto.SsafyInquireLoanAccountDetail;
+import com.sobi.support.entity.JudgementStatus;
 import com.sobi.support.entity.SuggestSupportProgram;
 import com.sobi.support.repository.SuggestSupportProgramRepository;
 import com.sobi.support.repository.SupportProgramRepository;
@@ -52,15 +61,16 @@ public class MydataStore {
 
     /** 수시입출금 계좌. account.type 에 쓰는 값 */
     private static final String ACCOUNT_TYPE_COMMON = "COMMON";
+    /** 대출 계좌 */
+    private static final String ACCOUNT_TYPE_LOAN = "LOAN";
+    /** 우리가 등록하지 않은 대출 상품일 때. account.bank_name 이 NOT NULL 이다 */
+    private static final String UNKNOWN_BANK_NAME = "기타";
 
     /** 마이데이터에 가입 기록이 없는 보험의 초기 상태 */
     private static final InsuranceStatus NOT_JOINED_STATUS = InsuranceStatus.NEEDS_VERIFICATION;
 
     /** suggest_support_program.reason 컬럼 길이 */
     private static final int REASON_MAX_LENGTH = 500;
-
-    /** status CHECK 제약이 허용하는 값 */
-    private static final Set<String> VALID_STATUS = Set.of("eligible", "unknown", "ineligible");
 
     private final UserRepository userRepository;
     private final BusinessReporitory businessRepository;
@@ -73,6 +83,9 @@ public class MydataStore {
     private final AccountRepository accountRepository;
     private final SupportProgramRepository supportProgramRepository;
     private final SuggestSupportProgramRepository suggestSupportProgramRepository;
+    private final LoanRepository loanRepository;
+    private final SuggestLoanRepository suggestLoanRepository;
+    private final LoanEligibilityChecker loanEligibilityChecker;
 
     /**
      * 연동에 필요한 값을 한 번에 읽는다.
@@ -132,34 +145,34 @@ public class MydataStore {
      * 수집한 값을 적재한다. 매출은 지우고 다시 넣고, 계좌는 없는 것만 더한다.
      */
     @Transactional
-    public void saveCollected(MydataSnapshot snapshot,
-                              List<SsafyDemandDepositAccountRecord> accounts,
-                              String creditRatingName) {
+    public void saveCollected(MydataSnapshot snapshot, FinanceSnapshot finance) {
 
         BusinessInfo business = businessRepository.getReferenceById(snapshot.getBusinessId());
         User user = userRepository.getReferenceById(snapshot.getUserId());
 
         saveTaxes(business, snapshot);
         saveInsuranceChecklist(business, snapshot);
-        saveAccounts(user, accounts);
-        saveCreditRating(user, creditRatingName);
+        saveDepositAccounts(user, finance.getDepositAccounts());
+        saveLoanAccounts(user, finance.getLoanAccounts());
+        saveCreditRating(user, finance.getCreditRatingName());
+        saveLoanSuggestions(business, user);
     }
 
     /**
      * 갱신용. 보험 체크리스트만 다르게 다루고 나머지는 최초 연동과 같다.
      */
     @Transactional
-    public void refreshCollected(MydataSnapshot snapshot,
-                                 List<SsafyDemandDepositAccountRecord> accounts,
-                                 String creditRatingName) {
+    public void refreshCollected(MydataSnapshot snapshot, FinanceSnapshot finance) {
 
         BusinessInfo business = businessRepository.getReferenceById(snapshot.getBusinessId());
         User user = userRepository.getReferenceById(snapshot.getUserId());
 
         saveTaxes(business, snapshot);
         upgradeInsuranceChecklist(business, snapshot);
-        saveAccounts(user, accounts);
-        saveCreditRating(user, creditRatingName);
+        saveDepositAccounts(user, finance.getDepositAccounts());
+        saveLoanAccounts(user, finance.getLoanAccounts());
+        saveCreditRating(user, finance.getCreditRatingName());
+        saveLoanSuggestions(business, user);
     }
 
     /**
@@ -179,7 +192,7 @@ public class MydataStore {
                 .map(r -> SuggestSupportProgram.of(
                         supportProgramRepository.getReferenceById(r.getProgramId()),
                         business,
-                        normalizeStatus(r),
+                        JudgementStatus.from(r.getStatus()),
                         truncateReason(r.getReason()),
                         r.getCheckItems(),
                         r.getBenefits(),
@@ -189,19 +202,6 @@ public class MydataStore {
         suggestSupportProgramRepository.saveAll(rows);
 
         log.info("판정 저장 - businessId: {}, {}건", businessId, rows.size());
-    }
-
-    /**
-     * AI 응답에 스키마 검증이 없어 LLM 이 엉뚱한 값을 뱉을 수 있다.
-     * CHECK 제약에 걸려 222건 전체가 날아가는 것보다 unknown 으로 두는 편이 낫다.
-     */
-    private String normalizeStatus(RagResult result) {
-        String status = result.getStatus();
-        if (status != null && VALID_STATUS.contains(status)) {
-            return status;
-        }
-        log.warn("알 수 없는 판정 상태 - programId: {}, status: {}", result.getProgramId(), status);
-        return "unknown";
     }
 
     private String truncateReason(String reason) {
@@ -292,7 +292,7 @@ public class MydataStore {
                 business.getId(), upgraded, added.size());
     }
 
-    private void saveAccounts(User user, List<SsafyDemandDepositAccountRecord> accounts) {
+    private void saveDepositAccounts(User user, List<SsafyDemandDepositAccountRecord> accounts) {
         if (accounts == null || accounts.isEmpty()) {
             log.info("금융망 계좌가 없다 - userId: {}", user.getId());
             return;
@@ -324,6 +324,77 @@ public class MydataStore {
             // 금융망이 A~E 밖의 값을 주면 비워둔다. 대출 자격 심사가 null 을 보고 판단한다.
             log.warn("알 수 없는 신용등급 - userId: {}, ratingName: {}", user.getId(), creditRatingName);
         }
+    }
+
+    /**
+     * 대출 계좌를 적재한다.
+     *
+     * 금융망은 입출금과 대출을 다른 API 로 나눠 준다. 대출 계좌 응답에는 bankName 이
+     * 없고 accountName 에 섞여 있어(예: "국민은행 믿고 가입하는 대출"), 상품 고유번호로
+     * 우리 loan 행을 찾아 은행명을 얻는다.
+     *
+     * withdrawalAccountNo 는 대출금이 나가고 들어오는 입출금 계좌다.
+     * account.transfer_account 에 그대로 넣는다.
+     */
+    private void saveLoanAccounts(User user, List<SsafyInquireLoanAccountDetail> accounts) {
+
+        if (accounts == null || accounts.isEmpty()) {
+            log.info("금융망 대출 계좌가 없다 - userId: {}", user.getId());
+            return;
+        }
+
+        List<Account> rows = accounts.stream()
+                .filter(account -> !accountRepository.existsByAccountNo(account.getAccountNo()))
+                .map(account -> Account.builder()
+                        .user(user)
+                        .bankName(resolveLoanBankName(account))
+                        .accountNo(account.getAccountNo())
+                        .type(ACCOUNT_TYPE_LOAN)
+                        .transferAccount(account.getWithdrawalAccountNo())
+                        .build())
+                .toList();
+        accountRepository.saveAll(rows);
+
+        log.info("대출 계좌 적재 - userId: {}, 신규 {}건 / 조회 {}건",
+                user.getId(), rows.size(), accounts.size());
+    }
+
+    private String resolveLoanBankName(SsafyInquireLoanAccountDetail account) {
+        return loanRepository.findByAccountTypeUniqueNo(account.getAccountTypeUniqueNo())
+                .map(Loan::getBankName)
+                .orElseGet(() -> {
+                    log.warn("등록하지 않은 대출 상품 - accountTypeUniqueNo: {}",
+                            account.getAccountTypeUniqueNo());
+                    return UNKNOWN_BANK_NAME;
+                });
+    }
+
+    /**
+     * 자격이 되는 대출 상품을 suggest_loan 에 적재한다.
+     *
+     * 반드시 saveCreditRating 뒤에 호출해야 한다. 판정이 신용등급을 보는데,
+     * 같은 트랜잭션·같은 엔티티라 방금 바꾼 값이 그대로 보인다.
+     *
+     * 자금조합 추천(FundingService)과 관심목록이 이 테이블을 읽는다.
+     * 컬럼에 상태가 없어 "행이 있으면 가능"으로 해석되므로 통과한 것만 넣는다.
+     */
+    private void saveLoanSuggestions(BusinessInfo business, User user) {
+
+        suggestLoanRepository.deleteAllByBusinessId(business.getId());
+
+        // 금융망에 등록되지 않은 상품은 신청할 수 없어 판정 대상이 아니다
+        List<Loan> loans = loanRepository.findAllByAccountTypeUniqueNoIsNotNull();
+
+        List<SuggestLoan> rows = loans.stream()
+                .filter(loan -> loanEligibilityChecker
+                        .check(loan, user.getCreditRating(), business)
+                        .getEligibility() == LoanEligibility.ELIGIBLE)
+                .map(loan -> SuggestLoan.of(business, loan))
+                .toList();
+        suggestLoanRepository.saveAll(rows);
+
+        log.info("대출 추천 적재 - businessId: {}, 전체 {}건 중 {}건",
+                business.getId(), loans.size(), rows.size());
     }
 
     /** 최근 12개월 매출 합. 자료가 없으면 null */

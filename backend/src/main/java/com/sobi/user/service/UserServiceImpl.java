@@ -3,10 +3,7 @@ package com.sobi.user.service;
 import com.sobi.auth.repository.RefreshTokenRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
-import com.sobi.user.dto.BirthDateRequest;
-import com.sobi.user.dto.BirthDateResponse;
-import com.sobi.user.dto.NotificationResponse;
-import com.sobi.user.dto.PasswordChangeReqeust;
+import com.sobi.user.dto.*;
 import com.sobi.user.entity.Provider;
 import com.sobi.user.entity.User;
 import com.sobi.user.repository.UserRepository;
@@ -71,5 +68,16 @@ public class UserServiceImpl implements UserService {
         user.updateBirthDate(request.getBirthDate());
 
         return new BirthDateResponse(user.getBirthDate());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserMeResponse getMe(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .filter(found -> found.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NO_USER));
+
+        return UserMeResponse.from(user);
     }
 }

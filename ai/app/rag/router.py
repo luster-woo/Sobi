@@ -30,6 +30,9 @@ class SearchRequest(BaseModel):
     annual_revenue: int | None = None
     birth_date: date | None = None
 
+class SearchTextRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=200)
+    top_k: int = Field(default=20, ge=1, le=100)
 
 @router.post("/embed", response_model=EmbedResponse)
 async def embed(req: EmbedRequest):
@@ -60,6 +63,11 @@ async def search(req: SearchRequest):
         ],
     }
 
+@router.post("/search-text")
+async def search_text(req: SearchTextRequest):
+    """질의 문장으로 공고를 찾는다. LLM을 부르지 않아 1초 미만이다."""
+    programs = await rag_search.search_by_text(query=req.query, top_k=req.top_k)
+    return {"programs": programs}
 
 @router.post("/recommend")
 async def recommend(req: SearchRequest):

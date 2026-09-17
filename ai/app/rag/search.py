@@ -5,6 +5,7 @@ SQL 필터를 통과한 공고 전체를 후보로 돌려준다. 벡터 유사�
 설계 근거는 docs/04_judgement_design.md.
 """
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import date
@@ -80,6 +81,23 @@ LEFT JOIN program_condition cond ON cond.support_program_id = sp.id
 WHERE NOT ({FILTER_SQL})
 ORDER BY sp.pblanc_nm
 """
+
+# 질의 문장으로만 찾는다. 사업자 정보도 정형 필터도 쓰지 않는다.
+# 자격 판정은 마이데이터 연동 때 이미 계산해 저장했으므로 여기서는 고르기만 한다.
+TEXT_SEARCH_SQL = """
+WITH ranked AS (
+    SELECT c.support_program_id,
+           MIN(c.embedding <=> %(vec)s::vector) AS distance
+    FROM program_chunk c
+    GROUP BY c.support_program_id
+)
+SELECT support_program_id AS program_id,
+       distance
+FROM ranked
+ORDER BY distance
+LIMIT %(top_k)s
+"""
+
 
 
 @dataclass
@@ -221,3 +239,24 @@ async def search(
         hits=hits,
         rejected=rejected,
     )
+
+async def search_by_text(*, query: str, top_k: int = 20) -> list[dict]:
+    """질의 문장으로 공고를 찾는다. LLM을 부르지 않는다.
+
+    /rag/recommend 와 성격이 다르다. 저 쪽은 사업자 프로필로 전량을 판정하고
+    여기는 "질의 ↔ 공고" 유사도만 본다. 판정을 붙이는 것은 백엔드의 몫이다.
+    설계 근거는 docs/02_api_contract.md.
+    """
+    # 임베딩은 CPU 를 오래 잡는다. 이벤트 루프를 막지 않도록 스레드로 뺀다.
+    vector = await asyncio.to_thread(koe5.embed_query, query)
+
+    async with db.acquire() as conn:
+        cur = await conn.execute(TEXT_SEARCH_SQL, {"vec": vector, "top_k": top_k})
+        rows = await cur.fetchall()
+
+    logger.info("텍스트 검색: %r → %d공고", query, len(rows))
+
+    return [
+        {"program_id": row["program_id"], "distance": round(row["distance"], 4)}
+        for row in rows
+    ]

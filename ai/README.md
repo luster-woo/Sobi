@@ -68,6 +68,7 @@ uvicorn이 고르는 이벤트 루프를 psycopg가 지원하지 않아서인데
 | POST | `/rag/embed` | 텍스트 임베딩 (디버그용) |
 | POST | `/rag/search` | 정형 필터 + 벡터 검색. 공고 최대 10건 |
 | POST | `/rag/recommend` | 검색 후 LLM 자격 검증까지 |
+| POST | `/ocr/verify` | 제출 서류 검증 (PP-OCRv5 + GMS 텍스트 파서). 계약은 `docs/05_ocr_contract.md` |
 
 `/rag/search`·`/rag/recommend` 요청 본문:
 

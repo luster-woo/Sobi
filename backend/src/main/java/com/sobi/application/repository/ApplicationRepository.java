@@ -43,4 +43,5 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
 
     // 내 신청만 조회 (남의 신청이면 없는 것으로 취급)
     Optional<Application> findByIdAndUser_Id(Long id, Long userId);
+
 }

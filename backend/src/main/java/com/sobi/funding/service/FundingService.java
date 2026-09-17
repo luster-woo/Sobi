@@ -2,6 +2,9 @@ package com.sobi.funding.service;
 
 
 
+import com.sobi.application.entity.Application;
+import com.sobi.application.repository.ApplicationRepository;
+import com.sobi.application.service.ApplicationService;
 import com.sobi.business.entity.BusinessInfo;
 import com.sobi.business.repository.BusinessReporitory;
 import com.sobi.funding.domain.FundingCandidate;
@@ -37,15 +40,22 @@ public class FundingService {
     private final SuggestSupportProgramRepository suggestSupportProgramRepository;
     private final FundingRecommendationEngine recommendationEngine;
     private final BusinessReporitory businessReporitory;
+    private final ApplicationService applicationService;
+    private final ApplicationRepository applicationRepository;
 
     public void application(Long userId, BatchRequest batchRequest) {
 
         for (BatchItem batchItem : batchRequest.getItem()) {
+            // 신청 현황에 있는 상품인지 검사
+            Application application = applicationRepository.findByIdAndUser_Id(userId, batchItem.getId()).orElse(null);
+
+            if (application == null) {
+                continue;
+            }
             // 신청 메서드로 신청
 
-
+            applicationService.create(userId, batchItem.getType(), batchItem.getId());
         }
-
     }
 
 

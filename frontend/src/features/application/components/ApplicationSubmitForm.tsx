@@ -5,7 +5,6 @@ import Button from '@/shared/ui/Button'
 import Input from '@/shared/ui/Input'
 import Select from '@/shared/ui/Select'
 import { formatMoneyShort } from '@/shared/utils/formatters'
-import { maskAccountNo } from '@/shared/utils/mask'
 
 interface ApplicationSubmitFormProps {
   detail: ApplicationDetail

@@ -82,6 +82,18 @@ export const queryKeys = {
     list: ['account', 'list'] as const,
   },
 
+  /**
+   * 마이데이터. 조회 API 가 없어 `link` 는 쿼리 키가 아니라 **뮤테이션 키**로도 쓴다.
+   *
+   * 연동은 동의 화면에서 쏘고 결과는 수집·판정 화면이 읽는다. 화면이 갈려 있어
+   * 뮤테이션 상태를 키로 찾아야 하고(`useMutationState`), 결과 요약은 같은 키로
+   * 캐시에 얹어 판정 화면이 꺼내 쓴다.
+   */
+  mydata: {
+    all: ['mydata'] as const,
+    link: ['mydata', 'link'] as const,
+  },
+
   application: {
     all: ['application'] as const,
     /** 신청 건마다 캐시가 갈린다. 검증 상태 폴링도 이 키로 무효화한다 */

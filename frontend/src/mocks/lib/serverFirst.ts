@@ -40,7 +40,17 @@ const AMBIGUOUS_STATUS = new Set([404, 405, 500, 501, 502, 503, 504])
  * 요청이 스프링까지 못 갔다는 뜻이고, 404·405 는 매핑이 없다는 뜻이라 둘 다 안전하다.
  * 그래서 500·501 에서만 목을 막는다 — 안전한 쪽은 그대로 두어 백엔드 없이도 화면이 돈다.
  */
-const DESTRUCTIVE = new Set(['DELETE /api/v1/user/me', 'PATCH /api/v1/user/password'])
+const DESTRUCTIVE = new Set([
+  'DELETE /api/v1/user/me',
+  'PATCH /api/v1/user/password',
+  /*
+   * 마이데이터는 지울 것이 없지만 되돌릴 수 없는 건 같다. 판정 1회에 GMS 크레딧이
+   * 약 100 나가고, 갱신은 성공하면 쿨다운 시계가 돌아간다. 실서버가 돌다가 500 을
+   * 냈는데 목이 200 을 덮어쓰면 "성공했다는데 다음 갱신이 막혀 있는" 상태가 된다.
+   */
+  'POST /api/v1/mydata/link',
+  'POST /api/v1/mydata/refresh',
+])
 
 /** 실행됐을 수도 있는 애매한 실패. 되돌릴 수 없는 동작에서는 목으로 넘기지 않는다 */
 const MAY_HAVE_RUN = new Set([500, 501])

@@ -62,6 +62,12 @@ export const ERROR_CODE = {
   /** REQUIRED / EXEMPT 외의 값을 보냄 */
   INSURANCE_STATUS_INVALID: 'INSURANCE_003',
 
+  /* 마이데이터 */
+  /** 업체 등록이 안 됐거나 수집할 대상이 없음. 404 */
+  MYDATA_NOT_FOUND: 'MYDATA_001',
+  /** 갱신 쿨다운(기본 24시간). 429 */
+  MYDATA_REFRESH_COOLDOWN: 'MYDATA_002',
+
   /* 자금 조합 */
   TARGET_AMOUNT_INVALID: 'FUNDING_001',
 

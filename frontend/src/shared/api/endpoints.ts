@@ -121,6 +121,19 @@ export const endpoints = {
   },
 
   /**
+   * 마이데이터 수집 + 자격 판정. 둘 다 본문이 없다.
+   *
+   * ⚠️ 동기 호출이고 응답까지 15~40초 걸린다(`MydataController` 주석). 전역 timeout 이
+   *    10초라 이 둘만 따로 늘려 쓴다 — `features/mydata/api/mydata.ts`.
+   */
+  mydata: {
+    /** 최초 연동. 온보딩 동의 화면에서 한 번 부른다 */
+    link: '/mydata/link',
+    /** 수동 갱신. 쿨다운(기본 24시간)에 걸리면 429 MYDATA_002 */
+    refresh: '/mydata/refresh',
+  },
+
+  /**
    * 신청. 생성은 쿼리로 대상을 받고, 나머지는 applicationId 로 가리킨다.
    *
    * 명세에는 경로 변수가 {programId} 로 적혀 있지만 예시 응답의 path 가

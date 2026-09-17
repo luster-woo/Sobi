@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 
+import { useMydataRefresh } from '@/features/mydata/hooks/useMydata'
 import Breadcrumb from '@/features/mypage/components/Breadcrumb'
 import { MOCK_LINKED_ACCOUNTS } from '@/features/mypage/model/mock'
 import { ROUTES } from '@/shared/constants/routes'
@@ -83,6 +84,8 @@ export function AccountsPage() {
   const { updatedAt, totalBalance, totalLoanBalance, institutionCount, deposits, loans } =
     MOCK_LINKED_ACCOUNTS
 
+  const refresh = useMydataRefresh()
+
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
       <Breadcrumb
@@ -93,9 +96,16 @@ export function AccountsPage() {
           <span className="flex items-center gap-2.5">
             <span className="text-text-muted text-[11.5px] tabular-nums">
               마이데이터로 불러온 계좌예요 · {toUpdatedAt(updatedAt)} 갱신
+              {/* 서버 쿨다운이 남아 있으면 눌러도 429 라 미리 잠근다 */}
+              {refresh.remaining && ` · ${refresh.remaining} 갱신 가능`}
             </span>
-            {/* TODO: POST /mydata/refresh — 비동기라 진행률 표시가 필요하다 */}
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              loading={refresh.isPending}
+              disabled={refresh.remaining !== null}
+              onClick={refresh.refresh}
+            >
               지금 갱신
             </Button>
           </span>

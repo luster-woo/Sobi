@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
 import { type JobStepDef, useJobProgress } from '@/features/auth/hooks/useJobProgress'
+import { useMydataLinkResult } from '@/features/mydata/hooks/useMydata'
 import { ROUTES } from '@/shared/constants/routes'
 import ProgressBar from '@/shared/ui/ProgressBar'
 import Spinner from '@/shared/ui/Spinner'
@@ -11,12 +12,12 @@ import StepList from '@/shared/ui/StepList'
 const DURATION_MS = 6000
 
 /**
- * 대조할 상품 수.
+ * 연동 결과를 못 읽었을 때 쓸 값. 이 화면을 직접 열었거나 새로고침한 경우다.
  *
- * ⚠️ 서버가 줄 값이다. 폴링 계약의 `JUDGE` 단계에 `done`·`total` 을 요청해뒀다
- * (`{ key: 'JUDGE', done: 11, total: 20 }`). 지금은 진행률에서 역산한다.
+ * ⚠️ 실제 판정은 이미 끝나 있다 — `POST /mydata/link` 가 수집과 판정을 함께 끝내고
+ *    `totalCount` 를 준다. 이 화면은 그 숫자를 되짚어 보여줄 뿐이다.
  */
-const TOTAL_PRODUCTS = 20
+const FALLBACK_TOTAL = 20
 
 const STEPS: JobStepDef[] = [
   { key: 'BUSINESS', label: '사업자 정보 확인', doneNote: '완료' },
@@ -35,7 +36,8 @@ export function MyDataJudgingPage() {
   const navigate = useNavigate()
   const { percent, steps, done } = useJobProgress(STEPS, DURATION_MS)
 
-  const judged = Math.round((percent / 100) * TOTAL_PRODUCTS)
+  const total = useMydataLinkResult()?.totalCount ?? FALLBACK_TOTAL
+  const judged = Math.round((percent / 100) * total)
 
   useEffect(() => {
     if (!done) return
@@ -59,8 +61,7 @@ export function MyDataJudgingPage() {
       <div className="border-border bg-surface w-full overflow-hidden rounded-md border">
         <div className="border-border-subtle border-b px-4 py-3.5">
           <p className="text-body2 text-text mb-2.5">
-            {TOTAL_PRODUCTS}개 상품 중 <b className="font-semibold tabular-nums">{judged}개</b> 판정
-            완료
+            {total}개 상품 중 <b className="font-semibold tabular-nums">{judged}개</b> 판정 완료
           </p>
           <ProgressBar value={percent} showValue label="자격 판정 진행률" />
         </div>

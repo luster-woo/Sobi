@@ -1,6 +1,7 @@
 package com.sobi.support.controller;
 
 import com.sobi.global.response.ApiResponse;
+import com.sobi.support.dto.SupportProgramDetailResponse;
 import com.sobi.support.dto.SupportProgramListResponse;
 import com.sobi.support.dto.SupportSearchCondition;
 import com.sobi.support.service.SupportService;
@@ -9,10 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/v1/support")
@@ -39,6 +37,28 @@ public class SupportController {
                 .body(ApiResponse.success(
                         HttpStatus.OK,
                         "지원사업 목록 조회 성공",
+                        response,
+                        request
+                ));
+    }
+
+    /**
+     * 지원사업 상세. 판정 사유와 확인 항목이 함께 나간다.
+     */
+    @GetMapping("/{supportProgramId}")
+    public ResponseEntity<ApiResponse<SupportProgramDetailResponse>> detail(
+            @PathVariable Long supportProgramId,
+            @AuthenticationPrincipal Long userId,
+            HttpServletRequest request
+    ) {
+
+        SupportProgramDetailResponse response = supportService.getProgram(userId, supportProgramId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "지원사업 상세 정보 조회 성공",
                         response,
                         request
                 ));

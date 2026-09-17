@@ -5,6 +5,8 @@ import com.sobi.application.repository.ApplicationRepository;
 import com.sobi.bookmark.repository.BookmarkRepository;
 import com.sobi.business.entity.BusinessInfo;
 import com.sobi.business.repository.BusinessReporitory;
+import com.sobi.global.exception.BusinessException;
+import com.sobi.global.exception.ErrorCode;
 import com.sobi.support.dto.*;
 import com.sobi.support.entity.JudgementStatus;
 import com.sobi.support.entity.SuggestSupportProgram;
@@ -72,6 +74,40 @@ public class SupportServiceImpl implements SupportService {
                 .programs(programs)
                 .page(PageMeta.of(page, size, rows.size()))
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SupportProgramDetailResponse getProgram(Long userId, Long supportProgramId) {
+
+        SupportProgram program = supportProgramRepository.findById(supportProgramId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SUPPORT_PROGRAM_NOT_FOUND));
+
+        // 예비창업자는 사업자 정보가 없어 판정도 없다. status 는 UNKNOWN 이 된다
+        BusinessInfo business = businessRepository.findByUserId(userId);
+
+        SuggestSupportProgram judgement = business == null
+                ? null
+                : suggestSupportProgramRepository
+                .findByBusinessIdAndSupportProgram_Id(business.getId(), supportProgramId);
+
+        Application latestApplication = applicationRepository
+                .findFirstByUser_IdAndSupportProgram_IdOrderByIdDesc(userId, supportProgramId)
+                .orElse(null);
+
+        SupportStatus status = SupportStatus.of(
+                judgement == null ? null : judgement.getStatus(),
+                latestApplication == null ? null : latestApplication.getStatus()
+        );
+
+        return SupportProgramDetailResponse.of(
+                program,
+                judgement,
+                status,
+                // 진행 중인 신청이 있을 때만 [이어서 작성] 으로 이동할 id 를 내려준다
+                status.isFromApplication() ? latestApplication.getId() : null,
+                bookmarkRepository.existsByUser_IdAndSupportProgram_Id(userId, supportProgramId)
+        );
     }
 
     /**

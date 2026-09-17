@@ -82,22 +82,38 @@ WHERE NOT ({FILTER_SQL})
 ORDER BY sp.pblanc_nm
 """
 
+# 무관한 공고는 0.55~0.63 에 빽빽하게 몰린다. 그 구간을 자른다.
+MAX_DISTANCE = 0.55
+
+# 질의마다 거리 분포가 통째로 움직인다(최솟값 0.32~0.47).
+# 최상위 기준 상대 여유를 둬 분포를 따라가게 한다. 근거는 docs/06_search_quality.md.
+DISTANCE_MARGIN = 0.1
+
 # 질의 문장으로만 찾는다. 사업자 정보도 정형 필터도 쓰지 않는다.
 # 자격 판정은 마이데이터 연동 때 이미 계산해 저장했으므로 여기서는 고르기만 한다.
+#
+# 마감 공고는 여기서 뺀다. 결과가 보통 한 자릿수라, 마감 건이 cutoff 의
+# 최솟값과 LIMIT 예산을 먹으면 체감 결과가 반으로 준다.
 TEXT_SEARCH_SQL = """
 WITH ranked AS (
     SELECT c.support_program_id,
            MIN(c.embedding <=> %(vec)s::vector) AS distance
     FROM program_chunk c
+    JOIN support_program sp ON sp.id = c.support_program_id
+    WHERE sp.end_date IS NULL OR sp.end_date >= CURRENT_DATE
     GROUP BY c.support_program_id
+),
+cutoff AS (
+    SELECT LEAST(MIN(distance) + %(margin)s, %(max_distance)s) AS limit_distance
+    FROM ranked
 )
-SELECT support_program_id AS program_id,
-       distance
-FROM ranked
-ORDER BY distance
+SELECT r.support_program_id AS program_id,
+       r.distance
+FROM ranked r, cutoff
+WHERE r.distance <= cutoff.limit_distance
+ORDER BY r.distance
 LIMIT %(top_k)s
 """
-
 
 
 @dataclass
@@ -190,7 +206,9 @@ async def search(
         open_date=open_date,
         annual_revenue=annual_revenue,
     )
-    vector = koe5.embed_query(query_text)
+    # 임베딩은 CPU 를 오래 잡는다. 이벤트 루프를 막으면 같이 도는
+    # /rag/search-text 의 "1초 미만" 전제가 깨진다.
+    vector = await asyncio.to_thread(koe5.embed_query, query_text)
     months = profile.biz_months(open_date)
     params = {
         "vec": vector,
@@ -251,7 +269,12 @@ async def search_by_text(*, query: str, top_k: int = 20) -> list[dict]:
     vector = await asyncio.to_thread(koe5.embed_query, query)
 
     async with db.acquire() as conn:
-        cur = await conn.execute(TEXT_SEARCH_SQL, {"vec": vector, "top_k": top_k})
+        cur = await conn.execute(TEXT_SEARCH_SQL, {
+            "vec": vector,
+            "top_k": top_k,
+            "margin": DISTANCE_MARGIN,
+            "max_distance": MAX_DISTANCE,
+        })
         rows = await cur.fetchall()
 
     logger.info("텍스트 검색: %r → %d공고", query, len(rows))

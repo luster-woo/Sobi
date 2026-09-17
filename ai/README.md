@@ -66,8 +66,9 @@ uvicorn이 고르는 이벤트 루프를 psycopg가 지원하지 않아서인데
 |---|---|---|
 | GET | `/health` | 상태 + 모델·DB 연결 여부 |
 | POST | `/rag/embed` | 텍스트 임베딩 (디버그용) |
-| POST | `/rag/search` | 정형 필터 + 벡터 검색. 공고 최대 10건 |
-| POST | `/rag/recommend` | 검색 후 LLM 자격 검증까지 |
+| POST | `/rag/search` | 정형 필터 + 벡터 검색. 통과한 공고 전부 (내부 디버깅용) |
+| POST | `/rag/recommend` | 검색 후 LLM 자격 검증까지. 공고 222건이 전부 담겨 온다 |
+| POST | `/rag/search-text` | 질의 문장으로 공고 찾기. LLM 을 부르지 않아 1초 미만 |
 | POST | `/ocr/verify` | 제출 서류 검증 (PP-OCRv5 + GMS 텍스트 파서). 계약은 `docs/05_ocr_contract.md` |
 
 `/rag/search`·`/rag/recommend` 요청 본문:
@@ -83,9 +84,18 @@ uvicorn이 고르는 이벤트 루프를 psycopg가 지원하지 않아서인데
 }
 ```
 
+`/rag/search-text` 요청 본문은 `{ "query": "키오스크 지원금", "top_k": 20 }` 입니다.
+거리 임계값이 먼저 자르므로 `top_k` 는 상한으로만 쓰입니다 — 근거는
+`docs/06_search_quality.md`.
+
 `/rag/recommend` 응답의 `status` 는 `eligible` · `ineligible` · `unknown` 셋 중 하나입니다.
-`unknown` 은 대표자 연령이나 체납 여부처럼 사업자 정보만으로 확인할 수 없는
-필수 조건이 있다는 뜻입니다.
+
+`unknown` 은 **"해당해야만 통과"하는 조건인데 확인할 수 없을 때**입니다.
+여성기업·신용점수·백년소상공인 지정처럼 해당하는 사람이 소수인 조건이 그렇습니다.
+
+체납·휴폐업·중복수혜처럼 **대부분이 충족하는** 조건은 `eligible` 로 두고
+`check_items` 에 넣습니다. 대표자 연령은 `birth_date` 가 있으면 확정 판정됩니다.
+자세한 기준은 `docs/04_judgement_design.md`.
 
 ## 동작 확인용 데이터
 

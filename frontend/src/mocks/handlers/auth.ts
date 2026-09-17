@@ -187,9 +187,23 @@ const PRE_OWNER_EXTRA = {
   linkedAccount: null,
 }
 
-/** 목 계정의 가입 경로. 구글 계정 하나를 고정으로 쓰고 있어 이메일로 가른다 */
+/**
+ * 소셜로 전환된 계정. `POST /auth/social/google` 이 여기 적는다.
+ *
+ * 서버는 `users.provider` 를 GOOGLE 로 바꾸고 password 를 지운다. 목도 저장해야
+ * 새로고침 후에도 '연결됨' 이 유지되는지 확인할 수 있다 — 응답만 돌려주면 화면이
+ * 잠깐 바뀌었다가 조회 한 번에 되돌아간다.
+ */
+const SOCIAL_KEY = 'msw:social:'
+
+function markSocialLinked(email: string) {
+  sessionStorage.setItem(SOCIAL_KEY + email, 'GOOGLE')
+}
+
+/** 목 계정의 가입 경로. 구글로 가입했거나 전환한 계정이 GOOGLE 이다 */
 function providerOf(email: string) {
-  return email === GOOGLE_EMAIL ? 'GOOGLE' : 'LOCAL'
+  if (email === GOOGLE_EMAIL) return 'GOOGLE'
+  return sessionStorage.getItem(SOCIAL_KEY + email) === 'GOOGLE' ? 'GOOGLE' : 'LOCAL'
 }
 
 /**
@@ -806,6 +820,9 @@ export const authHandlers = [
     if (code.includes('mismatch')) {
       return fail(400, 'AUTH_016', '계정 이메일과 일치하는 구글 계정만 연결할 수 있습니다.', path)
     }
+
+    // 실제로 바꿔 둔다. 새로고침해도 '연결됨' 이 유지되는지까지 목에서 확인된다
+    markSocialLinked(user.email)
 
     return ok(
       { userId: user.userId, email: user.email, provider: 'GOOGLE' },

@@ -640,3 +640,79 @@ FAILED의 normalized_path와 이전 snapshot은 서로 대응하지 않을 수 �
 CLI --help 확인. README에 실제 한 문서 E2E/동일 문서 재실행 명령과 DB 확인 SQL 기록.
 실제 GMS/DB E2E 호출/설치는 수행하지 않았다.
 기존 안정화 모듈/팀원 코드/migration 수정 없음. 기존 파일 변경은 이 진행 문서뿐이다.
+
+## 2026-09-17 — 단일 E2E 검증 완료 / In-memory Batch Runner·API 구현
+
+사용자 전달 기준 실제 HWP 단일 Template Preprocessing E2E 검증 완료:
+HWP→HWPX, Parser, CandidateExtractor, 실제 GMS Analyzer, Schema Persistence,
+mapping_status/location_info/Writer metadata 보존 및 동일 문서 replace-all 정상.
+이번 구현 중에는 실제 GMS/DB E2E를 호출하지 않았다.
+
+신규 preprocessing_batch에서 EC2 검수 원본을 DB program_document.id 기준으로 resolve하고
+작성용 문서만 ORDER BY id 순차 처리한다. 기존 TemplatePreprocessingService는 변경 없이 재사용.
+HWP/HWPX/DOC/DOCX를 원본 후보로 세어 정확히 1개만 허용하며 DOC/DOCX는 item 미지원 실패.
+원본은 read-only, normalized/{id}/ 출력, 숨김/임시 후보 제외 및 symlink/경로 우회 방어.
+
+Batch 상태/active lock은 InMemoryBatchStore만 담당. threading.Lock의 짧은 메모리 critical section과
+active batch ID로 동시 시작을 거부하고 finally에서 release한다. 최근 50개 이력 보존.
+processed=completed+failed+skipped. 개별 실패는 계속 진행하고 DB 조회 등 infrastructure 실패만 Batch FAILED.
+COMPLETED 기본 skip, FAILED 기본 retry, PARSING 항상 skip. 옵션으로 완료 재처리/실패 미재시도 지원.
+
+POST /api/v1/document-agent/preprocessing/batches → 202 + batchId/RUNNING,
+GET 동일 경로/{batch_id} → 현재 상태/집계/items. FastAPI BackgroundTasks에서 동일 Runner 실행.
+CLI python -B -m app.agent.documents.preprocessing_batch도 동일 Runner 사용.
+FastAPI 공통 wrapper/admin 인증 dependency는 없어 Pydantic 응답/HTTPException을 사용.
+API 기본 비활성화, DOCUMENT_AGENT_BATCH_API_ENABLED=true는 내부망 접근제어 후 활성화하는 스위치이며 인증이 아님.
+root 환경변수 DOCUMENT_AGENT_ORIGINAL_ROOT/DOCUMENT_AGENT_NORMALIZED_ROOT 필수.
+공용 config는 변경하지 않고 기존 dotenv 로딩 패턴 재사용.
+
+단일 worker/단일 replica 전용. CLI는 별도 프로세스라 API와 동시 실행 금지.
+재시작 시 Batch 메모리 상태 소실/BackgroundTask 중단 가능, PostgreSQL 결과는 유지.
+PARSING 잔류는 자동 복구하지 않고 완료 template만 Runtime 소비 가능.
+Redis/DB job table/새 migration/추가 dependency 없음.
+
+신규 파일: preprocessing_batch/{__init__,__main__,config,errors,files,models,repository,router,service,store}.py,
+README.md 및 tests/test_preprocessing_batch.py, test_preprocessing_batch_api.py.
+기존 파일 변경: app/main.py 라우터 import/include_router 2줄과 이 진행 문서만.
+기존 안정화 Agent/RAG/core/팀원 기능 코드/migration/requirements/배포 compose 변경 없음.
+
+검증: 신규 Batch/API 36개 통과. 전체 349개 중 348개 통과 / PostgreSQL 선택 테스트 1개 skip.
+기존 Orchestrator 17개, Persistence 단위 24개, Analyzer 93개 포함 모두 통과.
+ASGI send 이벤트로 background 완료 이전 202 응답 전송 검증, CLI --help 확인.
+실제 EC2/DB/GMS 통합은 사용자 후속 검증 필요. README에 mount/env/API/CLI/재실행/보안/단일 worker 제한 기록.
+
+## 2026-09-17 — Document Agent Runtime v1 구현 완료
+
+Template Preprocessing 및 Batch Runner 완료 이후 Runtime v1을 구현했다.
+정형 routing은 코드가 수행하며 Schema Analyzer의 semantic/source 판단을 다시 LLM으로 요청하지 않는다.
+
+신규 runtime/{__init__,__main__,service,repository,models,enums,errors}.py 및 README.md.
+DocumentAgentRuntime.resolve(DocumentRuntimeRequest(template_id, user_id, user_inputs)) 제공.
+exact template_id의 COMPLETED/작성용 문서만 소비하며 schema_version=1을 Runtime에 고정하지 않는다.
+support_program_id는 program_document 관계에서 유도한다. business_id/application_id 추가 입력 없음.
+기존 SourceService.resolve_source(SourceResolveContext, SourceResolveRequest) 그대로 연결.
+
+Schema load: 기존 acquire와 짧은 REPEATABLE READ/READ ONLY transaction에서 3회 SELECT.
+field_order ASC 및 source priority/id ASC, 일관된 snapshot, N+1 없음.
+DIRECT+RESOLVED만 Source 호출. found=False인 경우만 다음 priority fallback.
+예외/미지원은 값 부재로 삼키지 않으며 field별 ERROR/UNSUPPORTED로 격리.
+USER_INPUT은 field_key별 supplied JSON 값 사용. 부재/null/공백은 INPUT_REQUIRED,
+TEXT/NUMBER/DATE/BOOLEAN/JSON 기본 호환성만 확인하고 unknown key는 전체 validation error.
+NEEDS_REVIEW/UNSUPPORTED는 routing 우선 차단. COMPUTED/GENERATED RESOLVED는 NOT_IMPLEMENTED.
+RAG/PROGRAM_RAG는 호출하지 않음. 새 Calculator/Writer/Validation/HTTP API 없음.
+
+ResolvedField는 원래 schema metadata, sources, location_info JSON, native_ref/element_path/hints를 보존.
+Source date/Decimal 등 typed value를 의미 변경/formatting 없이 반환하며 source provenance는 type/key/priority만 기록.
+ready_for_write는 required field 전부 RESOLVED 여부. optional 미해결은 허용하며 종합 문서 검증은 아님.
+CLI 기본 출력은 상태/집계만, --show-values로 개발 검증 시에만 전체 값 출력.
+
+테스트: 신규 test_document_runtime.py 39개 통과.
+기존 Source 29 / Analyzer 93 / Persistence 단위 24 / Orchestrator 17 / Batch 36개 포함 회귀 통과.
+전체 388개 중 387개 통과, PostgreSQL 선택 테스트 1개 skip(전용 DSN 미설정).
+실제 GMS/RAG/Source DB 통합 또는 운영 EC2 파일 변경은 수행하지 않았다.
+실제 SourceService+fake provider 연결 및 fake repository transaction/정렬/조회 계약 검증.
+
+기존 안정화 모듈/Registry/RAG/core/main/requirements/DB migration 변경 없음.
+기존 파일 변경은 이 누적 문서만. 새 DB table/결과 저장도 없음.
+제한: exact template 선택, 접근 권한은 상위 서비스 책임, load 이후 동시 재분석은 Writer 전에 재확인 필요.
+constraints/min_length/max_length는 보존만 하며 후속 Validation/Writer 단계에서 처리.

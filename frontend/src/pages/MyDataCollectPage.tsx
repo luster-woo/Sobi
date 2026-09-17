@@ -1,37 +1,38 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
-import { type JobStepDef, useJobProgress } from '@/features/auth/hooks/useJobProgress'
+import JobProgressPanel from '@/features/mydata/components/JobProgressPanel'
+import { useEstimatedProgress } from '@/features/mydata/hooks/useEstimatedProgress'
 import { useMydataLink, useMydataLinkState } from '@/features/mydata/hooks/useMydata'
+import type { JobStepDef } from '@/features/mydata/model/progress'
 import { ROUTES } from '@/shared/constants/routes'
 import Button from '@/shared/ui/Button'
-import ProgressBar from '@/shared/ui/ProgressBar'
 import Spinner from '@/shared/ui/Spinner'
-import StepList from '@/shared/ui/StepList'
 
-/** 진행률 막대가 차는 데 걸리는 시간(ms). 서버 폴링이 붙으면 의미가 없어진다 (375) */
-const DURATION_MS = 7000
+/** 백엔드가 밝힌 소요 시간 15~40초의 가운데. 빗나가도 막대가 멈추지는 않는다 */
+const EXPECTED_MS = 30_000
 
-/**
- * 폴링 응답의 `steps` 중 수집 구간. 판정(JUDGE)은 화면 12 가 이어서 보여준다.
- */
+/** 목처럼 빨리 끝나도 이 시간은 보여준다. 한 프레임 스치고 사라지면 뭘 했는지 모른다 */
+const MIN_MS = 1500
+
 const STEPS: JobStepDef[] = [
-  { key: 'ACCOUNT', label: '계좌 거래 내역', doneNote: '2개 기관 완료' },
-  { key: 'SALES', label: '매출·현금 흐름', doneNote: '24개월 완료' },
-  { key: 'CREDIT', label: '신용 정보', doneNote: '완료' },
+  { key: 'IDENTITY', label: '본인 인증' },
+  { key: 'ACCOUNT', label: '계좌 거래 내역' },
+  { key: 'SALES', label: '매출·현금 흐름' },
+  { key: 'CREDIT', label: '신용 정보' },
 ]
 
 /**
  * 화면 09. 마이데이터 수집 중.
  *
- * 진행률 숫자는 아직 시간으로 만든다 — 서버가 진행 상태를 주지 않는다 (375).
- * 다만 **다음 화면으로 넘어가는 시점은 실제 응답이 정한다.** 막대가 100% 라도
- * `POST /mydata/link` 가 안 끝났으면 기다린다. 먼저 넘기면 판정 화면이 아직 저장되지도
- * 않은 결과를 읽는다.
+ * 진행률은 **추정값이다.** 서버가 상태를 주지 않아 시간으로 민다 —
+ * `features/mydata/model/progress.ts` 주석에 근거를 적어 뒀다.
+ *
+ * 다음 화면으로 넘어가는 시점만은 추정이 아니라 실제 응답이 정한다. 먼저 넘기면
+ * 판정 화면이 아직 저장되지도 않은 결과를 읽는다.
  */
 export function MyDataCollectPage() {
   const navigate = useNavigate()
-  const { percent, steps, done } = useJobProgress(STEPS, DURATION_MS)
 
   const link = useMydataLink()
   const linkStatus = useMydataLinkState()
@@ -43,12 +44,19 @@ export function MyDataCollectPage() {
   const failed = linkStatus === 'error'
   const settled = linkStatus === undefined || linkStatus === 'success'
 
+  const { percent, steps, done } = useEstimatedProgress({
+    defs: STEPS,
+    expectedMs: EXPECTED_MS,
+    minMs: MIN_MS,
+    settled,
+  })
+
   useEffect(() => {
-    if (!done || !settled) return
+    if (!done) return
 
     const timer = window.setTimeout(() => navigate(ROUTES.MYDATA_JUDGING, { replace: true }), 600)
     return () => window.clearTimeout(timer)
-  }, [done, settled, navigate])
+  }, [done, navigate])
 
   if (failed) {
     return (
@@ -90,25 +98,11 @@ export function MyDataCollectPage() {
         언제든 해제할 수 있어요.
       </p>
 
-      <div className="border-border bg-surface w-full overflow-hidden rounded-md border">
-        <StepList
-          steps={[
-            { key: 'IDENTITY', label: '본인 인증', status: 'DONE', note: '휴대폰 인증 완료' },
-            ...steps,
-          ]}
-        />
+      <JobProgressPanel steps={steps} percent={percent} label="마이데이터 수집 진행률" />
 
-        <div className="border-border-subtle border-t px-4 py-3.5">
-          <ProgressBar value={percent} showValue label="마이데이터 수집 진행률" />
-        </div>
-      </div>
-
-      {/* 막대가 다 찼는데 응답이 안 온 구간. 멈춘 것처럼 보이면 사용자가 새로고침한다 */}
-      {done && !settled && (
-        <p className="text-body2 text-text-muted text-center">
-          거의 다 됐어요. 기관 응답을 기다리는 중이라 조금 더 걸릴 수 있어요.
-        </p>
-      )}
+      <p className="text-caption text-text-muted text-center">
+        기관 응답에 따라 1분까지 걸릴 수 있어요.
+      </p>
     </div>
   )
 }

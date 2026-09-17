@@ -13,4 +13,6 @@ public interface UserService {
     BirthDateResponse updateBirthDate(Long userId, BirthDateRequest request);
 
     UserMeResponse getMe(Long userId);
+
+    MyPageResponse getMyPage(Long userId);
 }

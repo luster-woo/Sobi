@@ -118,4 +118,25 @@ public class UserController {
                         request
                 ));
     }
+
+    /**
+     * 마이페이지. 계좌 잔액·대출금은 금융망 실시간 조회라 1~2초 걸린다.
+     */
+    @GetMapping("/mypage")
+    public ResponseEntity<ApiResponse<MyPageResponse>> mypage(
+            @AuthenticationPrincipal Long userId,
+            HttpServletRequest request
+    ) {
+
+        MyPageResponse response = userService.getMyPage(userId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "마이페이지 조회에 성공했습니다.",
+                        response,
+                        request
+                ));
+    }
 }

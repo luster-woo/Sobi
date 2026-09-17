@@ -91,7 +91,8 @@ public class SecurityConfig {
         // 로컬 프론트 개발 서버
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "http://localhost:5174"
+                "http://localhost:5174",
+                "https://j15d101.p.ssafy.io/"
         ));
 
         configuration.setAllowedMethods(List.of(

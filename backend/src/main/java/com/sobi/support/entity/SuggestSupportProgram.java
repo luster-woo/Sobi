@@ -52,7 +52,7 @@ public class SuggestSupportProgram {
 
     /** 자격 판정 (eligible / unknown / ineligible) */
     @Column(nullable = false, length = 10)
-    private String status;
+    private JudgementStatus status;
 
     /** 신청 전 본인이 확인해야 할 항목 */
     @JdbcTypeCode(SqlTypes.JSON)
@@ -74,7 +74,7 @@ public class SuggestSupportProgram {
     public static SuggestSupportProgram of(
             SupportProgram supportProgram,
             BusinessInfo business,
-            String status,
+            JudgementStatus status,
             String reason,
             List<String> checkItems,
             List<String> benefits,

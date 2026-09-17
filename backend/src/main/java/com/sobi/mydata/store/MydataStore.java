@@ -14,11 +14,18 @@ import com.sobi.insurance.entity.InsuranceChecklist;
 import com.sobi.insurance.entity.InsuranceStatus;
 import com.sobi.insurance.repository.InsuranceChecklistRepository;
 import com.sobi.insurance.repository.InsuranceRepository;
+import com.sobi.loan.dto.LoanEligibility;
+import com.sobi.loan.entity.Loan;
+import com.sobi.loan.entity.SuggestLoan;
+import com.sobi.loan.repository.LoanRepository;
+import com.sobi.loan.repository.SuggestLoanRepository;
+import com.sobi.loan.service.LoanEligibilityChecker;
 import com.sobi.mydata.dto.MydataSnapshot;
 import com.sobi.mydata.entity.Mydata;
 import com.sobi.mydata.repository.MydataInsuranceRepository;
 import com.sobi.mydata.repository.MydataRepository;
 import com.sobi.mydata.repository.MydataTaxRepository;
+import com.sobi.support.entity.JudgementStatus;
 import com.sobi.support.entity.SuggestSupportProgram;
 import com.sobi.support.repository.SuggestSupportProgramRepository;
 import com.sobi.support.repository.SupportProgramRepository;
@@ -59,9 +66,6 @@ public class MydataStore {
     /** suggest_support_program.reason 컬럼 길이 */
     private static final int REASON_MAX_LENGTH = 500;
 
-    /** status CHECK 제약이 허용하는 값 */
-    private static final Set<String> VALID_STATUS = Set.of("eligible", "unknown", "ineligible");
-
     private final UserRepository userRepository;
     private final BusinessReporitory businessRepository;
     private final BusinessTaxRepository businessTaxRepository;
@@ -73,6 +77,9 @@ public class MydataStore {
     private final AccountRepository accountRepository;
     private final SupportProgramRepository supportProgramRepository;
     private final SuggestSupportProgramRepository suggestSupportProgramRepository;
+    private final LoanRepository loanRepository;
+    private final SuggestLoanRepository suggestLoanRepository;
+    private final LoanEligibilityChecker loanEligibilityChecker;
 
     /**
      * 연동에 필요한 값을 한 번에 읽는다.
@@ -143,6 +150,7 @@ public class MydataStore {
         saveInsuranceChecklist(business, snapshot);
         saveAccounts(user, accounts);
         saveCreditRating(user, creditRatingName);
+        saveLoanSuggestions(business, user);
     }
 
     /**
@@ -160,6 +168,7 @@ public class MydataStore {
         upgradeInsuranceChecklist(business, snapshot);
         saveAccounts(user, accounts);
         saveCreditRating(user, creditRatingName);
+        saveLoanSuggestions(business, user);
     }
 
     /**
@@ -179,7 +188,7 @@ public class MydataStore {
                 .map(r -> SuggestSupportProgram.of(
                         supportProgramRepository.getReferenceById(r.getProgramId()),
                         business,
-                        normalizeStatus(r),
+                        JudgementStatus.from(r.getStatus()),
                         truncateReason(r.getReason()),
                         r.getCheckItems(),
                         r.getBenefits(),
@@ -189,19 +198,6 @@ public class MydataStore {
         suggestSupportProgramRepository.saveAll(rows);
 
         log.info("판정 저장 - businessId: {}, {}건", businessId, rows.size());
-    }
-
-    /**
-     * AI 응답에 스키마 검증이 없어 LLM 이 엉뚱한 값을 뱉을 수 있다.
-     * CHECK 제약에 걸려 222건 전체가 날아가는 것보다 unknown 으로 두는 편이 낫다.
-     */
-    private String normalizeStatus(RagResult result) {
-        String status = result.getStatus();
-        if (status != null && VALID_STATUS.contains(status)) {
-            return status;
-        }
-        log.warn("알 수 없는 판정 상태 - programId: {}, status: {}", result.getProgramId(), status);
-        return "unknown";
     }
 
     private String truncateReason(String reason) {
@@ -324,6 +320,34 @@ public class MydataStore {
             // 금융망이 A~E 밖의 값을 주면 비워둔다. 대출 자격 심사가 null 을 보고 판단한다.
             log.warn("알 수 없는 신용등급 - userId: {}, ratingName: {}", user.getId(), creditRatingName);
         }
+    }
+
+    /**
+     * 자격이 되는 대출 상품을 suggest_loan 에 적재한다.
+     *
+     * 반드시 saveCreditRating 뒤에 호출해야 한다. 판정이 신용등급을 보는데,
+     * 같은 트랜잭션·같은 엔티티라 방금 바꾼 값이 그대로 보인다.
+     *
+     * 자금조합 추천(FundingService)과 관심목록이 이 테이블을 읽는다.
+     * 컬럼에 상태가 없어 "행이 있으면 가능"으로 해석되므로 통과한 것만 넣는다.
+     */
+    private void saveLoanSuggestions(BusinessInfo business, User user) {
+
+        suggestLoanRepository.deleteAllByBusinessId(business.getId());
+
+        // 금융망에 등록되지 않은 상품은 신청할 수 없어 판정 대상이 아니다
+        List<Loan> loans = loanRepository.findAllByAccountTypeUniqueNoIsNotNull();
+
+        List<SuggestLoan> rows = loans.stream()
+                .filter(loan -> loanEligibilityChecker
+                        .check(loan, user.getCreditRating(), business)
+                        .getEligibility() == LoanEligibility.ELIGIBLE)
+                .map(loan -> SuggestLoan.of(business, loan))
+                .toList();
+        suggestLoanRepository.saveAll(rows);
+
+        log.info("대출 추천 적재 - businessId: {}, 전체 {}건 중 {}건",
+                business.getId(), loans.size(), rows.size());
     }
 
     /** 최근 12개월 매출 합. 자료가 없으면 null */

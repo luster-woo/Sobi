@@ -75,7 +75,7 @@ ai:
 
 mydata:
   # 갱신 1회에 GMS 크레딧 약 100 이 나간다. 연타를 막는다.
-  refresh-cooldown: ${MYDATA_REFRESH_COOLDOWN:24h}
+  refresh-cooldown: ${MYDATA_REFRESH_COOLDOWN:1h}
 
 loan:
   product-sync:

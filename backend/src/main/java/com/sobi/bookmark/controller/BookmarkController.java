@@ -75,7 +75,7 @@ public class BookmarkController {
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(
                         HttpStatus.OK,
-                        "관심목록 삭제에 성공했습니다.",
+                        "관심목록 조회에 성공했습니다.",
                         response,
                         request
                 ));

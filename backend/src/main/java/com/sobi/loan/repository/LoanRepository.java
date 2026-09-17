@@ -16,4 +16,8 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
 
     // 금융망에 등록되어 신청 가능한 상품
     List<Loan> findAllByAccountTypeUniqueNoIsNotNull();
+
+    // 금융망 대출 계좌는 상품명에 은행명이 섞여 있고 bankName 필드 X
+    // 상품 고유번호로 우리 상품을 찾아 은행명을 가져옴
+    Optional<Loan> findByAccountTypeUniqueNo(String accountTypeUniqueNo);
 }

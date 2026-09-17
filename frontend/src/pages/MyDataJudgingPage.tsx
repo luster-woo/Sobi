@@ -1,43 +1,49 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
-import { type JobStepDef, useJobProgress } from '@/features/auth/hooks/useJobProgress'
+import JobProgressPanel from '@/features/mydata/components/JobProgressPanel'
+import { useEstimatedProgress } from '@/features/mydata/hooks/useEstimatedProgress'
 import { useMydataLinkResult } from '@/features/mydata/hooks/useMydata'
+import type { JobStepDef } from '@/features/mydata/model/progress'
 import { ROUTES } from '@/shared/constants/routes'
-import ProgressBar from '@/shared/ui/ProgressBar'
 import Spinner from '@/shared/ui/Spinner'
-import StepList from '@/shared/ui/StepList'
-
-/** 판정에 걸리는 시간(ms). 디자인의 '약 10초' 보다 짧게 잡았다 */
-const DURATION_MS = 6000
 
 /**
- * 연동 결과를 못 읽었을 때 쓸 값. 이 화면을 직접 열었거나 새로고침한 경우다.
+ * 이 화면이 머무는 시간. 디자인의 '약 10초' 보다 짧게 잡았다.
  *
- * ⚠️ 실제 판정은 이미 끝나 있다 — `POST /mydata/link` 가 수집과 판정을 함께 끝내고
- *    `totalCount` 를 준다. 이 화면은 그 숫자를 되짚어 보여줄 뿐이다.
+ * ⚠️ 기다리는 일이 없다. 판정은 `POST /mydata/link` 안에서 이미 끝났고 결과도 받아뒀다.
+ *    그래서 `settled: true` 로 두고 단순한 타이머로 돌린다 — 무엇을 했는지 보여주는
+ *    구간이지 무엇을 기다리는 구간이 아니다.
  */
+const DURATION_MS = 6000
+
+/** 연동 결과를 못 읽었을 때. 이 화면을 직접 열었거나 새로고침한 경우다 */
 const FALLBACK_TOTAL = 20
 
 const STEPS: JobStepDef[] = [
-  { key: 'BUSINESS', label: '사업자 정보 확인', doneNote: '완료' },
-  { key: 'MYDATA', label: '마이데이터 최신본 불러오기', doneNote: '완료' },
-  { key: 'JUDGE', label: '상품별 자격 요건 대조', doneNote: '완료' },
+  { key: 'BUSINESS', label: '사업자 정보 확인' },
+  { key: 'MYDATA', label: '마이데이터 최신본 불러오기' },
+  { key: 'JUDGE', label: '상품별 자격 요건 대조' },
 ]
 
 /**
  * 화면 12. 자격 판정 로딩.
  *
- * 대출 목록(`/loans`)이 아니라 온보딩 마지막 단계다 — 판정은 마이데이터 연동 job 안에서
- * 끝나므로, 목록에 들어갈 때는 판정할 것이 남아 있지 않다. 사이드바를 붙이지 않는 이유도
- * 같다. 이 시점의 사용자는 대시보드를 아직 본 적이 없다.
+ * 대출 목록이 아니라 온보딩 마지막 단계다 — 판정은 마이데이터 연동 job 안에서 끝나므로
+ * 목록에 들어갈 때는 판정할 것이 남아 있지 않다. 사이드바를 붙이지 않는 이유도 같다.
+ * 이 시점의 사용자는 대시보드를 아직 본 적이 없다.
  */
 export function MyDataJudgingPage() {
   const navigate = useNavigate()
-  const { percent, steps, done } = useJobProgress(STEPS, DURATION_MS)
 
   const total = useMydataLinkResult()?.totalCount ?? FALLBACK_TOTAL
-  const judged = Math.round((percent / 100) * total)
+
+  const { percent, steps, done } = useEstimatedProgress({
+    defs: STEPS,
+    expectedMs: DURATION_MS,
+    minMs: DURATION_MS,
+    settled: true,
+  })
 
   useEffect(() => {
     if (!done) return
@@ -58,16 +64,19 @@ export function MyDataJudgingPage() {
         매출·업력·부채비율·신용등급을 상품 요건과 대조하는 중
       </p>
 
-      <div className="border-border bg-surface w-full overflow-hidden rounded-md border">
-        <div className="border-border-subtle border-b px-4 py-3.5">
-          <p className="text-body2 text-text mb-2.5">
-            {total}개 상품 중 <b className="font-semibold tabular-nums">{judged}개</b> 판정 완료
-          </p>
-          <ProgressBar value={percent} showValue label="자격 판정 진행률" />
-        </div>
-
-        <StepList steps={steps} />
-      </div>
+      <JobProgressPanel
+        steps={steps}
+        percent={percent}
+        label="자격 판정 진행률"
+        barFirst
+        summary={
+          <>
+            {total}개 상품 중{' '}
+            <b className="font-semibold tabular-nums">{Math.round((percent / 100) * total)}개</b>{' '}
+            판정 완료
+          </>
+        }
+      />
     </div>
   )
 }

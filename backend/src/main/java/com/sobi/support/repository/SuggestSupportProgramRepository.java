@@ -45,6 +45,9 @@ public interface SuggestSupportProgramRepository extends JpaRepository<SuggestSu
             """)
     Optional<LocalDateTime> findLastJudgedAt(@Param("businessId") Long businessId);
 
+    /** 판정 결과만 가볍게. supportProgram 을 로딩하지 않는다 */
+    @Query("SELECT s FROM SuggestSupportProgram s WHERE s.business.id = :businessId")
+    List<SuggestSupportProgram> findAllByBusinessId(@Param("businessId") Long businessId);
 
     SuggestSupportProgram findByBusinessIdAndSupportProgram_Id(Long businessId, Long supportProgramId);
 }

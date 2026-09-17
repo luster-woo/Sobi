@@ -22,6 +22,12 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
             """)
     List<Long> findLoanIdsByUserId(@Param("userId") Long userId);
 
+    @Query("""
+            SELECT b.supportProgram.id FROM Bookmark b
+            WHERE b.user.id = :userId AND b.supportProgram IS NOT NULL
+            """)
+    List<Long> findSupportProgramIdsByUserId(@Param("userId") Long userId);
+
     boolean existsByUser_IdAndSupportProgram_Id(Long userId, Long supportProgramId);
 
     long deleteByUser_IdAndLoan_Id(Long userId, Long loanId);

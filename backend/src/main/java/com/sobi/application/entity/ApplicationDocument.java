@@ -87,6 +87,27 @@ public class ApplicationDocument {
                 .build();
     }
 
+    /**
+     * 파일 업로드(첫 업로드·재업로드 공통). 제출 서류는 AI 검증 대기(PENDING), 작성 서류는 검증 없이 바로 통과.
+     * 검증 실패 사유는 새 파일 기준으로 다시 정해지므로 지운다.
+     */
+    public void upload(String originalFilename, String storedPath, LocalDateTime now) {
+        this.originalFilename = originalFilename;
+        this.storedPath = storedPath;
+        this.validationMessage = null;
+        this.validationStatus = DocumentType.valueOf(documentType) == DocumentType.WRITE
+                ? ValidationStatus.PASSED.name()
+                : ValidationStatus.PENDING.name();
+        // updated_at 을 갱신하는 DB 트리거가 없다. 검증 시간 초과 판단에 쓰므로 직접 넣는다
+        this.updatedAt = now;
+    }
+
+    // AI 검증 대기 또는 진행 중. 이때 파일을 바꾸면 결과가 어느 파일 것인지 알 수 없어 재업로드를 막는다
+    public boolean isValidating() {
+        return ValidationStatus.PENDING.name().equals(validationStatus)
+                || ValidationStatus.VALIDATING.name().equals(validationStatus);
+    }
+
     private static ApplicationDocumentBuilder notSubmittedBuilder(Application application, DocumentType documentType) {
         return ApplicationDocument.builder()
                 .application(application)

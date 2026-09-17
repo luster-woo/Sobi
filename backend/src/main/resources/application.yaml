@@ -31,8 +31,13 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 20MB
+      max-file-size: 20MB      # 신청 서류는 서비스에서 10MB 로 더 엄격하게 막는다
       max-request-size: 50MB
+
+  task:
+    execution:
+      # 서류 검증 전용 풀(AsyncConfig)을 등록해도 기본 applicationTaskExecutor 가 사라지지 않게 한다
+      mode: force
 
   jackson:
     mapper:
@@ -72,6 +77,11 @@ ssafy:
 ai:
   base-url: ${AI_BASE_URL:http://localhost:8000}
   read-timeout: 120s
+  ocr-read-timeout: 300s   # 서류 검증. AI 서버가 한 장씩 처리해 앞 요청을 기다리므로 RAG 보다 길게
+
+file:
+  # 업로드 파일 루트. 로컬은 backend/uploads, EC2 컨테이너는 /app/uploads (호스트 /home/ubuntu/app/uploads 마운트)
+  upload-dir: ${FILE_UPLOAD_DIR:./uploads}
 
 mydata:
   # 갱신 1회에 GMS 크레딧 약 100 이 나간다. 연타를 막는다.

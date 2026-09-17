@@ -44,6 +44,9 @@ public enum ErrorCode {
     BUSINESS_CODE_NOT_FOUND(HttpStatus.NOT_FOUND,"BUSINESS_003", "업종 코드가 존재하지 않습니다."),
     BUSINESS_INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "BUSINESS_004", "등록된 사업자 정보가 없습니다."),
 
+    // 지원사업
+    SUPPORT_PROGRAM_NOT_FOUND(HttpStatus.NOT_FOUND, "SUPPORT_001", "존재하지 않는 지원사업입니다."),
+
     // 상권 분석 관련
     // 파라미터 누락/형식 오류는 도메인 코드를 따로 두지 않고 COMMON_001 을 쓴다.
     DONG_NOT_FOUND(HttpStatus.NOT_FOUND, "MARKET_001", "존재하지 않는 행정동입니다."),

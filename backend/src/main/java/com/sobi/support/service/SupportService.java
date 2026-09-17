@@ -9,4 +9,6 @@ public interface SupportService {
     SupportProgramListResponse getPrograms(Long userId, SupportSearchCondition condition);
 
     SupportProgramDetailResponse getProgram(Long userId, Long supportProgramId);
+
+    SupportProgramListResponse searchPrograms(Long userId, String query, int page, int size);
 }

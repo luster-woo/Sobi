@@ -41,6 +41,17 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
             """)
     List<Application> findAllSupportApplicationsByUserId(@Param("userId") Long userId);
 
+    /** 대상 공고가 정해졌을 때. 검색은 결과가 한 자릿수라 전건을 읽을 이유가 없다 */
+    @Query("""
+            SELECT a FROM Application a
+            WHERE a.user.id = :userId AND a.supportProgram.id IN :programIds
+            ORDER BY a.id DESC
+            """)
+    List<Application> findSupportApplicationsByUserIdAndProgramIds(
+            @Param("userId") Long userId,
+            @Param("programIds") List<Long> programIds
+    );
+
     // 내 신청만 조회 (남의 신청이면 없는 것으로 취급)
     Optional<Application> findByIdAndUser_Id(Long id, Long userId);
 

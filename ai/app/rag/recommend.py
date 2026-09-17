@@ -78,6 +78,7 @@ direction
   "reason": "한 문장", "check_items": ["..."], "benefits": ["..."]}]}
 
 reason은 판정 근거를 한 문장으로. ineligible이면 무엇이 어긋났는지 밝힌다.
+reason은 "~습니다" 체로 끝맺는다. SQL 탈락 사유와 문체를 맞추기 위함이다.
 check_items는 신청 전 사업자가 직접 확인해야 할 항목이다.
 benefits는 우대 조건을 그대로 옮긴다. 없으면 빈 배열.
 """

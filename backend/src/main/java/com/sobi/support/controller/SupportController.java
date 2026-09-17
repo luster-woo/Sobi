@@ -4,8 +4,10 @@ import com.sobi.global.response.ApiResponse;
 import com.sobi.support.dto.SupportProgramDetailResponse;
 import com.sobi.support.dto.SupportProgramListResponse;
 import com.sobi.support.dto.SupportSearchCondition;
+import com.sobi.support.dto.SupportSearchTextRequest;
 import com.sobi.support.service.SupportService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +39,33 @@ public class SupportController {
                 .body(ApiResponse.success(
                         HttpStatus.OK,
                         "지원사업 목록 조회 성공",
+                        response,
+                        request
+                ));
+    }
+
+    /**
+     * 자연어 검색. 판정은 마이데이터 연동 때 저장해둔 값을 쓰므로 LLM 을 부르지 않는다.
+     *
+     * 목록과 달리 유사도 순으로 내려간다. page·size 는 쿼리스트링, 질의는 본문이다.
+     */
+    @PostMapping("/search")
+    public ResponseEntity<ApiResponse<SupportProgramListResponse>> search(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody SupportSearchTextRequest searchRequest,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            HttpServletRequest request
+    ) {
+
+        SupportProgramListResponse response =
+                supportService.searchPrograms(userId, searchRequest.getQuery(), page, size);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "지원사업 자연어 검색 성공",
                         response,
                         request
                 ));

@@ -4,11 +4,12 @@
 fastapi==0.141.1
 uvicorn[standard]==0.53.0
 pydantic==2.13.5
+python-multipart==0.0.32  # FastAPI 파일 업로드(Form·UploadFile). /ocr/verify
 
 # 임베딩
 sentence-transformers==6.0.1
 transformers==5.17.0
-numpy==2.4.6
+numpy==2.3.5  # paddlex 3.7.x 가 numpy<2.4 를 요구한다. RAG 쪽(sentence-transformers·transformers)은 2.4 를 요구하지 않음
 
 # LLM / 설정
 openai==3.13.0
@@ -21,3 +22,8 @@ pgvector==0.5.0
 
 # 문서 정규화 CLI (Java Runtime은 Dockerfile에서 설치)
 hwp2hwpx==1.0.1
+
+# OCR (제출 서류 검증)
+paddlepaddle==3.3.1
+paddleocr==3.7.0
+pymupdf==1.28.2

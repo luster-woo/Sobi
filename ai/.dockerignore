@@ -7,3 +7,4 @@ venv/
 models/
 *.log
 .git
+data/raw/

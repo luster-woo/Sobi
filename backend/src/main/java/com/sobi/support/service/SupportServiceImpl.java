@@ -7,6 +7,9 @@ import com.sobi.business.entity.BusinessInfo;
 import com.sobi.business.repository.BusinessReporitory;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.global.external.ai.client.RagClient;
+import com.sobi.global.external.ai.clientDto.RagSearchTextRequest;
+import com.sobi.global.external.ai.clientDto.RagSearchTextResponse;
 import com.sobi.support.dto.*;
 import com.sobi.support.entity.JudgementStatus;
 import com.sobi.support.entity.SuggestSupportProgram;
@@ -17,10 +20,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -36,37 +37,36 @@ public class SupportServiceImpl implements SupportService {
 
     private static final String SORT_MAX_BALANCE_DESC = "maxBalance,desc";
 
+    /** AI 에 요청할 상한. 임계값이 먼저 자르므로 실제로는 더 적게 온다 */
+    private static final int SEARCH_TOP_K = 50;
+
+    /** 검색은 SupportSearchCondition 을 거치지 않아 여기서 직접 막는다 */
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final SupportProgramRepository supportProgramRepository;
     private final SuggestSupportProgramRepository suggestSupportProgramRepository;
     private final BookmarkRepository bookmarkRepository;
     private final ApplicationRepository applicationRepository;
     private final BusinessReporitory businessRepository;
+    private final RagClient ragClient;
 
     @Override
     @Transactional(readOnly = true)
     public SupportProgramListResponse getPrograms(Long userId, SupportSearchCondition condition) {
 
-        // 예비창업자는 사업자 정보가 없다. 판정도 없으므로 전부 UNKNOWN 이 된다
-        BusinessInfo business = businessRepository.findByUserId(userId);
-        Long businessId = business == null ? null : business.getId();
-
-        // 공고마다 조회하지 않도록 한 번에 가져온다
-        Map<Long, JudgementStatus> judgements = findJudgements(businessId);
-        Set<Long> bookmarkedIds = Set.copyOf(bookmarkRepository.findSupportProgramIdsByUserId(userId));
-        Map<Long, String> latestApplications = findLatestApplications(userId);
+        // 목록은 전체를 훑어 정렬하므로 판정·신청도 전건이 필요하다
+        UserContext context = loadContext(userId, null);
 
         List<Row> rows = supportProgramRepository.findAllOpen(condition.getRegion()).stream()
-                .map(program -> toRow(program, judgements, latestApplications, bookmarkedIds))
+                .map(program -> toRow(program, context))
                 .filter(row -> matches(row, condition))
                 .sorted(comparator(condition.getSort()))
                 .toList();
 
         int page = condition.getPage();
         int size = condition.getSize();
-        int from = Math.min(page * size, rows.size());
-        int to = Math.min(from + size, rows.size());
 
-        List<SupportProgramSummaryResponse> programs = rows.subList(from, to).stream()
+        List<SupportProgramSummaryResponse> programs = slice(rows, page, size).stream()
                 .map(row -> SupportProgramSummaryResponse.of(row.program(), row.status(), row.bookmarked()))
                 .toList();
 
@@ -111,6 +111,67 @@ public class SupportServiceImpl implements SupportService {
     }
 
     /**
+     * 자연어 검색.
+     *
+     * AI 는 공고 id 와 유사도만 준다. 판정은 마이데이터 연동 때 저장해둔 값을 붙인다.
+     * LLM 을 다시 부르지 않으므로 1초 안쪽이다.
+     *
+     * 목록과 달리 판정 순으로 재정렬하지 않는다. 검색은 "질의와 가까운 것" 을
+     * 원하는 요청이라, 순서를 바꾸면 검색 의도가 깨진다.
+     *
+     * @Transactional 을 붙이지 않는다. AI 호출이 트랜잭션 안에 들어가면
+     * 그동안 DB 커넥션을 붙든다. 클라이언트 타임아웃이 120초다.
+     */
+    @Override
+    public SupportProgramListResponse searchPrograms(Long userId, String query, int page, int size) {
+
+        int safePage = safePage(page);
+        int safeSize = safeSize(size);
+
+        List<RagSearchTextResponse.Hit> hits = ragClient.searchText(
+                RagSearchTextRequest.builder()
+                        .query(query)
+                        .topK(SEARCH_TOP_K)
+                        .build()
+        ).getPrograms();
+
+        if (hits.isEmpty()) {
+            return SupportProgramListResponse.builder()
+                    .programs(List.of())
+                    .page(PageMeta.of(safePage, safeSize, 0))
+                    .build();
+        }
+
+        List<Long> orderedIds = hits.stream()
+                .map(RagSearchTextResponse.Hit::getProgramId)
+                .toList();
+
+        Map<Long, SupportProgram> programs =
+                supportProgramRepository.findAllOpenByIds(orderedIds).stream()
+                        .collect(Collectors.toMap(SupportProgram::getId, Function.identity()));
+
+        // 검색은 보통 한 자릿수 결과다. 판정·신청을 전건 읽을 이유가 없다
+        UserContext context = loadContext(userId, orderedIds);
+
+        // AI 가 준 유사도 순서를 그대로 유지한다
+        List<SupportProgramSummaryResponse> ordered = orderedIds.stream()
+                .map(programs::get)
+                .filter(Objects::nonNull)   // 마감돼 조회에서 빠진 공고
+                .map(program -> SupportProgramSummaryResponse.of(
+                        program,
+                        SupportStatus.of(
+                                context.judgements().get(program.getId()),
+                                context.latestApplications().get(program.getId())),
+                        context.bookmarkedIds().contains(program.getId())))
+                .toList();
+
+        return SupportProgramListResponse.builder()
+                .programs(slice(ordered, safePage, safeSize))
+                .page(PageMeta.of(safePage, safeSize, ordered.size()))
+                .build();
+    }
+
+    /**
      * 정렬과 필터에 판정(judgement)과 뱃지(status)가 둘 다 필요하다.
      * 뱃지는 신청 상태가 섞인 값이라 정렬 기준으로 쓸 수 없다.
      */
@@ -122,19 +183,15 @@ public class SupportServiceImpl implements SupportService {
     ) {
     }
 
-    private Row toRow(
-            SupportProgram program,
-            Map<Long, JudgementStatus> judgements,
-            Map<Long, String> latestApplications,
-            Set<Long> bookmarkedIds
-    ) {
-        JudgementStatus judgement = judgements.get(program.getId());
+    private Row toRow(SupportProgram program, UserContext context) {
+
+        JudgementStatus judgement = context.judgements().get(program.getId());
 
         return new Row(
                 program,
                 judgement,
-                SupportStatus.of(judgement, latestApplications.get(program.getId())),
-                bookmarkedIds.contains(program.getId())
+                SupportStatus.of(judgement, context.latestApplications().get(program.getId())),
+                context.bookmarkedIds().contains(program.getId())
         );
     }
 
@@ -186,22 +243,83 @@ public class SupportServiceImpl implements SupportService {
                 Comparator.nullsLast(Comparator.naturalOrder()));
     }
 
-    private Map<Long, JudgementStatus> findJudgements(Long businessId) {
+    /**
+     * 뱃지를 만드는 데 필요한 사용자별 값 묶음.
+     * 공고마다 조회하면 쿼리가 공고 수만큼 나가므로 한 번에 읽어 맵으로 접는다.
+     */
+    private record UserContext(
+            Map<Long, JudgementStatus> judgements,
+            Map<Long, String> latestApplications,
+            Set<Long> bookmarkedIds
+    ) {
+    }
+
+    /**
+     * @param programIds 대상 공고. null 이면 전건을 읽는다.
+     *                   목록은 전체를 정렬해야 해서 전건, 검색은 결과가 한 자릿수라 좁힌다.
+     */
+    private UserContext loadContext(Long userId, List<Long> programIds) {
+
+        // 예비창업자는 사업자 정보가 없다. 판정도 없으므로 전부 UNKNOWN 이 된다
+        BusinessInfo business = businessRepository.findByUserId(userId);
+        Long businessId = business == null ? null : business.getId();
+
+        return new UserContext(
+                findJudgements(businessId, programIds),
+                findLatestApplications(userId, programIds),
+                Set.copyOf(bookmarkRepository.findSupportProgramIdsByUserId(userId))
+        );
+    }
+
+    private Map<Long, JudgementStatus> findJudgements(Long businessId, List<Long> programIds) {
+
         if (businessId == null) {
             return Map.of();
         }
-        return suggestSupportProgramRepository.findAllByBusinessId(businessId).stream()
+
+        List<SuggestSupportProgram> found = programIds == null
+                ? suggestSupportProgramRepository.findAllByBusinessId(businessId)
+                : suggestSupportProgramRepository.findAllByBusinessIdAndProgramIds(businessId, programIds);
+
+        return found.stream()
                 .collect(Collectors.toMap(
                         suggest -> suggest.getId().getSupportProgramId(),
                         SuggestSupportProgram::getStatus,
                         (first, second) -> first));
     }
 
-    private Map<Long, String> findLatestApplications(Long userId) {
-        return applicationRepository.findAllSupportApplicationsByUserId(userId).stream()
+    private Map<Long, String> findLatestApplications(Long userId, List<Long> programIds) {
+
+        List<Application> found = programIds == null
+                ? applicationRepository.findAllSupportApplicationsByUserId(userId)
+                : applicationRepository.findSupportApplicationsByUserIdAndProgramIds(userId, programIds);
+
+        return found.stream()
                 .collect(Collectors.toMap(
                         application -> application.getSupportProgram().getId(),
                         Application::getStatus,
                         (latest, older) -> latest));   // 최신순이라 먼저 온 것이 최근
+    }
+
+    /**
+     * 요청한 페이지 구간을 잘라 낸다.
+     *
+     * page * size 를 int 로 계산하면 큰 page 에서 오버플로가 나 음수 인덱스가 된다.
+     * long 으로 계산한 뒤 목록 크기로 막는다.
+     */
+    private <T> List<T> slice(List<T> items, int page, int size) {
+
+        int from = (int) Math.min((long) page * size, items.size());
+        int to = (int) Math.min((long) from + size, items.size());
+
+        return items.subList(from, to);
+    }
+
+    private int safePage(int page) {
+        return Math.max(page, 0);
+    }
+
+    private int safeSize(int size) {
+        return Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
     }
 }

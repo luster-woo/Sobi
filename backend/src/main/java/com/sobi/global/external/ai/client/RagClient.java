@@ -4,6 +4,8 @@ import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
 import com.sobi.global.external.ai.clientDto.RagRecommendRequest;
 import com.sobi.global.external.ai.clientDto.RagRecommendResponse;
+import com.sobi.global.external.ai.clientDto.RagSearchTextRequest;
+import com.sobi.global.external.ai.clientDto.RagSearchTextResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
@@ -49,6 +51,31 @@ public class RagClient {
 
         } catch (RestClientException e) {
             log.error("AI 추천 호출 실패", e);
+            throw new BusinessException(ErrorCode.AI_API_ERROR);
+        }
+    }
+
+    /**
+     * 질의 문장으로 공고를 찾는다. LLM 을 부르지 않아 1초 미만이다.
+     */
+    public RagSearchTextResponse searchText(RagSearchTextRequest request) {
+        try {
+            RagSearchTextResponse response = restClient.post()
+                    .uri("/rag/search-text")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(RagSearchTextResponse.class);
+
+            if (response == null || response.getPrograms() == null) {
+                log.error("AI 검색 응답이 비어 있습니다.");
+                throw new BusinessException(ErrorCode.AI_API_ERROR);
+            }
+
+            return response;
+
+        } catch (RestClientException e) {
+            log.error("AI 검색 호출 실패", e);
             throw new BusinessException(ErrorCode.AI_API_ERROR);
         }
     }

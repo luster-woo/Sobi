@@ -27,4 +27,12 @@ public interface SupportProgramRepository extends JpaRepository<SupportProgram, 
                    OR c.regionSido = :region)
             """)
     List<SupportProgram> findAllOpen(@Param("region") String region);
+
+    /** 검색 결과 id 들. 마감된 공고는 목록과 마찬가지로 뺀다 */
+    @Query("""
+            SELECT sp FROM SupportProgram sp
+            WHERE sp.id IN :ids
+              AND (sp.endDate IS NULL OR sp.endDate >= CURRENT_DATE)
+            """)
+    List<SupportProgram> findAllOpenByIds(@Param("ids") List<Long> ids);
 }

@@ -37,10 +37,18 @@ export const endpoints = {
     /**
      * 로그인한 본인 정보. 세션 복구에서 재발급 직후 호출한다.
      *
-     * ⚠️ **GET 은 아직 백엔드에 없다.** `UserController` 에 `DELETE /user/me` 는 있지만
-     *    같은 경로의 GET 매핑이 없어 목으로만 돈다 (S15P21D101-377).
+     * **가볍다.** `userId`·`email`·`name`·`birthDate`·`role`·`provider` 여섯 개뿐이다
+     * (백엔드 `UserMeResponse`). 사업자 정보·계좌처럼 여러 도메인을 모아야 하는 값은
+     * 아래 `mypage` 가 맡는다 — 이쪽은 앱 진입마다 불려서 무겁게 만들 수 없다.
      */
     me: '/user/me',
+    /**
+     * 마이페이지 한 화면 분량. 사업자 정보·마이데이터·계좌·알림 설정을 한 번에 준다.
+     *
+     * ⚠️ **아직 백엔드에 없다.** `UserController` 에 매핑이 없어 목으로만 돈다 —
+     *    `mocks/lib/serverFirst.ts` 의 `MOCK_ONLY` 참고 (S15P21D101-377).
+     */
+    mypage: '/user/mypage',
     /**
      * 회원 탈퇴. 되돌릴 수 없다.
      *

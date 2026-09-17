@@ -30,6 +30,11 @@ ENV VITE_MOCK_DOMAINS=$VITE_MOCK_DOMAINS
 ARG VITE_GOOGLE_CLIENT_ID=719352113387-r5stvku567sapsg850mpjfet14cq5vvr.apps.googleusercontent.com
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
+# ⚠️ 이 줄이 빠지면 dist 가 안 생겨서 아래 단계가 '빌드 결과 폴더를 찾을 수 없습니다' 로
+#    죽는다. b94cb29(hotfix, CORS·OAuth)에서 위 ARG 블록을 갈아끼우다 같이 지워져
+#    배포 #43 이 실패했다. ARG·ENV 를 손댈 때 이 줄을 넘기지 말 것.
+RUN npm run build
+
 # Vite(dist) / CRA(build) 어느 쪽이든 /out 으로 모음
 RUN mkdir -p /out && \
     if [ -d dist ]; then cp -r dist/. /out; \

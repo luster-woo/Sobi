@@ -5,9 +5,12 @@ import com.sobi.global.exception.ErrorCode;
 import com.sobi.global.external.ai.client.RagClient;
 import com.sobi.global.external.ai.clientDto.RagRecommendRequest;
 import com.sobi.global.external.ai.clientDto.RagRecommendResponse;
+import com.sobi.mydata.dto.FinanceSnapshot;
 import com.sobi.mydata.dto.MydataLinkResponse;
 import com.sobi.mydata.dto.MydataSnapshot;
 import com.sobi.mydata.store.MydataStore;
+import com.sobi.repayment.client.SsafyRepaymentClient;
+import com.sobi.repayment.clientDto.SsafyInquireLoanAccountDetail;
 import com.sobi.user.client.SsafyUserClient;
 import com.sobi.user.clientDto.SsafyDemandDepositAccountRecord;
 import com.sobi.user.clientDto.SsafyInquireMyCreditRatingResponse;
@@ -32,6 +35,7 @@ public class MydataServiceImpl implements MydataService {
 
     private final MydataStore store;
     private final SsafyUserClient ssafyUserClient;
+    private final SsafyRepaymentClient ssafyRepaymentClient;
     private final RagClient ragClient;
     private final Duration refreshCooldown;
 
@@ -39,11 +43,13 @@ public class MydataServiceImpl implements MydataService {
     public MydataServiceImpl(
             MydataStore store,
             SsafyUserClient ssafyUserClient,
+            SsafyRepaymentClient ssafyRepaymentClient,
             RagClient ragClient,
             @Value("${mydata.refresh-cooldown}") Duration refreshCooldown
     ) {
         this.store = store;
         this.ssafyUserClient = ssafyUserClient;
+        this.ssafyRepaymentClient = ssafyRepaymentClient;
         this.ragClient = ragClient;
         this.refreshCooldown = refreshCooldown;
     }
@@ -52,7 +58,7 @@ public class MydataServiceImpl implements MydataService {
     public MydataLinkResponse link(Long userId) {
         MydataSnapshot snapshot = store.read(userId);
 
-        store.saveCollected(snapshot, fetchAccounts(snapshot), fetchCreditRating(snapshot));
+        store.saveCollected(snapshot, fetchFinance(snapshot));
 
         return judge(userId, snapshot);
     }
@@ -62,9 +68,12 @@ public class MydataServiceImpl implements MydataService {
         MydataSnapshot snapshot = store.read(userId);
         ensureCooldownPassed(snapshot.getBusinessId());
 
-        store.refreshCollected(snapshot, fetchAccounts(snapshot), fetchCreditRating(snapshot));
+        store.refreshCollected(snapshot, fetchFinance(snapshot));
 
-        return judge(userId, snapshot);
+
+         return judge(userId, snapshot);
+        // AI 판정을 건너뛴다. 커밋 전에 되돌릴 것
+//        return MydataLinkResponse.from(List.of());
     }
 
     /** AI 판정 후 결과를 저장한다. 최초 연동과 갱신이 같다. */
@@ -89,14 +98,33 @@ public class MydataServiceImpl implements MydataService {
     }
 
     /**
-     * 금융망이 실패해도 연동을 중단하지 않는다.
+     * 금융망에서 받아올 것 셋. 실패해도 연동을 중단하지 않는다.
+     *
      * 계좌·신용등급은 자격 판정에 쓰이지 않으므로, 매출과 보험만으로도 판정은 성립한다.
+     * 여기서 예외를 던지면 멀쩡히 할 수 있는 판정까지 못 하게 된다.
      */
-    private List<SsafyDemandDepositAccountRecord> fetchAccounts(MydataSnapshot snapshot) {
+    private FinanceSnapshot fetchFinance(MydataSnapshot snapshot) {
+        return FinanceSnapshot.builder()
+                .depositAccounts(fetchDepositAccounts(snapshot))
+                .loanAccounts(fetchLoanAccounts(snapshot))
+                .creditRatingName(fetchCreditRating(snapshot))
+                .build();
+    }
+
+    private List<SsafyDemandDepositAccountRecord> fetchDepositAccounts(MydataSnapshot snapshot) {
         try {
             return ssafyUserClient.inquireDemandDepositAccountList(snapshot.getUserKey()).getRec();
         } catch (RuntimeException e) {
-            log.warn("금융망 계좌 조회 실패. 계좌 없이 진행한다", e);
+            log.warn("금융망 입출금 계좌 조회 실패. 계좌 없이 진행한다", e);
+            return List.of();
+        }
+    }
+
+    private List<SsafyInquireLoanAccountDetail> fetchLoanAccounts(MydataSnapshot snapshot) {
+        try {
+            return ssafyRepaymentClient.inquireLoanAccountList(snapshot.getUserKey()).getDetails();
+        } catch (RuntimeException e) {
+            log.warn("금융망 대출 계좌 조회 실패. 대출 계좌 없이 진행한다", e);
             return List.of();
         }
     }

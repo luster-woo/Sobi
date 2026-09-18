@@ -1,10 +1,11 @@
 import BusinessVerifyPromoCard from '@/features/dashboard/components/BusinessVerifyPromoCard'
+import DashboardFallback from '@/features/dashboard/components/DashboardFallback'
 import InsuranceMiniPanel from '@/features/dashboard/components/InsuranceMiniPanel'
 import JudgementSummaryPanel from '@/features/dashboard/components/JudgementSummaryPanel'
 import LoanStrip from '@/features/dashboard/components/LoanStrip'
 import StoreConditionPanel from '@/features/dashboard/components/StoreConditionPanel'
 import SupportProgramStrip from '@/features/dashboard/components/SupportProgramStrip'
-import { MOCK_PRE_OWNER_DASHBOARD } from '@/features/dashboard/model/mock'
+import { usePreOwnerDashboard } from '@/features/dashboard/hooks/useDashboard'
 
 /**
  * 예비창업자 대시보드 (S15P21D101-178) — 시안 10-1.
@@ -18,12 +19,13 @@ import { MOCK_PRE_OWNER_DASHBOARD } from '@/features/dashboard/model/mock'
  *
  * 오른쪽은 상환·매출 대신 다음 단계(사업자 인증)와 미리 알아둘 것(의무보험), 그리고
  * 조건 입력이 온다. 아직 갚을 것도 벌어들인 것도 없는 사용자다.
- *
- * ⚠️ 값은 전부 목이다(model/mock.ts). `GET /dashboard` 가 role 로 갈라서 주기로 되어
- *    있으니, 붙을 때 DashboardPage 에서 한 번만 받아 두 컴포넌트에 나눠 주는 편이 낫다.
  */
 export default function PreOwnerDashboard() {
-  const { condition, judgement, loans, supportPrograms, insurances } = MOCK_PRE_OWNER_DASHBOARD
+  const { data, isError, refetch } = usePreOwnerDashboard()
+
+  if (!data) return <DashboardFallback isError={isError} onRetry={() => void refetch()} />
+
+  const { condition, judgement, loans, supportPrograms, insurances } = data
 
   return (
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">

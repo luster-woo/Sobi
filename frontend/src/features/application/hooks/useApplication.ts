@@ -3,15 +3,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelApplication,
   createApplication,
+  downloadProgramDocument,
   getApplicationDetail,
   getApplications,
-  requestDraft,
   submitApplication,
   uploadDocument,
+  writeDraft,
 } from '@/features/application/api/application'
 import { hasValidating } from '@/features/application/model/documents'
 import type { ApplicationDetail, SubmitApplicationBody } from '@/features/application/model/types'
 import { queryKeys } from '@/shared/api/queryKeys'
+import { saveBlobAsFile } from '@/shared/utils/saveFile'
 
 /**
  * 검증이 도는 동안 다시 물어보는 주기.
@@ -113,19 +115,25 @@ export function useSubmitApplication(applicationId: number) {
 }
 
 /**
- * 작성 서류 초안 생성.
+ * 초안 만들기.
  *
- * 업로드와 마찬가지로 응답에 결과가 없다. 상세를 다시 받아야 '작성 중' 으로
- * 바뀌고, 그때부터 폴링이 초안을 기다린다.
+ * 만들고 받는 것이 한 번이라 성공하면 그대로 파일을 저장한다. 캐시를 건드리지 않는다 —
+ * 서버가 초안을 어디에도 저장하지 않아서 상세 응답이 달라지지 않는다.
+ *
+ * 최대 5분이라 부르는 쪽이 진행 상황을 보여줘야 한다. isPending 을 그대로 쓰면 된다.
  */
-export function useRequestDraft(applicationId: number) {
-  const queryClient = useQueryClient()
-
+export function useWriteDraft() {
   return useMutation({
-    mutationFn: requestDraft,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.application.detail(applicationId) })
-    },
+    mutationFn: (programDocumentId: number) => writeDraft(programDocumentId),
+    onSuccess: (file) => saveBlobAsFile(file.blob, file.fileName ?? '초안.hwpx'),
+  })
+}
+
+/** 공고가 배포하는 빈 서식 받기 */
+export function useDownloadProgramDocument() {
+  return useMutation({
+    mutationFn: (programDocumentId: number) => downloadProgramDocument(programDocumentId),
+    onSuccess: (file) => saveBlobAsFile(file.blob, file.fileName ?? '서식'),
   })
 }
 

@@ -53,8 +53,10 @@ export type DraftStatus = (typeof DRAFT_STATUS)[keyof typeof DRAFT_STATUS]
  * 도는 게 맞다. 초안을 만들고(draftStatus) 사용자가 손봐서 올린 것을 검증한다
  * (validationStatus). 그래서 유니온을 걷어내고 평평한 타입 하나로 둔다.
  *
- * ⚠️ templateUrl · draftUrl 이 없다. 화면의 '빈 서식 받기' · '초안 작성본 받기' 가
- *    그 주소로 파일을 여는데, 어떻게 받는지 아직 정해지지 않았다 (413).
+ * ⚠️ 서식·초안 주소가 없다. 주소를 받아 여는 게 아니라 programDocumentId 로 파일을
+ *    직접 받아온다 — 두 API 다 Authorization 헤더가 필요해서 새 탭으로는 못 연다.
+ * ⚠️ draftStatus 는 서버가 움직이지 않는다. 초안 생성이 동기라 상태를 기록할 구간이
+ *    없어서 NOT_STARTED 로 남는다. 작성 서류의 완료 여부는 validationStatus 가 정한다.
  * ⚠️ issuer(발급처)도 없어졌다. 체크리스트의 '홈택스' 표시가 그 값이었다.
  */
 export interface ApplicationDocument {
@@ -63,6 +65,13 @@ export interface ApplicationDocument {
    * 업로드할 때 이 값을 보낸다 — 그래서 없으면 업로드 자체가 불가능하다.
    */
   applicationDocumentId: number
+  /**
+   * 공고 서식 id. 빈 서식 받기·AI 초안이 이 값으로 부른다.
+   *
+   * 대출 신청의 서류는 null 이다 — 서버가 program_document 쪽만 채우고, 대출 서류는
+   * 전부 제출 서류라 서식도 초안도 없다(V20 시드). 그래서 두 버튼이 아예 안 생긴다.
+   */
+  programDocumentId: number | null
   /** 서류명. 필수 서류가 삭제돼 연결이 끊기면 null */
   documentName: string | null
   documentType: DocumentType

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
-import { estimatePercent, type JobStepDef, toStepItems } from '@/features/mydata/model/progress'
 import type { StepItem } from '@/shared/ui/StepList'
+import { estimatePercent, type JobStepDef, toStepItems } from '@/shared/utils/estimatedProgress'
 
 const TICK_MS = 100
 
@@ -23,7 +23,7 @@ export interface EstimatedProgress {
 }
 
 /**
- * 시간으로 미는 진행률. 계산 근거는 `model/progress.ts` 주석 참고.
+ * 시간으로 미는 진행률. 계산 근거는 `shared/utils/estimatedProgress.ts` 주석 참고.
  *
  * `settled` 를 받는 것이 핵심이다. 이 값이 false 인 동안에는 100% 에 닿지 않으므로,
  * 응답이 늦어도 막대가 멈춰 보이지 않는다.

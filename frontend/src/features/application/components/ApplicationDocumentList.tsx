@@ -14,16 +14,17 @@ interface ApplicationDocumentListProps {
   onUpload: (applicationDocumentId: number, file: File) => void
   /** 확장자·용량·파일명 검사에서 걸렸을 때. FileDropzone 이 문구를 만들어 준다 */
   onFileError: (message: string) => void
-  /** AI 에게 초안을 만들어 달라고 요청한다 */
-  onRequestDraft: (applicationDocumentId: number) => void
-  /** 서식 원본·초안 내려받기 */
+  /** 'AI 초안 받기'. 공고 서식 id 로 부른다 */
+  onWriteDraft: (programDocumentId: number) => void
   /**
-   * 서식·초안 내려받기.
+   * 지금 초안을 만들고 있는 서식 id.
    *
-   * ⚠️ 지금은 url 이 항상 null 이다 (413 대기). 부르는 쪽이 '준비 중' 을 알린다.
-   *    엔드포인트가 정해지면 주소를 넘기고 이 주석을 지운다.
+   * 한 건만 잠근다. 서류가 여러 장일 때 전부 잠그면, 한 장을 기다리는 동안 다른 장은
+   * 손도 못 댄다.
    */
-  onDownload: (url: string | null) => void
+  draftingDocumentId: number | null
+  /** '빈 서식 받기' */
+  onDownloadOriginal: (programDocumentId: number) => void
   /**
    * 신청이 접수된 뒤라 서류를 더 바꿀 수 없는 상태.
    *
@@ -46,8 +47,9 @@ export default function ApplicationDocumentList({
   documents,
   onUpload,
   onFileError,
-  onRequestDraft,
-  onDownload,
+  onWriteDraft,
+  draftingDocumentId,
+  onDownloadOriginal,
   readOnly = false,
 }: ApplicationDocumentListProps) {
   const { submit, write } = splitByType(documents)
@@ -88,20 +90,23 @@ export default function ApplicationDocumentList({
                 accept={uploadAccept(doc.documentType)}
                 maxSizeMb={UPLOAD_MAX_SIZE_MB}
                 /*
-                 * ⚠️ 서식·초안 내려받기는 아직 동작하지 않는다 (413). 확정 응답에
-                 *    templateUrl·draftUrl 이 없고 다운로드 엔드포인트도 정해지지 않았다.
-                 *    자리는 두고 누르면 준비 중임을 알린다.
+                 * 두 버튼 다 programDocumentId 로 부른다. 대출 신청의 서류는 이 값이
+                 * null 이라 버튼이 아예 안 생긴다 — 대출에는 작성 서류도 서식 파일도 없다.
                  *
-                 *    다만 초안 받기는 초안이 실제로 있을 때만 넘긴다. 이 컴포넌트가
-                 *    핸들러 유무로 '초안이 있느냐' 를 판단해서, 항상 넘기면 만든 적도
-                 *    없는데 '초안 다시 만들기' 가 뜬다.
+                 * 읽기 전용이면 초안만 막는다. 빈 서식은 제출한 뒤에도 받을 수 있어야
+                 * 무엇을 냈는지 다시 볼 수 있다.
                  */
-                onDownloadOriginal={() => onDownload(null)}
-                onDownloadDraft={doc.draftStatus === 'WRITTEN' ? () => onDownload(null) : undefined}
-                // 읽기 전용이면 핸들러를 안 넘긴다. 그러면 그 버튼들이 사라진다
-                onStartDraft={
-                  readOnly ? undefined : () => onRequestDraft(doc.applicationDocumentId)
+                onDownloadOriginal={
+                  doc.programDocumentId === null
+                    ? undefined
+                    : () => onDownloadOriginal(doc.programDocumentId as number)
                 }
+                onWriteDraft={
+                  readOnly || doc.programDocumentId === null
+                    ? undefined
+                    : () => onWriteDraft(doc.programDocumentId as number)
+                }
+                isDraftPending={draftingDocumentId === doc.programDocumentId}
                 onSelectFile={
                   readOnly ? undefined : (file) => onUpload(doc.applicationDocumentId, file)
                 }

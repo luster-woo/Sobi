@@ -143,8 +143,16 @@ export const endpoints = {
     submit: (applicationId: number) => `/application/${applicationId}/submit`,
     /** 서류 업로드. multipart 로 applicationDocumentId · file */
     uploadDocument: '/document',
-    /** ⚠️ 413 대기. 서버에 아직 없다 */
-    requestDraft: '/document/draft',
+    /**
+     * 초안 생성. 만들고 **바로 파일을 준다** — 생성과 다운로드가 한 번이다.
+     *
+     * ⚠️ applicationDocumentId 가 아니라 programDocumentId 다. 신청 건이 아니라 공고의
+     *    서식을 가리킨다. 대출 서류는 전부 제출 서류라 부를 일이 없다(V20 시드).
+     * ⚠️ 최대 300초. 성공은 봉투 없는 HWPX 바이트고 실패만 JSON 봉투다.
+     * ⚠️ 배포에서는 nginx proxy_read_timeout(기본 60초)을 이 경로에도 늘려야 한다.
+     *    마이데이터와 같은 문제다 — 안 늘리면 로컬은 되고 배포만 504 다.
+     */
+    writeDraft: (programDocumentId: number) => `/document/write/${programDocumentId}`,
     /** 내 신청 목록. 신청 현황 화면이 쓴다 */
     list: '/application',
   },
@@ -171,6 +179,16 @@ export const endpoints = {
     records: '/repayment/finan/records',
     /** 일시납(완납). 본문에 accountNo. 되돌릴 수 없다 */
     loanBalanceInFull: '/repayment/finan/loanBalanceInFull',
+  },
+
+  /**
+   * 공고가 배포하는 빈 서식.
+   *
+   * 지원사업 전용이다. 대출 서류(loan_document)는 전부 제출 서류라 내려받을 양식이
+   * 없다 — 시드가 url 을 전부 NULL 로 넣는다(V20). 성공은 봉투 없는 파일 바이트다.
+   */
+  programDocument: {
+    download: (programDocumentId: number) => `/program-documents/${programDocumentId}/download`,
   },
 
   supportProgram: {

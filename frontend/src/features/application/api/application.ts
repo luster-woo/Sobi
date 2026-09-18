@@ -1,3 +1,5 @@
+import type { AxiosResponse } from 'axios'
+
 import type {
   ApplicationDetail,
   ApplicationListData,
@@ -10,6 +12,38 @@ import type {
 } from '@/features/application/model/types'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
+
+/** 초안 생성은 AI 가 필드를 채우는 동안 응답이 없다. 서버 read timeout 300초보다 넉넉히 */
+const DRAFT_TIMEOUT_MS = 330_000
+
+export interface DownloadedFile {
+  blob: Blob
+  /** Content-Disposition 에서 뽑은 파일명. 못 읽으면 null 이고 부르는 쪽이 이름을 짓는다 */
+  fileName: string | null
+}
+
+/**
+ * Content-Disposition 에서 파일명을 꺼낸다.
+ *
+ * 두 API 가 형태를 달리 쓴다. 빈 서식은 한글 이름이라 `filename*=UTF-8''...` 이고
+ * 초안은 `filename="draft-....hwpx"` 다. 둘 다 본다.
+ */
+function parseFileName(disposition: string | undefined): string | null {
+  if (!disposition) return null
+
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)
+  if (encoded) return decodeURIComponent(encoded[1])
+
+  const plain = /filename="?([^";]+)"?/i.exec(disposition)
+  return plain ? plain[1] : null
+}
+
+function toDownloadedFile(response: AxiosResponse): DownloadedFile {
+  return {
+    blob: response.data as Blob,
+    fileName: parseFileName(response.headers['content-disposition'] as string | undefined),
+  }
+}
 
 /**
  * 신청 건 생성.
@@ -56,13 +90,32 @@ export async function submitApplication(
 }
 
 /**
- * 작성 서류 초안 생성 요청.
+ * 서버가 채운 초안(HWPX)을 받는다. 생성과 다운로드가 한 번이다.
  *
- * 서버가 비동기로 만들고 응답에는 결과가 없다. 상세를 다시 받아 WRITING 으로
- * 바뀐 뒤 폴링으로 draftUrl 을 기다린다.
+ * 비동기가 아니다. 요청을 넣고 상태를 폴링하는 구간이 없어서 이 한 번의 호출이
+ * 끝날 때까지 기다린다 — 그래서 화면이 진행 상황을 보여줘야 한다.
+ *
+ * ⚠️ responseType 이 blob 이라 **실패 응답의 JSON 도 Blob 으로 온다.** 에러 코드로
+ *    갈라 안내하려면 model/downloadError.ts 가 풀어야 한다.
  */
-export async function requestDraft(applicationDocumentId: number) {
-  await api.post<null>(endpoints.application.requestDraft, { applicationDocumentId })
+export async function writeDraft(programDocumentId: number): Promise<DownloadedFile> {
+  const response = await api.post(endpoints.application.writeDraft(programDocumentId), null, {
+    responseType: 'blob',
+    timeout: DRAFT_TIMEOUT_MS,
+  })
+
+  return toDownloadedFile(response)
+}
+
+/** 공고가 배포하는 빈 서식을 받는다. 지원사업 서류에만 있다 */
+export async function downloadProgramDocument(
+  programDocumentId: number,
+): Promise<DownloadedFile> {
+  const response = await api.get(endpoints.programDocument.download(programDocumentId), {
+    responseType: 'blob',
+  })
+
+  return toDownloadedFile(response)
 }
 
 /**

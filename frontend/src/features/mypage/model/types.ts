@@ -24,8 +24,8 @@ export interface MyProfile {
 /**
  * 사업자 정보. 예비창업자는 null 이다 — `business_info` 행 자체가 없다.
  *
- * ⚠️ `ownerName` 은 응답의 `name` 이다. `GET /business/me` 의 `name` 은 상호명이
- *    한 번 더 들어간 값이라 뜻이 다르다 — 두 API 를 같은 타입으로 묶지 말 것.
+ * ⚠️ `ownerName` 은 서버가 `users.name` 을 넣어 준다. `business_info` 에 대표자명
+ *    컬럼이 없어서다 — 법인이면 대표자와 계정 주인이 다를 수 있다.
  */
 export interface MyBusinessInfo {
   businessName: string
@@ -40,31 +40,36 @@ export interface MyBusinessInfo {
 
 /** 마이데이터 연동 상태. 연동한 적이 없으면 null */
 export interface MyDataStatus {
-  /** 마이데이터가 채우는 값. 수집에 실패했으면 null 일 수 있다 */
-  creditRating: string | null
-  /** 마지막으로 수집한 시각 */
-  linkedAt: ISODateTime
+  /** 마지막 판정 시각. 서버가 수집 시각 대신 이걸 준다 — 둘이 한 흐름이라 거의 같다 */
+  linkedAt: ISODateTime | null
 }
 
-/** 연동 계좌 요약. 마이데이터 연동 전이면 null */
+/**
+ * 계좌 요약. 마이데이터 연동 전이면 null 이다.
+ *
+ * ⚠️ 금융망 실시간 조회라 **실패해도 0 으로 온다.** 서버가 예외를 삼키고 화면을
+ *    띄우는 쪽을 택했다(`UserServiceImpl.fetchDepositAccounts`). 그래서 0원과
+ *    '못 불러옴' 이 구분되지 않는다.
+ */
 export interface AccountSummary {
   /** 입출금 합계(원) */
   totalBalance: number
   /** 대출 잔액 합계(원) */
   totalLoanBalance: number
-  /** 연동된 계좌 수. 기관 수가 아니다 */
+  /** 입출금 + 대출 계좌 수 */
   accountCount: number
+  /** 입출금 계좌의 은행 수. 한 은행에 계좌가 둘이면 1 이다 */
+  institutionCount: number
 }
 
 /**
- * 입출금 계좌 한 줄.
+ * 대출금이 들어오고 자동이체가 빠지는 계좌. 대출이 없으면 null.
  *
  * ⚠️ `accountNo` 는 원본이다. 화면에는 `maskAccountNo` 로 가려서 띄운다 (395).
  */
-export interface DepositAccount {
+export interface PayoutAccount {
   bankName: string
   accountNo: string
-  balance: number
 }
 
 export interface MyPageData {
@@ -75,8 +80,8 @@ export interface MyPageData {
   myData: MyDataStatus | null
   /** 연동 전이면 null */
   accountSummary: AccountSummary | null
-  /** 연동 전이면 빈 배열 */
-  deposits: DepositAccount[]
+  /** 대출이 없으면 null */
+  payoutAccount: PayoutAccount | null
   /** 새 공고 알림 수신 여부. `PATCH /user/notification` 로 뒤집는다 */
   notification: boolean
 }

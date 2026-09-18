@@ -1,122 +1,90 @@
-import type {
-  AccountSummary,
-  DepositAccount,
-  MyBusinessInfo,
-  MyDataStatus,
-  MyPageData,
-} from '@/features/mypage/model/types'
+import type { MyPageData } from '@/features/mypage/model/types'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
 import type { AuthProvider, ISODate, ISODateTime, UserRole } from '@/shared/types'
 import { AUTH_PROVIDER, USER_ROLE } from '@/shared/types'
 
 /**
- * `GET /user/mypage` 응답. 백엔드 명세와 1:1 이다.
+ * `GET /user/mypage` 응답. 백엔드 `MyPageResponse` 와 1:1 이다.
  *
- * `GET /user/me` 와 다른 엔드포인트다. 저쪽은 세션 복구용이라 여섯 필드뿐이고
- * (`UserMeResponse`), 이쪽은 사업자 정보·마이데이터·계좌를 한 번에 모아 준다.
+ * `GET /user/me` 와 다른 엔드포인트다. 저쪽은 세션 복구용이라 여섯 필드뿐이고,
+ * 이쪽은 사업자 정보·마이데이터·계좌 요약을 한 번에 모아 준다.
  *
- * ⚠️ 표기가 섞여 있다. `business_name` · `business_type` 만 snake_case 고 나머지는
- *    아니다. 명세가 그렇게 적혀 있어 그대로 받고, 아래 변환 함수에서 정리한다.
+ * ⚠️ 잔액은 DB 에 없다. 서버가 **조회 시점에 금융망에서 받아온다**(`UserServiceImpl`).
+ *    그래서 이 요청만 1~2초 더 걸리고, 금융망이 실패하면 예외 대신 **전부 0** 이 온다.
+ *    0 원과 '못 불러옴' 이 응답에서 구분되지 않는다.
  */
-interface MyBusinessInfoResponse {
-  business_name: string
+interface BusinessSummaryResponse {
+  businessName: string
   /** 하이픈 포함 '123-45-67890' */
-  bsn: string
-  /** 대표자명. `GET /business/me` 의 같은 이름 필드와 뜻이 다르다 */
-  name: string
-  business_type: string
+  brn: string
+  /** `business_info` 에 대표자명이 없어 서버가 `users.name` 을 넣는다 */
+  ownerName: string
+  industryName: string
   address: string
   openDate: ISODate
 }
 
-interface MyDataResponse {
-  creditRating: string | null
-  /** 마지막 수집 시각 */
-  createdAt: ISODateTime
+/** ⚠️ null 이 아니다. 연동 여부는 `linked` 로 판단한다 */
+interface MyDataStatusResponse {
+  linked: boolean
+  /** 마지막 판정 시각. 연동 전이면 null */
+  updatedAt: ISODateTime | null
 }
 
-interface WithdrawAccountResponse {
+/** ⚠️ 이것도 null 이 아니다. 금융망 실패·계좌 없음이면 전부 0 */
+interface AccountSummaryResponse {
+  totalBalance: number
+  totalLoanBalance: number
+  /** 입출금 + 대출 계좌 수 */
+  accountCount: number
+  /** 입출금 계좌의 은행 수. 한 은행에 계좌가 둘이면 1 이다 */
+  institutionCount: number
+}
+
+/** 가장 최근 대출의 출금 계좌. 대출이 없거나 그 계좌를 못 찾으면 null */
+interface PayoutAccountResponse {
   bankName: string
   accountNo: string
-  /** 잔액(원) */
-  balance: number
-}
-
-interface LinkedAccountResponse {
-  balanceSum: number
-  loanSum: number
-  /** 계좌 수. 기관 수가 아니다 */
-  accountNum: number
 }
 
 interface MyPageResponse {
+  userId: number
   name: string
   email: string
+  birthDate: ISODate | null
   role: string
   provider: string
   notification: boolean
-  businessInfo: MyBusinessInfoResponse | null
-  myData: MyDataResponse | null
-  withdrawAccount: WithdrawAccountResponse[] | null
-  linkedAccount: LinkedAccountResponse | null
+  /** 예비창업자면 null */
+  business: BusinessSummaryResponse | null
+  myData: MyDataStatusResponse
+  accountSummary: AccountSummaryResponse
+  payoutAccount: PayoutAccountResponse | null
 }
 
 /**
  * role 문자열을 좁힌다.
  *
- * 명세 예시에는 한글 `"사업자"` 로 적혀 있었지만 enum 으로 내려주기로 했다. 그래도
- * 모르는 값이 오면 예비창업자로 본다 — `isPreOwner` 와 같은 판단이다(사업자가
- * 아니면 전부 예비창업자). 잘못 사업자로 보면 없는 업체 정보를 그리려다 빈 화면이 된다.
+ * 모르는 값이 오면 예비창업자로 본다 — `isPreOwner` 와 같은 판단이다(사업자가 아니면
+ * 전부 예비창업자). 백엔드 `Role` 은 nullable 이라 실제로 null 이 올 수 있다.
  */
-function toUserRole(raw: string): UserRole {
+function toUserRole(raw: string | null): UserRole {
   return raw === USER_ROLE.ENTREPRENEUR ? USER_ROLE.ENTREPRENEUR : USER_ROLE.PREENTREPRENEUR
 }
 
-/** 모르는 값은 LOCAL 로 본다. 소셜 가입자에게 비밀번호 변경을 잘못 열어주면 AUTH_017 로 막힌다 */
-function toProvider(raw: string): AuthProvider {
+/** 모르는 값은 LOCAL 로 본다. 소셜 가입자에게 비밀번호 변경을 열어주면 AUTH_017 로 막힌다 */
+function toProvider(raw: string | null): AuthProvider {
   return raw === AUTH_PROVIDER.GOOGLE ? AUTH_PROVIDER.GOOGLE : AUTH_PROVIDER.LOCAL
-}
-
-function toBusinessInfo(raw: MyBusinessInfoResponse | null): MyBusinessInfo | null {
-  if (!raw) return null
-
-  return {
-    businessName: raw.business_name,
-    brn: raw.bsn,
-    ownerName: raw.name,
-    industryName: raw.business_type,
-    address: raw.address,
-    openDate: raw.openDate,
-  }
-}
-
-function toMyDataStatus(raw: MyDataResponse | null): MyDataStatus | null {
-  if (!raw) return null
-
-  return { creditRating: raw.creditRating, linkedAt: raw.createdAt }
-}
-
-function toAccountSummary(raw: LinkedAccountResponse | null): AccountSummary | null {
-  if (!raw) return null
-
-  return {
-    totalBalance: raw.balanceSum,
-    totalLoanBalance: raw.loanSum,
-    accountCount: raw.accountNum,
-  }
-}
-
-/** 연동 전이면 배열 자체가 null 이다. 화면은 '없음' 과 '빈 목록' 을 같게 그린다 */
-function toDeposits(raw: WithdrawAccountResponse[] | null): DepositAccount[] {
-  return raw ?? []
 }
 
 /**
  * 마이페이지 조회.
  *
- * 마이페이지·연동 계좌 화면이 이 하나로 돈다. 사업자 정보·마이데이터·계좌가 전부
- * 여기 실려서 화면마다 따로 부를 것이 없다.
+ * 응답이 이미 화면에 가까운 모양이라 이름만 맞춘다. 연동 전을 `null` 로 좁히는 것이
+ * 실질적인 변환이다 — 서버는 `myData` · `accountSummary` 를 항상 객체로 주고
+ * 연동 전인지는 `linked` 와 0 으로 표현하는데, 화면에서는 '없음' 과 '0원' 을
+ * 갈라야 해서 여기서 한 번 정리한다.
  */
 export async function getMyPage(): Promise<MyPageData> {
   const { data } = await api.get<MyPageResponse>(endpoints.user.mypage)
@@ -128,10 +96,10 @@ export async function getMyPage(): Promise<MyPageData> {
       role: toUserRole(data.role),
       provider: toProvider(data.provider),
     },
-    business: toBusinessInfo(data.businessInfo),
-    myData: toMyDataStatus(data.myData),
-    accountSummary: toAccountSummary(data.linkedAccount),
-    deposits: toDeposits(data.withdrawAccount),
+    business: data.business,
+    myData: data.myData.linked ? { linkedAt: data.myData.updatedAt } : null,
+    accountSummary: data.myData.linked ? data.accountSummary : null,
+    payoutAccount: data.payoutAccount,
     notification: data.notification,
   }
 }

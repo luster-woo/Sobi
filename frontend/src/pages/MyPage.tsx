@@ -283,15 +283,12 @@ export function MyPage() {
               />
 
               {/*
-               * 항목별 갱신 시각은 서버가 주지 않는다. 응답에 있는 건 마지막 수집 시각
+               * 항목별 갱신 시각은 서버가 주지 않는다. 응답에 있는 건 마지막 판정 시각
                * 하나뿐이라 두 줄이 같은 값을 쓴다 — 항목마다 다른 시각을 보여주려면
                * 백엔드가 수집원별 시각을 나눠 줘야 한다.
                */}
               <LinkRow label="금융 거래 정보" value={toUpdatedLabel(myData?.linkedAt ?? null)} />
-              <LinkRow
-                label="신용 정보"
-                value={myData?.creditRating ? `${myData.creditRating} 등급` : '연동 전'}
-              />
+              <LinkRow label="신용 정보" value={toUpdatedLabel(myData?.linkedAt ?? null)} />
             </Panel>
           </>
         )}

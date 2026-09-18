@@ -73,11 +73,6 @@ const MAY_HAVE_RUN = new Set([500, 501])
  */
 const MOCK_ONLY = new Set([
   /*
-   * 마이페이지 한 화면 분량(사업자 정보·마이데이터·계좌·알림). 백엔드 작업 대기 중이다.
-   * 같은 user 도메인이지만 `GET /user/me` 는 구현돼 있어서 여기 없다 — S15P21D101-377
-   */
-  'GET /api/v1/user/mypage',
-  /*
    * 구글 가입자의 이름·생년월일. 백엔드에는 생년월일만 받는 `PATCH /user/birth-date` 가
    * 있고, 이름까지 받는 이 경로는 요청해 둔 상태다. 올라오면 이 줄을 지운다.
    */

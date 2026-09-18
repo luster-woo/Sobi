@@ -28,10 +28,16 @@ interface SupportProgramBase {
   isBookmark: boolean
 }
 
-/** 원 단위 금액. 지원금·대출에만 온다 */
+/**
+ * 원 단위 금액. 지원금·대출에만 오는 자리다.
+ *
+ * ⚠️ optional 이다. 서버 DTO 가 @JsonInclude(NON_NULL) 이라 DB 가 비어 있으면 키 자체가
+ *    오지 않는다 — null 이 아니라 undefined 로 들어온다. 공고문에 금액이 안 적힌 건이
+ *    실제로 있어서, type 이 SUPPORT·LOAN 이어도 값을 보장하지 않는다.
+ */
 interface WithBalance {
-  minBalance: number
-  maxBalance: number
+  minBalance?: number
+  maxBalance?: number
 }
 
 /**
@@ -46,7 +52,7 @@ interface WithBalance {
  */
 export type SupportProgramListItem =
   | (SupportProgramBase & WithBalance & { type: 'SUPPORT' })
-  | (SupportProgramBase & WithBalance & { type: 'LOAN'; interestRate: number })
+  | (SupportProgramBase & WithBalance & { type: 'LOAN'; interestRate?: number })
   | (SupportProgramBase & { type: 'ETC' })
 
 export interface SupportProgramListData {
@@ -133,5 +139,5 @@ interface SupportProgramDetailBase {
 
 export type SupportProgramDetail =
   | (SupportProgramDetailBase & WithBalance & { type: 'SUPPORT' })
-  | (SupportProgramDetailBase & WithBalance & { type: 'LOAN'; interestRate: number })
+  | (SupportProgramDetailBase & WithBalance & { type: 'LOAN'; interestRate?: number })
   | (SupportProgramDetailBase & { type: 'ETC' })

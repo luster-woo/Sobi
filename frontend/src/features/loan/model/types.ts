@@ -62,7 +62,10 @@ export interface LoanListParams {
   keyword?: string
   /** 판정 결과 + 내 신청 상태를 합친 값 */
   status?: LoanStatus
-  bankName?: string
+  /*
+   * 서버에는 bankName 필터가 남아 있다(LoanSearchCondition). 화면에서 뺐을 뿐이라
+   * 되살리려면 이 줄과 LoanFilterBar 의 Select 만 돌려놓으면 된다.
+   */
   /** true 일 때만 거른다. false 를 보내도 서버는 필터하지 않는다 */
   bookmarked?: boolean
   sort?: LoanSort

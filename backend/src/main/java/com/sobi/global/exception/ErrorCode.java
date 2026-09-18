@@ -64,6 +64,17 @@ public enum ErrorCode {
     // 외부 API - AI 서버
     AI_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_002", "지원사업 추천 서버 호출에 실패했습니다."),
 
+    // 문서 초안 작성 (기존 신청 서류 업로드/검증과 별도)
+    PROGRAM_DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_001", "존재하지 않는 지원사업 문서입니다."),
+    DOCUMENT_NOT_WRITABLE(HttpStatus.CONFLICT, "DOCUMENT_002", "초안 작성 대상 문서가 아닙니다."),
+    DOCUMENT_TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_003", "작성 가능한 문서 템플릿이 없습니다."),
+    DOCUMENT_DRAFT_NOT_READY(HttpStatus.CONFLICT, "DOCUMENT_004", "자동 작성에 필요한 정보를 확인할 수 없습니다."),
+    DOCUMENT_DRAFT_FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_005", "생성된 초안 파일을 찾을 수 없습니다."),
+    DOCUMENT_AGENT_REQUEST_FAILED(HttpStatus.BAD_GATEWAY, "DOCUMENT_006", "문서 작성 서버 호출에 실패했습니다."),
+    DOCUMENT_FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_007", "다운로드할 원본 파일을 찾을 수 없습니다."),
+    INVALID_DOCUMENT_PATH(HttpStatus.BAD_REQUEST, "DOCUMENT_008", "원본 문서 경로가 올바르지 않습니다."),
+    DOCUMENT_FILE_READ_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "DOCUMENT_009", "원본 파일을 읽을 수 없습니다."),
+
     // funding 관련
     TARGET_AMOUNT_ERROR(HttpStatus.BAD_REQUEST, "FUNDING_001", "목표 금액은 0보다 커야합니다."),
 

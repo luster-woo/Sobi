@@ -1,5 +1,15 @@
 # 문서 Source 기반 구조
 
+## USER 저장 정보 보완 (2026-09-18)
+
+USER 키는 USER_NAME / USER_EMAIL / USER_BIRTH_DATE / CREDIT_RATING이다.
+USER_BIRTH_DATE는 기존 DIRECT resolver로 요청 context.user_id에 해당하는
+삭제되지 않은 users.birth_date를 조회한다. 추가 business/application 조회는 없다.
+User.java의 LocalDate와 V23__add_birth_date_to_users.sql의 nullable DATE를 확인했다.
+psycopg의 Python date 값을 변환 없이 반환하고 JSON 직렬화 시 ISO 날짜가 된다.
+NULL은 found=false/value=null, 사용자 부재는 기존 USER_NOT_FOUND metadata 계약을 따른다.
+실제 배포 DB에 접속하거나 migration을 추가/실행하지 않았다.
+
 ## 범위와 기존 코드 보호
 
 문서 Agent의 데이터 조회 기반만 구현한다. LLM, 루프, Tool Calling, 문서 파싱/작성,

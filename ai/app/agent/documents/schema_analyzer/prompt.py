@@ -48,8 +48,9 @@ semantic_type=DIRECT/COMPUTED이고 mapping_status=RESOLVED이면 source가 반�
 field_label은 Candidate 원문을 유지한다. input_shape와 value_type은 다를 수 있다.
 semantic_type은 값을 어디서/어떻게 얻는지, value_type은 값 자체의 데이터 형식이다. 서로 독립적이다.
 semantic_type=USER_INPUT이라는 이유만으로 value_type=TEXT를 선택하지 않는다.
-value_type은 실제 필드 의미로 판단한다. 생년월일과 출산일은 semantic_type=USER_INPUT,
-value_type=DATE, mapping_status=RESOLVED, sources=[]이다. 생년월일 SourceKey를 만들지 않는다.
+value_type은 실제 필드 의미로 판단한다. 등록 사용자 본인의 생년월일은 DIRECT,
+value_type=DATE, mapping_status=RESOLVED, USER / USER_BIRTH_DATE이다.
+출산일 및 직접 제공해야 하는 제3자의 생년월일은 USER_INPUT, value_type=DATE, sources=[]이다.
 동의 여부는 USER_INPUT + BOOLEAN, 계좌번호와 주민등록번호는 USER_INPUT + TEXT이다.
 주민등록번호/계좌번호/사업자등록번호는 계산용 숫자가 아닌 식별자이므로 TEXT로 보존한다.
 대표자명/사업장 주소는 TEXT, 개업일/생년월일/출산일은 DATE, 상시근로자 수/매출액은 NUMBER이다.
@@ -124,7 +125,7 @@ No SourceKey -> USER_INPUT 자동 판단은 금지한다.
 명확한 계산 결과이고 계산기가 없으면 semantic_type=COMPUTED, mapping_status=UNSUPPORTED, sources=[]이다.
 사용자 결정/선택/직접 제공 또는 서비스상 자동 기입 금지 값만 semantic_type=USER_INPUT으로 판단한다.
 USER_INPUT + mapping_status=RESOLVED는 그 사용자 결정/제공 필요성이 확정됐다는 뜻이다.
-기존 생년월일/출산일/동의/계좌/민감정보 정책은 유지한다.
+등록 사용자 생년월일은 USER_BIRTH_DATE로 조회한다. 출산일/동의/계좌/민감정보 정책은 유지한다.
 
 법인등록번호, 홈페이지, 주요생산품, 특정 연도 매출/종업원 수, 실제 발생 운반비는 객관적 속성/사실이다.
 해당 exact source가 없다는 이유로 USER_INPUT으로 바꾸지 않는다. 법인등록번호를 BUSINESS_BRN으로 대신하지 않는다.
@@ -167,7 +168,8 @@ FEW_SHOT_EXAMPLES = [
              context="업체 정보", example_id="example_representative"),
     _example("성명", "DIRECT", "representative_name", "TEXT", source_type="USER", source_key="USER_NAME",
              context="대표자 정보 / 생년월일 / 핸드폰"),
-    _example("생년월일", "USER_INPUT", "birth_date", "DATE"),
+    _example("생년월일", "DIRECT", "birth_date", "DATE", source_type="USER", source_key="USER_BIRTH_DATE",
+             context="대표자 정보 / 성명 / 생년월일 / E-mail"),
     _example("출산일", "USER_INPUT", "childbirth_date", "DATE"),
     _example("사업 추진 계획", "GENERATED", "business_plan", "TEXT", status="NEEDS_REVIEW", confidence=0.6,
              note="서술형 필드이나 충분한 source mapping을 결정할 수 없어 검토 필요"),
@@ -191,7 +193,44 @@ FEW_SHOT_EXAMPLES = [
     _example("전년도 매출액 또는 월 매출액", "DIRECT", "reported_revenue", "NUMBER", status="NEEDS_REVIEW", confidence=0.6),
 ]
 
-SYSTEM_PROMPT = ENUM_CONTRACT + SEMANTIC_GUIDANCE + SYSTEM_PROMPT + OBJECTIVE_FACT_POLICY
+USER_FACT_POLICY = """
+USER_INPUT은 '사용자와 관련된 값'이라는 뜻이 아니다. 현재 SourceKey로 객관적으로
+자동 조회/계산/생성할 수 없고 사용자가 직접 결정하거나 직접 기재해야 하는 값이다.
+저장된 본인 객관 정보는 USER_INPUT보다 DIRECT를 우선한다. 결과를 반환하기 전에
+각 USER_INPUT 후보의 label+context를 USER_NAME / USER_EMAIL / USER_BIRTH_DATE와 재대조한다.
+개인정보라는 이유만으로 이 세 가지 허용된 본인 fact를 USER_INPUT으로 분류하지 않는다.
+등록 사용자는 신청인 본인/사업체 대표자이다. 대 표 자/대표자명은 USER_NAME이다.
+대표자 정보의 성 명, 신청서 하단 대표자, 업체명과 함께 나오는 동의서 하단 성 명도
+context가 동일 사업체 대표자임을 확인한 경우 DIRECT / USER_NAME / TEXT로 매핑한다.
+신청자/대표자 본인의 E-mail/이메일/전자우편은 DIRECT / USER_EMAIL / TEXT이다.
+대표자 정보 또는 신청자 본인 context의 생년월일은 DIRECT / USER_BIRTH_DATE / DATE이다.
+위 세 가지의 mapping_status는 RESOLVED이며 source_type은 USER이다.
+담당자/별도 연락 담당자/대리인/수임자/위임받은 사람/자녀/배우자/직원/상담자 등
+제3자 문맥은 이 본인 Source로 대체하지 않는다. 단순 '성명', '이메일', '생년월일'만으로
+본인이라고 확정하지 않는다. 대상 인물이 불명확하면 mapping_status=NEEDS_REVIEW로 표현한다.
+동일 fact가 여러 Candidate에 반복되면 각 candidate_id를 유지하고 같은 SourceKey를 재사용한다.
+inline_blank도 TABLE_CELL과 같은 의미 정책을 적용한다. BUSINESS_NAME 반복 매핑도 유지한다.
+서명/날인/동의/미동의는 여전히 USER_INPUT이다. (인)/(서명/인)은 고정 suffix이며
+서명 자체를 USER_NAME으로 쓰지 않는다. 실제 Candidate의 대표자/성명 텍스트 입력 영역만 구분한다.
+"""
+
+FEW_SHOT_EXAMPLES += [
+    _example("대 표 자", "DIRECT", "owner_name", "TEXT", source_type="USER", source_key="USER_NAME", context="업체 정보"),
+    _example("대표자", "DIRECT", "footer_owner_name", "TEXT", source_type="USER", source_key="USER_NAME",
+             context="신청서 하단 업 체 명 : [빈칸] 대표자 : [빈칸] (인)", target_kind="inline_blank"),
+    _example("성 명", "DIRECT", "consent_owner_name", "TEXT", source_type="USER", source_key="USER_NAME",
+             context="사업체 대표자의 동의서 하단 업체명 : [빈칸] 성 명 : [빈칸] (서명/인)", target_kind="inline_blank"),
+    _example("E-mail", "DIRECT", "user_email", "TEXT", source_type="USER", source_key="USER_EMAIL", context="대표자 정보 / 성명 / 생년월일"),
+    _example("전자우편", "DIRECT", "applicant_email", "TEXT", source_type="USER", source_key="USER_EMAIL", context="신청자 본인 정보"),
+    _example("생년월일", "DIRECT", "applicant_birth_date", "DATE", source_type="USER", source_key="USER_BIRTH_DATE", context="신청자 본인 정보"),
+    _example("담당자 성명", "USER_INPUT", "contact_name", "TEXT", context="별도 연락 담당자"),
+    _example("대리인 성명", "USER_INPUT", "proxy_name", "TEXT", context="위임받은 사람"),
+    _example("담당자 이메일", "USER_INPUT", "contact_email", "TEXT", context="별도 연락 담당자"),
+    _example("자녀 생년월일", "USER_INPUT", "child_birth_date", "DATE", context="자녀 정보"),
+    _example("담당자 생년월일", "USER_INPUT", "contact_birth_date", "DATE", context="별도 담당자 정보"),
+]
+
+SYSTEM_PROMPT = ENUM_CONTRACT + SEMANTIC_GUIDANCE + SYSTEM_PROMPT + OBJECTIVE_FACT_POLICY + USER_FACT_POLICY
 
 
 def compact_candidate(candidate):

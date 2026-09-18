@@ -31,6 +31,9 @@ services:
     # 신청 서류 파일. 볼륨이 없으면 재배포마다 사라진다. 호스트에 디렉터리를 미리 만들어 둘 것
     volumes:
       - /home/ubuntu/app/uploads:/app/uploads
+      - /home/ubuntu/app/documents/original:/data/document-agent/original
+      - /home/ubuntu/app/documents/generated:/data/document-agent/generated
+      - /home/ubuntu/app/documents/normalized:/data/document-agent/normalized
     networks: [backend, data]
     restart: unless-stopped
     healthcheck:
@@ -62,6 +65,9 @@ services:
       GMS_API_KEY: ${GMS_API_KEY}
     volumes:
       - aimodels:/models
+      - /home/ubuntu/app/documents/original:/data/document-agent/original
+      - /home/ubuntu/app/documents/generated:/data/document-agent/generated
+      - /home/ubuntu/app/documents/normalized:/data/document-agent/normalized
     networks: [backend, data]
     restart: unless-stopped
     healthcheck:

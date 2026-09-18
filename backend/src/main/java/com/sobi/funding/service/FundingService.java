@@ -43,15 +43,16 @@ public class FundingService {
     private final ApplicationService applicationService;
     private final ApplicationRepository applicationRepository;
 
+    @Transactional
     public void application(Long userId, BatchRequest batchRequest) {
 
         for (BatchItem batchItem : batchRequest.getItem()) {
             // 신청 현황에 있는 상품인지 검사
-            Application application = applicationRepository.findByIdAndUser_Id(userId, batchItem.getId()).orElse(null);
-
-            if (application == null) {
-                continue;
-            }
+//            Application application = applicationRepository.findByIdAndUser_Id(userId, batchItem.getId()).orElse(null);
+//
+//            if (application != null) {
+//                continue;
+//            }
             // 신청 메서드로 신청
 
             applicationService.create(userId, batchItem.getType(), batchItem.getId());

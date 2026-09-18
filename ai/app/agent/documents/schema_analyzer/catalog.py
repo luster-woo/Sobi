@@ -6,6 +6,13 @@ from ...sources.models import EmptyParams, PeriodParams
 from ...sources.resolvers import AmountResolver, direct, business_age, insurance_enrolled, rag_placeholder
 
 
+USER_FACT_DESCRIPTIONS = {
+    SourceKey.USER_NAME: "Registered user's stored real name. The registered user is the applicant/business representative. Reuse for each name candidate referring to that same person, including inline repetitions; never for another person's name or a signature itself.",
+    SourceKey.USER_EMAIL: "Registered user's stored email address. Objective fact for the applicant/representative's own E-mail, 이메일 or 전자우편; not a separate contact person's, proxy's or employee's email.",
+    SourceKey.USER_BIRTH_DATE: "Registered user's stored birth date (DATE). Objective fact for the applicant/representative's own 생년월일 when context identifies the registered user; not a child's, spouse's, contact person's or proxy's birth date.",
+}
+
+
 @dataclass(frozen=True)
 class CatalogEntry:
     source_type: SourceType
@@ -40,5 +47,6 @@ class SourceCatalog:
                  "field_type": entry.field_type.value,
                  "source_params_schema": entry.params_model.model_json_schema(),
                  "runtime_supported": entry.runtime_supported,
+                 **({"description": USER_FACT_DESCRIPTIONS[key]} if key in USER_FACT_DESCRIPTIONS else {}),
                  "period_policy": "recent completed N months; excludes current month; no calendar year" if entry.rolling_period else None}
                 for key, entry in self.entries.items()]

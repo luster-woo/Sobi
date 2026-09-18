@@ -15,7 +15,6 @@ class DocumentRuntimeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     template_id: Id
     user_id: Id
-    user_inputs: dict[str, JsonValue] = Field(default_factory=dict)
 
 
 class RuntimeSource(BaseModel):
@@ -80,6 +79,7 @@ class ResolvedField(BaseModel):
     source_priority: int | None = None
     error_code: str | None = None
     error_message: str | None = None
+    missing_information: list[str] = Field(default_factory=list)
 
 
 class DocumentRuntimeResult(BaseModel):

@@ -1,5 +1,32 @@
 # GMS Schema Analyzer
 
+## USER fact 후속 보완 (2026-09-18; 이전 생년월일 정책을 대체)
+
+실제 DB/GMS 재전처리에서 같은 대표자 이름의 반복 후보와 E-mail이 USER_INPUT으로
+흔들렸고, 생년월일에는 SourceKey가 없었다. USER_BIRTH_DATE를 Registry 기반 catalog에
+추가하고 USER_NAME/USER_EMAIL/USER_BIRTH_DATE에 저장된 본인 객관 정보라는 설명을 제공한다.
+등록 사용자는 신청인/사업체 대표자라는 기존 전제를 유지한다.
+
+- 대 표 자/대표자명, 대표자 영역 성명, 신청서·동의서 하단의 동일 대표자 텍스트 입력란은 USER_NAME.
+- 본인 E-mail/이메일/전자우편은 USER_EMAIL, 본인 생년월일은 USER_BIRTH_DATE + DATE.
+- 반복 Candidate도 각 ID/위치를 유지하며 같은 SourceKey를 사용할 수 있다.
+- 담당자/대리인/자녀/배우자/직원/상담자 등 제3자 값으로 대체하지 않는다.
+- USER_INPUT은 사용자 관련 정보라는 뜻이 아니다. 본인 저장 fact는 DIRECT 우선이며,
+  서명/동의/선택과 자동 기입 금지 값은 USER_INPUT을 유지한다.
+- 이전 Prompt의 '생년월일 USER_INPUT / 생년월일 SourceKey 생성 금지' 지침과 예시를 제거했다.
+
+source-first 재검토는 기존에도 Prompt 정책이다. Python local validation은 Enum, Source 조합,
+params, ID, 고정 기간 계약을 검사하며 자연어 본인/제3자 판정을 하지 않는다.
+이 구조를 유지해 semantic keyword 보정이나 추가 LLM 호출을 넣지 않았다.
+따라서 **형식상 유효한 잘못된 USER_INPUT 응답은 자동 보정되지 않으며 repair도 발생하지 않는다.**
+이 한계를 fake 회귀 테스트로 명시했다. 같은 fake 응답의 반복 가능성/Prompt 내용 검증과
+실제 GMS의 의미 분류 안정성은 다르다. 실제 GMS 재전처리 및 DB mapping 확인이 필요하다.
+
+기존 template schema에는 Prompt 변경이 소급 적용되지 않는다. preprocessing을 다시 실행한다.
+TemplateRepository.start는 같은 program_document/schema_version=1의 template을 재사용할 수 있고,
+Persistence는 해당 template의 field/source를 replace-all한다. **반환된 template_id**를 사용한다.
+수동 명령/SQL은 docs/document-agent-progress.md의 2026-09-18 USER Source 보완 항목에 있다.
+
 현재 정책은 v1.2.2이다. 이전 버전 절의 대표자 동일성 미확정 정책은 v1.2.1에서 대체되었다.
 
 `FieldCandidate[] + SourceCatalog + GMS -> semantic schema proposal` 계층이다.

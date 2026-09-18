@@ -47,8 +47,8 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.resolver = SimpleNamespace(resolve_source=AsyncMock(return_value=value()))
         self.runtime = DocumentAgentRuntime(repository=self.repository, source_resolver=self.resolver)
 
-    async def resolve(self, inputs=None):
-        return await self.runtime.resolve(DocumentRuntimeRequest(template_id=1, user_id=9, user_inputs=inputs or {}))
+    async def resolve(self):
+        return await self.runtime.resolve(DocumentRuntimeRequest(template_id=1, user_id=9))
 
     async def test_direct_context_provenance(self):
         result = await self.resolve()
@@ -145,49 +145,49 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result.ready_for_write)
         self.resolver.resolve_source.assert_not_called()
 
-    async def test_user_input_supplied(self):
+    async def test_user_input_left_blank(self):
         self.repository.load.return_value = template(field("bank_name", "USER_INPUT", sources=[]))
-        result = await self.resolve({"bank_name": "국민은행"})
-        self.assertEqual(result.fields[0].value, "국민은행")
+        result = await self.resolve()
+        self.assertIsNone(result.fields[0].value)
+        self.assertEqual(result.fields[0].runtime_status, "LEFT_BLANK")
         self.assertTrue(result.ready_for_write)
         self.resolver.resolve_source.assert_not_called()
 
-    async def test_user_input_missing_null_blank(self):
-        self.repository.load.return_value = template(field("name", "USER_INPUT", sources=[]))
-        for inputs in ({}, {"name": None}, {"name": "  "}):
-            result = await self.resolve(inputs)
-            self.assertEqual(result.fields[0].runtime_status, "INPUT_REQUIRED")
-            self.assertFalse(result.ready_for_write)
+    async def test_user_input_required_and_optional(self):
+        for required in (True, False):
+            self.repository.load.return_value = template(field("name", "USER_INPUT", sources=[], required=required))
+            result = await self.resolve()
+            self.assertEqual(result.fields[0].runtime_status, "LEFT_BLANK")
+            self.assertIsNone(result.fields[0].value)
+            self.assertTrue(result.ready_for_write)
 
-    async def test_unknown_input_key(self):
-        with self.assertRaises(DocumentRuntimeError) as caught:
-            await self.resolve({"기업명": "값"})
-        self.assertEqual(caught.exception.code, "UNKNOWN_USER_INPUT_KEY")
+    async def test_removed_user_inputs_rejected(self):
+        from pydantic import ValidationError
+        with self.assertRaises(ValidationError):
+            DocumentRuntimeRequest(template_id=1,user_id=9,user_inputs={"consent":True})
         self.resolver.resolve_source.assert_not_called()
 
-    async def test_direct_input_override_forbidden(self):
-        with self.assertRaises(DocumentRuntimeError) as caught:
-            await self.resolve({"business_name": "override"})
-        self.assertEqual(caught.exception.code, "USER_INPUT_FIELD_TYPE_MISMATCH")
+    async def test_request_only_ids(self):
+        self.assertEqual(DocumentRuntimeRequest(template_id=1,user_id=9).model_dump(), {"template_id":1,"user_id":9})
 
-    async def test_computed_not_implemented(self):
+    async def test_computed_non_computed_source_unsupported(self):
         self.repository.load.return_value = template(field(type="COMPUTED", instruction="keep", constraints={"x": [1]}, min_length=2))
         result = await self.resolve()
-        self.assertEqual(result.fields[0].runtime_status, "NOT_IMPLEMENTED")
+        self.assertEqual(result.fields[0].runtime_status, "UNSUPPORTED")
         self.assertEqual(result.fields[0].instruction, "keep")
         self.assertEqual(result.fields[0].constraints, {"x": [1]})
         self.assertEqual(len(result.fields[0].sources), 1)
         self.resolver.resolve_source.assert_not_called()
 
-    async def test_generated_not_implemented(self):
-        self.repository.load.return_value = template(field(type="GENERATED"))
-        self.assertEqual((await self.resolve()).fields[0].runtime_status, "NOT_IMPLEMENTED")
+    async def test_generated_missing_source(self):
+        self.repository.load.return_value = template(field(type="GENERATED", sources=[]))
+        self.assertEqual((await self.resolve()).fields[0].error_code, "MISSING_SOURCE_DEFINITION")
         self.resolver.resolve_source.assert_not_called()
 
-    async def test_mapping_before_user_input_and_computed(self):
+    async def test_user_input_always_blank_computed_mapping_gate(self):
         self.repository.load.return_value = template(field("name", "USER_INPUT", status="NEEDS_REVIEW", sources=[]), field("amount", "COMPUTED", status="UNSUPPORTED", id=2, order=1))
-        result = await self.resolve({"name": "supplied"})
-        self.assertEqual([f.runtime_status for f in result.fields], ["NEEDS_REVIEW", "UNSUPPORTED"])
+        result = await self.resolve()
+        self.assertEqual([f.runtime_status for f in result.fields], ["LEFT_BLANK", "UNSUPPORTED"])
         self.assertIsNone(result.fields[0].value)
 
     async def test_rag_never_called(self):
@@ -214,7 +214,7 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.ready_for_write)
         self.assertEqual(result.total_fields, 2)
         self.assertEqual(result.status_counts["RESOLVED"], 1)
-        self.assertEqual(result.status_counts["INPUT_REQUIRED"], 1)
+        self.assertEqual(result.status_counts["LEFT_BLANK"], 1)
         self.assertEqual(sum(result.status_counts.values()), 2)
 
     async def test_empty_schema(self):
@@ -223,18 +223,13 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.total_fields, 0)
         self.assertTrue(result.ready_for_write)
 
-    async def test_user_input_types(self):
-        cases = [("TEXT", "문자", True), ("TEXT", 2, False), ("NUMBER", 0, True), ("NUMBER", False, False),
-                 ("NUMBER", "1", False), ("BOOLEAN", False, True), ("BOOLEAN", 1, False),
-                 ("DATE", "2024-02-29", True), ("DATE", "2025-02-29", False), ("DATE", "20240101", False),
-                 ("JSON", {"x": [1, False, None]}, True), ("JSON", [], True)]
-        for type_, supplied, valid in cases:
-            with self.subTest(type=type_, supplied=supplied):
+    async def test_user_input_types_always_blank(self):
+        for type_ in ("TEXT", "NUMBER", "BOOLEAN", "DATE", "JSON"):
+            with self.subTest(type=type_):
                 self.repository.load.return_value = template(field("input", "USER_INPUT", value_type=type_, sources=[]))
-                result = await self.resolve({"input": supplied})
-                self.assertEqual(result.fields[0].runtime_status, "RESOLVED" if valid else "ERROR")
-                if valid:
-                    self.assertEqual(result.fields[0].value, supplied)
+                result = await self.resolve()
+                self.assertEqual(result.fields[0].runtime_status, "LEFT_BLANK")
+                self.assertIsNone(result.fields[0].value)
 
     async def test_source_typed_values_not_formatted(self):
         for supplied in (date(2026, 9, 17), Decimal("123.40"), 0, False, [], "  "):

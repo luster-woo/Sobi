@@ -10,6 +10,7 @@ from .provider import MonthlyAmounts, SourceData
 
 USER_FIELDS = {
     SourceKey.USER_NAME: "name", SourceKey.USER_EMAIL: "email",
+    SourceKey.USER_BIRTH_DATE: "birth_date",
     SourceKey.CREDIT_RATING: "credit_rating",
 }
 BUSINESS_FIELDS = {

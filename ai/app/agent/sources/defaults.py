@@ -16,6 +16,9 @@ def build_registry() -> SourceRegistry:
     registry.register(SourceKey.USER_EMAIL, SourceDefinition(
         SourceType.USER, FieldType.DIRECT, direct,
     ))
+    registry.register(SourceKey.USER_BIRTH_DATE, SourceDefinition(
+        SourceType.USER, FieldType.DIRECT, direct,
+    ))
     registry.register(SourceKey.CREDIT_RATING, SourceDefinition(
         SourceType.USER, FieldType.DIRECT, direct,
     ))

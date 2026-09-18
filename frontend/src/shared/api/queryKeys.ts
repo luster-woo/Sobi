@@ -62,6 +62,12 @@ export const queryKeys = {
       ['insurance', 'detail', insuranceChecklistId] as const,
   },
 
+  dashboard: {
+    all: ['dashboard'] as const,
+    owner: ['dashboard', 'owner'] as const,
+    preOwner: ['dashboard', 'pre-owner'] as const,
+  },
+
   notification: {
     all: ['notification'] as const,
     /** 상단바 벨의 미확인 개수. 알림을 읽으면 여기를 무효화한다 */

@@ -1,10 +1,11 @@
 import BusinessSnapshotPanel from '@/features/dashboard/components/BusinessSnapshotPanel'
+import DashboardFallback from '@/features/dashboard/components/DashboardFallback'
 import InsuranceMiniPanel from '@/features/dashboard/components/InsuranceMiniPanel'
 import JudgementSummaryPanel from '@/features/dashboard/components/JudgementSummaryPanel'
 import LoanStrip from '@/features/dashboard/components/LoanStrip'
 import RepaymentMiniPanel from '@/features/dashboard/components/RepaymentMiniPanel'
 import SupportProgramStrip from '@/features/dashboard/components/SupportProgramStrip'
-import { MOCK_OWNER_DASHBOARD } from '@/features/dashboard/model/mock'
+import { useOwnerDashboard } from '@/features/dashboard/hooks/useDashboard'
 
 /**
  * 사업자 대시보드 (S15P21D101-176) — 시안 10번.
@@ -21,12 +22,14 @@ import { MOCK_OWNER_DASHBOARD } from '@/features/dashboard/model/mock'
  * 오른쪽 열은 320px 고정이고 lg 미만에서 아래로 내려간다. 좁은 화면에서 두 열을
  * 유지하면 카드 스트립이 한 장도 다 안 보인다.
  *
- * ⚠️ 의무보험을 뺀 나머지는 아직 목이다(model/mock.ts). `GET /dashboard` 가 붙으면
- *    MOCK_OWNER_DASHBOARD 를 useQuery 결과로 바꾸고, 로딩·에러 처리를 여기 넣는다.
- *    의무보험은 자기 엔드포인트(`GET /insurance`)가 따로 있어 패널이 직접 받아온다.
+ * 의무보험은 자기 엔드포인트(`GET /insurance`)가 따로 있어 패널이 직접 받아온다.
  */
 export default function OwnerDashboard() {
-  const { judgement, loans, supportPrograms, repayment, snapshot } = MOCK_OWNER_DASHBOARD
+  const { data, isError, refetch } = useOwnerDashboard()
+
+  if (!data) return <DashboardFallback isError={isError} onRetry={() => void refetch()} />
+
+  const { judgement, loans, supportPrograms, repayment, snapshot } = data
 
   return (
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">

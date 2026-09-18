@@ -38,6 +38,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -149,7 +150,13 @@ public class MarketServiceImpl implements MarketService {
             district.dongs().add(new Dong(dong.dongCode(), dong.dongName()));
         }
 
-        return new MarketRegionResponse(CITY_NAME, List.copyOf(districts.values()));
+        // 자치구는 이름순, 동은 쿼리의 코드순을 유지한다.
+        // DB collation(en_US.utf8)은 한글을 가나다순으로 정렬하지 못해서 Java에서 정렬한다.
+        List<District> sorted = districts.values().stream()
+                .sorted(Comparator.comparing(District::name))
+                .toList();
+
+        return new MarketRegionResponse(CITY_NAME, sorted);
     }
 
     @Override

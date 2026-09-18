@@ -1,5 +1,5 @@
 import { LOAN_SORT } from '@/features/loan/model/types'
-import { LOAN_STATUS_LABEL, PRODUCT_STATUS } from '@/shared/constants/productStatus'
+import { LOAN_STATUS,LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
 import FilterChip from '@/shared/ui/FilterChip'
 import Select from '@/shared/ui/Select'
 
@@ -29,7 +29,7 @@ const SORT_OPTIONS = [
 /** 판정 결과. 라벨은 대출 기준(PAID = 실행 완료) */
 const STATUS_OPTIONS = [
   { value: '', label: '판정 전체' },
-  ...Object.values(PRODUCT_STATUS).map((status) => ({
+  ...Object.values(LOAN_STATUS).map((status) => ({
     value: status,
     label: LOAN_STATUS_LABEL[status],
   })),

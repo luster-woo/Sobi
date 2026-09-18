@@ -268,8 +268,15 @@ export function FavoritesPage() {
                  */}
                 <ProductStatusBadge
                   status={item.status}
+                  /*
+                   * 대출 항목에도 지원사업 라벨 표를 바탕으로 넘긴다. 값 집합이 넓은
+                   * 쪽이라 대출 값이 전부 들어 있고, UNKNOWN 만 대출에 안 올 뿐이다.
+                   * 문구가 갈리는 APPROVED·PAID 는 대출 표가 덮어쓴다.
+                   */
                   labels={
-                    item.kind === FAVORITE_KIND.LOAN ? LOAN_STATUS_LABEL : SUPPORT_STATUS_LABEL
+                    item.kind === FAVORITE_KIND.LOAN
+                      ? { ...SUPPORT_STATUS_LABEL, ...LOAN_STATUS_LABEL }
+                      : SUPPORT_STATUS_LABEL
                   }
                   className="w-full justify-center"
                 />

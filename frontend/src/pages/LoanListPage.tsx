@@ -4,7 +4,7 @@ import { loanColumns } from '@/features/loan/components/loanColumns'
 import LoanFilterBar from '@/features/loan/components/LoanFilterBar'
 import { useLoans } from '@/features/loan/hooks/useLoans'
 import type { LoanSort } from '@/features/loan/model/types'
-import { PRODUCT_STATUS, type ProductStatus } from '@/shared/constants/productStatus'
+import { LOAN_STATUS, type LoanStatus } from '@/shared/constants/productStatus'
 import { routeTo } from '@/shared/constants/routes'
 import { useListParams } from '@/shared/hooks/useListParams'
 import EmptyState from '@/shared/ui/EmptyState'
@@ -36,7 +36,7 @@ export function LoanListPage() {
   const { data, isLoading, isFetching, isError } = useLoans({
     keyword: values.keyword || undefined,
     bankName: values.bankName || undefined,
-    status: (values.status as ProductStatus) || undefined,
+    status: (values.status as LoanStatus) || undefined,
     bookmarked: values.bookmarked === 'true' ? true : undefined,
     sort: (values.sort as LoanSort) || undefined,
   })
@@ -122,7 +122,7 @@ export function LoanListPage() {
            * 관심 목록과 같은 처리다.
            */
           rowClassName={(loan) =>
-            loan.status === PRODUCT_STATUS.INELIGIBLE ? 'bg-surface-muted' : undefined
+            loan.status === LOAN_STATUS.INELIGIBLE ? 'bg-surface-muted' : undefined
           }
           empty={
             isError ? (

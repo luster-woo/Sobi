@@ -1,6 +1,7 @@
 """공용 설정. 저장소 루트 .env 하나만 읽는다."""
 
 import os
+from urllib.parse import quote_plus
 
 from dotenv import find_dotenv, load_dotenv
 

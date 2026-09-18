@@ -5,6 +5,7 @@ import type {
   SubmitApplicationBody,
   SubmitApplicationResult,
   UploadDocumentParams,
+  UploadDocumentResult
 } from '@/features/application/model/types'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
@@ -62,24 +63,24 @@ export async function requestDraft(applicationDocumentId: number) {
 }
 
 /**
- * 서류 업로드. 제출 서류와 작성 서류가 같은 곳을 쓴다 — 작성 서류는
- * 서버가 검증을 건너뛰고 바로 작성 완료로 둘다.
- *
- * 서버가 Spring `@RequestPart` 로 받아서 파일과 JSON 이 각각 별개의 part 다.
- * JSON 을 문자열로 넣으면 part 에 Content-Type 이 안 붙어 415 가 나므로 Blob 으로 감싼다.
+ * 서류 업로드 (첫 업로드·재업로드 공통).
  *
  * Content-Type 헤더는 직접 지정하지 않는다. axios 가 FormData 를 보면 boundary 를
  * 포함해서 알아서 넣어 주는데, 손으로 넣으면 boundary 가 빠져 서버가 파싱하지 못한다.
+ *
+ * 응답에 검증 결과가 없다. 제출 서류는 PENDING 으로 돌아오고 AI 검증이 뒤에서 도는데,
+ * 그 결과는 신청 상세를 폴링해서 받는다. 작성 서류는 검증을 타지 않아 바로 PASSED 다.
  */
 export async function uploadDocument({ applicationDocumentId, file }: UploadDocumentParams) {
   const formData = new FormData()
+  formData.append('applicationDocumentId', String(applicationDocumentId))
   formData.append('file', file)
-  formData.append(
-    'request',
-    new Blob([JSON.stringify({ applicationDocumentId })], { type: 'application/json' }),
-  )
 
-  await api.post<null>(endpoints.application.uploadDocument, formData)
+  const { data } = await api.post<UploadDocumentResult>(
+    endpoints.application.uploadDocument,
+    formData,
+  )
+  return data
 }
 
 /**

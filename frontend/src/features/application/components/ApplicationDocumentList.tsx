@@ -5,7 +5,7 @@ import {
   toWriteUiStatus,
 } from '@/features/application/model/documentStatus'
 import type { ApplicationDocument } from '@/features/application/model/types'
-import { UPLOAD_ACCEPT, UPLOAD_MAX_SIZE_MB } from '@/features/application/model/upload'
+import { UPLOAD_MAX_SIZE_MB,uploadAccept } from '@/features/application/model/upload'
 import DocumentUploadItem from '@/shared/ui/DocumentUploadItem'
 import DocumentWriteItem from '@/shared/ui/DocumentWriteItem'
 
@@ -64,7 +64,7 @@ export default function ApplicationDocumentList({
                 name={doc.documentName ?? '이름 없는 서류'}
                 status={toSubmitUiStatus(doc.validationStatus)}
                 description={describeDocument(doc)}
-                accept={UPLOAD_ACCEPT}
+                accept={uploadAccept(doc.documentType)}
                 maxSizeMb={UPLOAD_MAX_SIZE_MB}
                 readOnly={readOnly}
                 onSelectFile={(file) => onUpload(doc.applicationDocumentId, file)}
@@ -85,7 +85,7 @@ export default function ApplicationDocumentList({
                 name={doc.documentName ?? '이름 없는 서류'}
                 status={toWriteUiStatus(doc)}
                 description={describeDocument(doc)}
-                accept={UPLOAD_ACCEPT}
+                accept={uploadAccept(doc.documentType)}
                 maxSizeMb={UPLOAD_MAX_SIZE_MB}
                 /*
                  * ⚠️ 서식·초안 내려받기는 아직 동작하지 않는다 (413). 확정 응답에

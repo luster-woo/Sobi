@@ -11,6 +11,7 @@ import type {
   SubmitApplicationBody,
   ValidationStatus,
 } from '@/features/application/model/types'
+import { UPLOAD_MAX_SIZE_MB,uploadAccept } from '@/features/application/model/upload'
 import { findLoanProductSummary } from '@/mocks/handlers/loan'
 import { findSupportProductSummary } from '@/mocks/handlers/support'
 import type { ApiResponse } from '@/shared/types'
@@ -728,50 +729,84 @@ export const applicationHandlers = [
     )
   }),
 
-  /**
-   * 제출 서류 업로드.
+    /**
+   * 신청 서류 업로드 (첫 업로드·재업로드 공통).
    *
-   * Spring 의 @RequestPart 방식이라 파일과 JSON 이 각각 다른 part 로 온다.
-   * JSON part 는 Blob 으로 감싸 보내야 해서 여기서도 text() 로 꺼내 파싱한다.
+   * 서버가 @RequestParam 으로 받는다. JSON part 가 따로 없고 값이 FormData 필드로
+   * 그냥 들어온다.
+   *
+   * 제출 서류만 검증을 태운다. 작성 서류는 올리는 즉시 PASSED 다 —
+   * ApplicationDocumentServiceImpl 이 SUBMIT 일 때만 검증 이벤트를 쏜다.
    */
   http.post('/api/v1/document', async ({ request }) => {
+    const path = '/api/v1/document'
     const formData = await request.formData()
     const file = formData.get('file')
-    const rawRequest = formData.get('request')
+    const rawId = formData.get('applicationDocumentId')
 
-    if (!(file instanceof File) || !rawRequest) {
-      return failure('/api/v1/document', '유효하지 않은 요청입니다.')
+    if (!(file instanceof File)) {
+      return failure(path, '파일을 선택해 주세요.', 'APPLICATION_DOCUMENT_FILE_EMPTY')
     }
 
-    const json = rawRequest instanceof Blob ? await rawRequest.text() : String(rawRequest)
-    const { applicationDocumentId } = JSON.parse(json) as { applicationDocumentId: number }
+    const applicationDocumentId = Number(rawId)
 
     for (const app of applications.values()) {
       const doc = app.documents.find((d) => d.applicationDocumentId === applicationDocumentId)
       if (!doc) continue
 
+      if (app.status !== 'PREPARING') {
+        return failure(
+          path,
+          '이미 제출한 신청입니다.',
+          'APPLICATION_DOCUMENT_UPLOAD_NOT_ALLOWED',
+        )
+      }
+
+      // 검증이 도는 중에는 파일을 바꿀 수 없다
+      const current = resolveValidationStatus(doc)
+      if (current === 'PENDING' || current === 'VALIDATING') {
+        return failure(path, '검증이 진행 중입니다.', 'APPLICATION_DOCUMENT_VALIDATING')
+      }
+
+      // 서버가 확장자와 시그니처를 함께 본다. 목은 확장자만 본다
+      const accept = uploadAccept(doc.documentType)
+      const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase()
+      if (!accept.includes(extension)) {
+        return failure(
+          path,
+          '허용되지 않는 파일 형식입니다.',
+          'APPLICATION_DOCUMENT_FILE_TYPE_INVALID',
+        )
+      }
+
+      if (file.size > UPLOAD_MAX_SIZE_MB * 1024 * 1024) {
+        return failure(path, '파일이 너무 큽니다.', 'APPLICATION_DOCUMENT_FILE_TOO_LARGE')
+      }
+
       doc.originalFilename = file.name
       doc.attempts += 1
       app.updatedAt = nowIso()
 
-      /*
-       * 종류를 가리지 않고 검증을 태운다. 서버가 그렇게 센다 —
-       * validateDocumentsPassed 가 모든 서류의 validationStatus 를 PASSED 로 요구한다.
-       *
-       * writeStatus(초안 생성 상태)는 건드리지 않는다. 올린 것과 초안이 만들어진 것은
-       * 다른 사건이다. 여기서 WRITTEN 으로 바꾸면 초안을 만든 적도 없는데 '초안 다시
-       * 만들기' 가 뜬다.
-       */
-      doc.uploadedAt = Date.now()
-      // 시연용 고정 상태를 풀어야 재업로드가 실제로 진행된다
-      doc.frozenStatus = null
+      if (doc.documentType === 'WRITE') {
+        // 작성 서류는 검증하지 않는다. 올리는 순간 통과다
+        doc.frozenStatus = 'PASSED'
+        doc.uploadedAt = null
+      } else {
+        doc.uploadedAt = Date.now()
+        // 시연용 고정 상태를 풀어야 재업로드가 실제로 진행된다
+        doc.frozenStatus = null
+      }
 
       return HttpResponse.json(
-        success('/api/v1/document', '제출용 문서 업로드에 성공하였습니다.', null),
+        success(path, '서류 업로드에 성공하였습니다.', {
+          applicationDocumentId: doc.applicationDocumentId,
+          validationStatus: resolveValidationStatus(doc),
+          originalFilename: doc.originalFilename,
+        }),
       )
     }
 
-    return failure('/api/v1/document', '해당 서류를 찾을 수 없습니다.')
+    return failure(path, '해당 서류를 찾을 수 없습니다.', 'APPLICATION_DOCUMENT_NOT_FOUND')
   }),
 
   /**
@@ -791,7 +826,12 @@ export const applicationHandlers = [
         return failure('/api/v1/document/draft', '작성 서류가 아닙니다.')
       }
 
-      doc.writeStatus = 'WRITING'
+      /*
+       * writeStatus 에는 '다 만들어진 뒤' 의 상태를 넣는다. 만드는 중인지는
+       * draftStartedAt 부터 흐른 시간으로 계산한다(toDocumentResponse).
+       * 여기에 WRITING 을 넣으면 시간이 지나도 그 값이 그대로 나와 영영 작성 중이 된다.
+       */
+      doc.writeStatus = 'WRITTEN'
       doc.draftStartedAt = Date.now()
       app.updatedAt = nowIso()
 

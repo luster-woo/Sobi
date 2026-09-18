@@ -184,6 +184,14 @@ export interface UploadDocumentParams {
   file: File
 }
 
+/** 업로드 응답. 검증 결과는 여기 없고 신청 상세를 폴링해 받는다 */
+export interface UploadDocumentResult {
+  applicationDocumentId: number
+  /** 제출 서류는 PENDING, 작성 서류는 바로 PASSED */
+  validationStatus: ValidationStatus
+  originalFilename: string
+}
+
 /** 출금 계좌 후보. 서버가 입출금(COMMON) 계좌만 걸러서 준다 */
 export interface PayoutAccount {
   /** 제출할 때 이 값을 보낸다. 계좌번호로는 지목할 수 없다 */

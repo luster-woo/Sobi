@@ -13,7 +13,12 @@ import {
 } from '@/features/application/hooks/useApplication'
 import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
 import { amountRange, productName, productSummary } from '@/features/application/model/summary'
-import { UPLOAD_ACCEPT_LABEL, UPLOAD_MAX_SIZE_MB } from '@/features/application/model/upload'
+import {
+  SUBMIT_ACCEPT_LABEL,
+  UPLOAD_MAX_SIZE_MB,
+  WRITE_ACCEPT_LABEL,
+} from '@/features/application/model/upload'
+import { uploadErrorMessage } from '@/features/application/model/uploadError'
 import { ROUTES } from '@/shared/constants/routes'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import { APPLICATION_STATUS_LABEL } from '@/shared/types/application'
@@ -124,8 +129,17 @@ export function ApplicationApplyPage() {
     upload.mutate(
       { applicationDocumentId, file },
       {
-        onSuccess: () => showToast('올렸어요. 검증이 시작됩니다.'),
-        onError: () => showToast('업로드에 실패했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+        /*
+         * 작성 서류는 검증을 타지 않아 올리는 즉시 끝난다. 제출 서류만 AI 검증이 뒤에서 돌고, 
+         * 그 결과는 상세 폴링으로 받는다.
+         */
+        onSuccess: (result) =>
+          showToast(
+            result.validationStatus === 'PASSED'
+              ? '올렸어요.'
+              : '올렸어요. 검증이 시작됩니다.',
+          ),
+        onError: (error) => showToast(uploadErrorMessage(error), 'danger'),
       },
     )
   }
@@ -279,9 +293,14 @@ export function ApplicationApplyPage() {
 
           <Panel title="업로드 제한">
             <dl className="text-body2 flex flex-col gap-2 px-[15px] py-4">
+              {/* 제출 서류는 AI 가 OCR 로 읽어야 해서 형식이 좁다 */}
               <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary">형식</dt>
-                <dd className="text-text">{UPLOAD_ACCEPT_LABEL}</dd>
+                <dt className="text-text-secondary shrink-0">제출 서류</dt>
+                <dd className="text-text text-right">{SUBMIT_ACCEPT_LABEL}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-text-secondary shrink-0">작성 서류</dt>
+                <dd className="text-text text-right">{WRITE_ACCEPT_LABEL}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-text-secondary">용량</dt>

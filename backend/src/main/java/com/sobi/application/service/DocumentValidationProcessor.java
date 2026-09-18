@@ -130,7 +130,9 @@ public class DocumentValidationProcessor {
     // 예비창업자처럼 사업자 정보가 없으면 사업자 항목은 null → AI 가 대조를 건너뛴다
     private OcrExpected expectedOf(User user) {
         BusinessInfo business = businessReporitory.findByUserId(user.getId());
-        OcrExpected.OcrExpectedBuilder expected = OcrExpected.builder().ownerName(user.getName());
+        OcrExpected.OcrExpectedBuilder expected = OcrExpected.builder()
+                .ownerName(user.getName())
+                .birthDate(user.getBirthDate());
         if (business != null) {
             expected.brn(business.getBrn())
                     .businessName(business.getBusinessName())

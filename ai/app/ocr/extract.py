@@ -1,4 +1,4 @@
-"""서류 파일 → 인식된 줄 → 규칙 추출 (사업자번호 · 발급일 · 유효기간 · 개업일).
+"""서류 파일 → 인식된 줄 → 규칙 추출 (사업자번호 · 발급일 · 유효기간 · 개업일 · 생년월일 · 예금주 · 계좌번호).
 
 양식마다 라벨이 달라지는 값(대표자·상호·주소·제목·기관)은 prompt.py 가 GMS 로 뽑는다.
 이 모듈은 PaddleOCR 을 import 하지 않는다(엔진은 engine.py). 그래서 규칙만 따로 테스트할 수 있다.
@@ -12,6 +12,7 @@ from typing import NamedTuple, Optional
 import numpy as np
 
 MAX_PDF_PAGES = 3      # 계약서: PDF 는 앞 3페이지까지만 본다
+TITLE_HEAD_CELLS = 15  # 제목을 찾을 첫 페이지 윗부분 칸 수 (첨부서류란의 '사업자등록증 1부' 같은 본문 언급을 피한다)
 PDF_DPI = 200          # 스캔 문서 기준. 낮추면 작은 글씨를 놓친다
 
 # 같은 칸으로 합칠 가로 간격(글자 높이 배수). 크게 잡는 편이 안전하다 —
@@ -20,15 +21,25 @@ PDF_DPI = 200          # 스캔 문서 기준. 낮추면 작은 글씨를 놓친
 CELL_GAP = 4.0
 ROW_TOL = 0.6          # 같은 행으로 볼 세로 허용치 (글자 높이 배수)
 
+# OCR 이 하이픈을 en dash(–)·em dash(—)로 읽는 경우가 있다 ('940311–*******'). 번호 정규식은 셋 다 받는다
+DASH = "[-–—]"
 # 사업자등록번호. 하이픈 필수 + 앞뒤 숫자 금지 → 주민(법인)등록번호·접수번호가 섞이지 않는다
-BRN_RE = re.compile(r"(?<!\d)\d{3}\s*-\s*\d{2}\s*-\s*\d{5}(?!\d)")
+BRN_RE = re.compile(rf"(?<!\d)\d{{3}}\s*{DASH}\s*\d{{2}}\s*{DASH}\s*\d{{5}}(?!\d)")
+# 주민·법인등록번호 6-7자리 (뒷자리가 이미 * 로 가려진 것 포함). GMS 로 보내기 전에 가리고, 앞 6자리는 생년월일로 쓴다
+ID_NUMBER_RE = re.compile(rf"(?<!\d)(\d{{6}})\s*{DASH}\s*([\d*]{{7}})(?!\d)")
+# 계좌번호 '1005-800-985027' · '0010-1010-1010-1010'. 숫자 10~16자리는 검증기에서 본다
+# 주민등록등본 상단 '신청인:김표준 ( 1994-03-11)'. 괄호 안 날짜만 본다 (신청일과 헷갈리지 않게)
+APPLICANT_BIRTH_RE = re.compile(rf"신\s*청\s*인\s*[:：]?\s*[가-힣\s]{{2,10}}\(\s*(\d{{4}})\s*{DASH}\s*(\d{{1,2}})\s*{DASH}\s*(\d{{1,2}})")
+# 예금주 라벨. 뒤에 공백·콜론·줄 끝이 와야 한다 ('예금주가 본인의…' 안내문은 제외)
+HOLDER_LABEL_RE = re.compile(r"\s*예\s*금\s*주\s*명?(?:\s*[:：]\s*|\s+|$)")
+ACCOUNT_RE = re.compile(rf"\d{{2,6}}(?:\s*{DASH}\s*\d{{2,8}}){{1,4}}")
 # '2005년 03월 23일' / '2005.03.23' / '2005-03-23'. OCR 이 하이픈을 en dash 로 읽기도 한다
 DATE_RE = re.compile(r"(\d{4})\s*[.\-–—년]\s*(\d{1,2})\s*[.\-–—월]\s*(\d{1,2})")
 # '2026년 Year 09월 17일' 처럼 영문 병기 양식은 년·월 뒤에 글자가 끼어든다
 KO_DATE_RE = re.compile(r"(\d{4})\s*년[^\d]{0,8}?(\d{1,2})\s*월[^\d]{0,8}?(\d{1,2})\s*일")
 
 # 발급일 후보에서 뺄 칸: 발급일이 아닌 날짜가 적힌 곳
-NOT_ISSUE_WORDS = ("유효기간", "개업", "등록일", "과세기간", "이주확인일")
+NOT_ISSUE_WORDS = ("유효기간", "개업", "등록일", "과세기간", "이주확인일", "생년월일", "신청인")
 # 발급일이 찍히는 자리 근처에 나오는 말
 ISSUE_HINTS = ("증명합니다", "확인합니다", "세무서장", "장관", "발급일")
 
@@ -39,6 +50,8 @@ LABEL_WORDS = ("등록번호", "성명", "상호", "법인명", "소재지", "�
 BRN_LABELS = ("사업자등록번호", "등록번호")
 # OCR 이 '일' 글자를 놓치는 경우가 있어 '개업' 까지 허용한다. 날짜 검증기가 날짜만 통과시킨다
 OPEN_DATE_LABELS = ("개업일", "개업연월일", "개업")
+# 통장 예금주 줄('김 표 준 님')과 헷갈리는 안내 문구
+NOT_HOLDER_WORDS = ("고객", "손님", "드리")
 
 
 class FileUnreadableError(Exception):
@@ -78,11 +91,14 @@ class RuleFields(NamedTuple):
     issue_date: Optional[str]     # YYYY-MM-DD
     valid_until: Optional[str]
     open_date: Optional[str]
+    birth_dates: tuple = ()       # YYYY-MM-DD 후보 전부 (등본은 세대원마다 하나씩)
+    account_holder: Optional[str] = None   # 통장 예금주 (공백 제거)
+    account_no: Optional[str] = None
 
 
 # --- 파일 → 이미지 ------------------------------------------------------------
 
-def to_images(data: bytes, ext: str) -> list:
+def to_images(data: bytes, ext: str, max_pages: int = MAX_PDF_PAGES) -> list:
     """PaddleOCR 에 넣을 BGR ndarray 목록. 디스크에 쓰지 않는다 (계약서: 파일을 남기지 않음)."""
     try:
         if ext == ".pdf":
@@ -90,7 +106,7 @@ def to_images(data: bytes, ext: str) -> list:
 
             images = []
             with pymupdf.open(stream=data, filetype="pdf") as doc:
-                for page in list(doc)[:MAX_PDF_PAGES]:
+                for page in list(doc)[:max_pages]:
                     pix = page.get_pixmap(dpi=PDF_DPI, alpha=False)
                     rgb = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
                     images.append(np.ascontiguousarray(rgb[:, :, ::-1]))   # RGB → BGR
@@ -135,6 +151,11 @@ def collect_lines(result, page: int) -> list:
 
 # --- 문자열 도우미 -----------------------------------------------------------
 
+def head_text(cells, n: int = TITLE_HEAD_CELLS) -> str:
+    """첫 페이지 위쪽 n 칸. cells 는 merge_cells 가 (페이지, 위, 왼쪽) 순으로 정렬해 둔다"""
+    return "\n".join(c.text for c in [c for c in cells if c.page == 0][:n])
+
+
 def norm(s: str) -> str:
     """비교용. OCR 이 '사 업 자 등 록 번 호' 처럼 자간을 띄우거나 공백을 먹으므로 공백을 모두 지운다"""
     return re.sub(r"\s+", "", s or "")
@@ -176,6 +197,30 @@ def v_brn(s):
 def v_date(s):
     ds = dates_in(s)
     return ds[0] if ds else None
+
+
+def v_account(s):
+    for m in ACCOUNT_RE.finditer(s or ""):
+        if 10 <= len(re.sub(r"\D", "", m.group())) <= 16:
+            return re.sub(r"\s+", "", m.group()).replace("–", "-").replace("—", "-")
+    return None
+
+
+def birth_from_id(front: str, back: str) -> Optional[str]:
+    """주민등록번호 앞 6자리 → YYYY-MM-DD. 세기는 뒷자리 첫 글자로, 가려져 있으면 두 자리 연도로 짐작한다"""
+    yy, mm, dd = int(front[:2]), int(front[2:4]), int(front[4:6])
+    if not (1 <= mm <= 12 and 1 <= dd <= 31):
+        return None
+    g = back[:1]
+    if g in "1256":
+        century = 1900
+    elif g in "3478":
+        century = 2000
+    elif g in "90":
+        century = 1800
+    else:
+        century = 1900 if yy >= 30 else 2000
+    return f"{century + yy}-{mm:02d}-{dd:02d}"
 
 
 # --- 칸 병합과 라벨 짝짓기 -----------------------------------------------------
@@ -308,6 +353,64 @@ def find_dates(cells):
     return issue, valid_until
 
 
+def find_birth_dates(cells) -> tuple:
+    """생년월일 후보. 서류에 적힌 곳이 제각각이라 세 군데를 모두 본다.
+
+      - '생년월일' 라벨 (개인 사업자등록증)
+      - '신청인:김표준(1994-03-11)' 처럼 신청인 이름 뒤 괄호 안의 날짜 (주민등록등본)
+      - 주민등록번호 앞 6자리 (지방세 납세증명서 · 등본 세대원). 바로 앞에 '법인' 이 있으면 법인등록번호라 뺀다
+    """
+    found = []
+    got = pair_by_row(cells, "생년월일", v_date)
+    if got:
+        found.append(got)
+    for c in cells:
+        for m in APPLICANT_BIRTH_RE.finditer(c.text):
+            y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            if 1 <= mo <= 12 and 1 <= d <= 31:
+                found.append(f"{y}-{mo:02d}-{d:02d}")
+        for m in ID_NUMBER_RE.finditer(c.text):
+            if "법인" in norm(c.text[max(0, m.start() - 12):m.start()]):
+                continue
+            iso = birth_from_id(m.group(1), m.group(2))
+            if iso:
+                found.append(iso)
+    return tuple(dict.fromkeys(found))
+
+
+def v_holder(s):
+    n = re.sub(r"님$", "", norm(s).lstrip(":："))
+    if not (2 <= len(n) <= 20) or "예금주" in n or re.search(r"\d", n) or not re.search(r"[가-힣]", n):
+        return None
+    return n
+
+
+def find_account_holder(cells) -> Optional[str]:
+    """통장 예금주. 인터넷뱅킹 통장사본은 '예금주' 라벨이 있고,
+    종이 통장은 라벨 없이 '김 표 준 님' 처럼 이름 뒤에 '님' 만 붙어 있다"""
+    # 라벨은 칸 맨 앞에 있을 때만 본다. 안내문 '예금주가 본인의 주민등록증을…' 에서 '가본인의' 를 집지 않게
+    for c in cells:
+        m = HOLDER_LABEL_RE.match(c.text)
+        if not m:
+            continue
+        got = v_holder(c.text[m.end():])
+        if got:
+            return got
+        if c.poly is None:
+            continue
+        h = max(c.bottom - c.top, 1.0)
+        right = sorted((o for o in cells if o is not c and o.page == c.page and o.poly is not None
+                        and c.top - h * 0.6 <= o.center_y <= c.bottom + h * 0.6 and o.left >= c.right - h * 0.5),
+                       key=lambda o: o.left)
+        if right and v_holder(right[0].text):
+            return v_holder(right[0].text)
+    for c in cells:
+        n = norm(c.text)
+        if n.endswith("님") and 2 <= len(n) - 1 <= 30 and not any(w in n for w in NOT_HOLDER_WORDS):
+            return n[:-1]
+    return None
+
+
 def extract_rule_fields(cells) -> RuleFields:
     issue_date, valid_until = find_dates(cells)
     open_date = None
@@ -315,4 +418,7 @@ def extract_rule_fields(cells) -> RuleFields:
         open_date = pair_by_row(cells, label, v_date)
         if open_date:
             break
-    return RuleFields(find_brn(cells), issue_date, valid_until, open_date)
+    return RuleFields(find_brn(cells), issue_date, valid_until, open_date,
+                      birth_dates=find_birth_dates(cells),
+                      account_holder=find_account_holder(cells),
+                      account_no=pair_by_row(cells, "계좌번호", v_account))

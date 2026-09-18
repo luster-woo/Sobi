@@ -11,5 +11,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class BirthDateResponse {
 
+    private String name;
+
     private LocalDate birthDate;
 }

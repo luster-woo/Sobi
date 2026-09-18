@@ -80,7 +80,8 @@ public class User {
         this.password = encodedPassword;
     }
 
-    public void updateBirthDate(LocalDate birthDate) {
+    public void updateProfile(String name, LocalDate birthDate) {
+        this.name = name;
         this.birthDate = birthDate;
     }
 

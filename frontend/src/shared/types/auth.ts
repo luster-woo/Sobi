@@ -61,7 +61,7 @@ export interface SessionUser {
    *
    * ⚠️ **구글 가입자는 null 이다.** 구글이 생일을 주지 않아 가입 시점에 채울 수 없다
    *    (V23 마이그레이션 주석: '소셜 가입 시 null, 온보딩에서 입력'). 로그인 직후
-   *    `PATCH /user/profile` 로 받아 채운다 — `ProfileSetupModal` 참고.
+   *    `PATCH /user/birth-date` 로 받아 채운다 — `ProfileSetupModal` 참고.
    *
    *    로컬 가입은 `SignupRequest.birthDate` 가 `@NotNull` 이라 항상 값이 있다.
    */

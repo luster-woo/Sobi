@@ -7,8 +7,8 @@ import { bypass, http, type HttpHandler } from 'msw'
  * `undefined` 를 반환하면 MSW 가 다음 핸들러(= 원래 목)로 넘긴다.
  *
  * 덕분에 백엔드가 엔드포인트를 구현하는 순간 목에서 **엔드포인트 단위로** 자동으로
- * 빠진다. 도메인 단위가 아니라 엔드포인트 단위인 게 중요하다 — 같은 파일 안에서도
- * `/user/me` 는 실서버가 받고 `/user/profile` 은 목이 받는 식으로 갈린다.
+ * 빠진다. 도메인 단위가 아니라 엔드포인트 단위라, 한 파일 안에서도 어떤 경로는
+ * 실서버가 받고 어떤 경로는 목이 받는 식으로 갈린다.
  */
 
 /** 판정 결과를 경로별로 기억한다. 없으면 매 요청마다 왕복이 한 번 더 생긴다 */
@@ -71,12 +71,8 @@ const MAY_HAVE_RUN = new Set([500, 501])
  * ⚠️ **백엔드가 만들면 여기서 지워야 한다.** 다른 엔드포인트처럼 저절로 빠지지 않는다 —
  *    그게 이 목록의 대가다. 그래서 티켓 번호를 같이 적어 둔다.
  */
-const MOCK_ONLY = new Set([
-  /*
-   * 구글 가입자의 이름·생년월일. 백엔드에는 생년월일만 받는 `PATCH /user/birth-date` 가
-   * 있고, 이름까지 받는 이 경로는 요청해 둔 상태다. 올라오면 이 줄을 지운다.
-   */
-  'PATCH /api/v1/user/profile',
+const MOCK_ONLY = new Set<string>([
+  // 지금은 비어 있다. 프론트가 부르는 엔드포인트가 전부 백엔드에 있다.
 ])
 
 async function callRealServer(request: Request, destructive: boolean): Promise<Response | null> {

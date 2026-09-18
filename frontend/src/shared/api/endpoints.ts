@@ -70,26 +70,14 @@ export const endpoints = {
      */
     notification: '/user/notification',
     /**
-     * 생년월일만 저장. body·응답 모두 `{ birthDate }`.
-     *
-     * 아래 `profile` 이 백엔드에 없을 때의 **폴백**이다 — 이름은 못 저장해도 생년월일은
-     * 저장돼야 자격 판정이 돈다 (`features/auth/api/profile.ts`).
-     */
-    birthDate: '/user/birth-date',
-    /**
      * 구글 가입자의 이름·생년월일 저장. body·응답 모두 `{ name, birthDate }`.
      *
-     * 구글은 생일을 주지 않고(가입 시 null), 이름은 구글 프로필 이름이 들어가 있어
-     * 실명이 아닐 수 있다. 둘을 한 요청으로 받는다 — 나눠 보내면 한쪽만 저장된 상태를
-     * 화면이 설명할 방법이 없다.
+     * ⚠️ 경로 이름과 달리 **이름도 같이 받는다.** 생년월일만 받던 엔드포인트에 백엔드가
+     *    `name` 을 더한 것이라 이름이 안 맞는다 — `BirthDateRequest` 참고.
      *
-     * 검증은 `name` 이 `@NotBlank @Size(max = 100)`(SignupRequest 와 동일),
-     * `birthDate` 가 `@NotNull @Past`(BirthDateRequest 와 동일).
-     *
-     * ⚠️ **백엔드 작업 대기 중.** 현재 `UserController` 에는 `/birth-date` 만 있다.
-     *    그때까지 목이 받는다 — `mocks/lib/serverFirst.ts` 의 `MOCK_ONLY` 참고.
+     * 검증은 `name` 이 `@NotBlank @Size(max = 100)`, `birthDate` 가 `@NotNull @Past`.
      */
-    profile: '/user/profile',
+    birthDate: '/user/birth-date',
   },
 
   business: {

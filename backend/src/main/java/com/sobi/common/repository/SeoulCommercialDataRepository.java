@@ -28,6 +28,8 @@ public interface SeoulCommercialDataRepository extends JpaRepository<SeoulCommer
     /** 업종 구성 — 해당 동의 전체 업종을 점포 수 내림차순 */
     List<SeoulCommercialData> findByDongCodeOrderByTotalCountDesc(String dongCode);
 
+
+    /** 자치구, 행정동 목록 불러오기  */
     @Query("""
             SELECT DISTINCT new com.sobi.common.dto.DongItem(
                 d.districtCode, d.districtName, d.dongCode, d.dongName

@@ -1,32 +1,24 @@
 import { useQuery } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 
-import { MOCK_OWNER_DASHBOARD, MOCK_PRE_OWNER_DASHBOARD } from '@/features/dashboard/model/mock'
+import { getDashboard } from '@/features/dashboard/api/dashboard'
 import { queryKeys } from '@/shared/api/queryKeys'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
-import { isPreOwner } from '@/shared/types'
 
 const STALE_TIME_MS = 60 * 1000
 
-export function useOwnerDashboard() {
+/** 서버가 DB 의 role 로 응답 모양을 가르므로 한 번만 부르고 모양으로 구분한다 */
+export function useDashboard() {
   const status = useAuthStore((s) => s.status)
-  const role = useAuthStore((s) => s.user?.role)
 
   return useQuery({
-    queryKey: queryKeys.dashboard.owner,
-    queryFn: () => Promise.resolve(MOCK_OWNER_DASHBOARD),
-    enabled: status === 'authenticated' && !isPreOwner(role ?? null),
+    queryKey: queryKeys.dashboard.me,
+    queryFn: getDashboard,
+    enabled: status === 'authenticated',
     staleTime: STALE_TIME_MS,
-  })
-}
-
-export function usePreOwnerDashboard() {
-  const status = useAuthStore((s) => s.status)
-  const role = useAuthStore((s) => s.user?.role)
-
-  return useQuery({
-    queryKey: queryKeys.dashboard.preOwner,
-    queryFn: () => Promise.resolve(MOCK_PRE_OWNER_DASHBOARD),
-    enabled: status === 'authenticated' && isPreOwner(role ?? null),
-    staleTime: STALE_TIME_MS,
+    retry: (failureCount, error) => {
+      if (isAxiosError(error) && error.response?.status === 404) return false
+      return failureCount < 2
+    },
   })
 }

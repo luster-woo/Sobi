@@ -64,8 +64,7 @@ export const queryKeys = {
 
   dashboard: {
     all: ['dashboard'] as const,
-    owner: ['dashboard', 'owner'] as const,
-    preOwner: ['dashboard', 'pre-owner'] as const,
+    me: ['dashboard', 'me'] as const,
   },
 
   notification: {

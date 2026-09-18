@@ -1,5 +1,6 @@
 import { daysUntil } from '@/features/dashboard/model/format'
 import type {
+  DashboardResponse,
   InsuranceResponse,
   LoanItemResponse,
   OwnerDashboardResponse,
@@ -161,4 +162,12 @@ export function toPreOwnerDashboard(raw: PreOwnerDashboardResponse): PreOwnerDas
     },
     insurances: raw.insurances.map(toInsurance),
   }
+}
+
+export type Dashboard =
+  { kind: 'owner'; data: OwnerDashboardData } | { kind: 'preOwner'; data: PreOwnerDashboardData }
+
+export function toDashboard(raw: DashboardResponse): Dashboard {
+  if ('suggestLoans' in raw) return { kind: 'owner', data: toOwnerDashboard(raw) }
+  return { kind: 'preOwner', data: toPreOwnerDashboard(raw) }
 }

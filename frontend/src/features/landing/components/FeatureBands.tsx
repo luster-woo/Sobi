@@ -14,7 +14,8 @@ interface Band {
   eyebrow: string
   title: string
   body: string
-  pills: [string, string]
+  /** 기능을 요약하는 알약. 개수는 밴드마다 다르다 */
+  pills: string[]
   demo: { header: string; headerValue?: string; rows: DemoRow[]; footer: string }
 }
 
@@ -23,29 +24,29 @@ const BANDS: Band[] = [
   {
     eyebrow: '자격 판정',
     title: '지금 받을 수 있는지, 3분 안에 판정해요',
-    body: '매출·업력·부채비율·신용등급을 상품 요건과 대조해 가능·불가로 나눠서 보여드려요.',
-    pills: ['가능 6건', '불가 14건'],
+    body: '매출·업력·부채비율·신용등급을 상품 요건과 대조해요. 공고문에 사람이 직접 확인해야 하는 조건이 있으면 확인할 항목까지 짚어드려요.',
+    pills: ['신청 가능 6건', '확인 필요 3건', '해당 없음 11건'],
     demo: {
       header: '판정 결과',
       rows: [
-        { label: '소진공 일반경영안정자금', badge: { text: '가능', variant: 'success' } },
-        { label: '스마트상점 기술보급', badge: { text: '가능', variant: 'success' } },
-        { label: '청년창업사관학교', badge: { text: '불가', variant: 'outline' } },
+        { label: '소진공 일반경영안정자금', badge: { text: '신청 가능', variant: 'success' } },
+        { label: '스마트상점 기술보급', badge: { text: '확인 필요', variant: 'neutral' } },
+        { label: '청년창업사관학교', badge: { text: '해당 없음', variant: 'outline' } },
       ],
-      footer: '신청 가능 6건 · 불가 14건',
+      footer: '신청 가능 6건 · 확인 필요 3건 · 해당 없음 11건',
     },
   },
   {
     eyebrow: '서류 검증',
     title: '서류는 제출 전에 자동 완성하고 미리 검증해요',
     body: '도장·서명 누락, 발급 유효기간 초과를 업로드 즉시 확인하고 기관에서 반려될 사유를 미리 잡아드려요.',
-    pills: ['업로드 즉시 검증', '검증 실패 안내'],
+    pills: ['업로드 즉시 검증', '초안 자동 작성'],
     demo: {
       header: '제출 서류 검증',
       rows: [
         { label: '부가세 과세표준증명원', badge: { text: '검증 통과', variant: 'success' } },
-        { label: '재무제표', badge: { text: '검증 중', variant: 'neutral' } },
-        { label: '등기부등본', badge: { text: '검증 실패', variant: 'danger' } },
+        { label: '소상공인확인서', badge: { text: '검증 중', variant: 'neutral' } },
+        { label: '사업자등록증명원', badge: { text: '검증 실패', variant: 'danger' } },
       ],
       footer: '인감 도장·서명·발급일자 자동 확인',
     },
@@ -53,10 +54,10 @@ const BANDS: Band[] = [
   {
     eyebrow: '자금 조합',
     title: '부족한 금액은 조합으로 채워요',
-    body: '무상 지원금을 먼저 채우고, 남는 금액만 대출로 구성해 이자 부담을 최소로 만들어드려요.',
-    pills: ['이자 최소 조합', '한도 여유 조합'],
+    body: '무상 지원금을 먼저 채우고, 남는 금액만 대출로 구성해요. 금리·월 상환액이 다른 조합을 여러 개 만들어 나란히 비교할 수 있어요.',
+    pills: ['조합 여러 개 비교', '월 상환액까지 계산'],
     demo: {
-      header: '추천 조합',
+      header: '추천 조합 1',
       headerValue: '5,000만 원',
       rows: [
         { label: '1  스마트상점 바우처', value: ['500만 원', '무상'] },
@@ -69,12 +70,12 @@ const BANDS: Band[] = [
   {
     eyebrow: '예비 창업자',
     title: '아직 사업자등록 전이어도 시작할 수 있어요',
-    body: '희망 업종과 지역만 입력하면 상권을 분석하고 예비창업자 전용 지원금과 대출을 찾아드려요.',
+    body: '희망 업종과 창업할 동을 고르면 그 동네 점포 수·매출을 서울 평균과 비교해 드려요. 예비창업자가 신청할 수 있는 지원금과 대출도 같이 찾아드려요.',
     pills: ['상권 분석', '예비창업자 지원금'],
     demo: {
       header: '예비창업자 맞춤 결과',
       rows: [
-        { label: '동종업종 밀집도', value: ['27곳 · 평균보다 높음'] },
+        { label: '동종업종 점포 수', value: ['27곳 · 서울 평균보다 많음'] },
         { label: '예비창업자 대출', value: ['4건'] },
         { label: '예비창업자 지원금', value: ['3건'] },
       ],
@@ -160,13 +161,21 @@ export default function FeatureBands() {
                 {band.body}
               </p>
 
+              {/* 첫 알약만 채운 색이다. 나머지는 테두리만 두어 시선이 하나로 모이게 한다 */}
               <ul className="flex flex-wrap gap-2">
-                <li className="bg-primary text-text-inverse text-body2 inline-flex h-[30px] items-center rounded-full px-3.5 font-medium">
-                  {band.pills[0]}
-                </li>
-                <li className="border-border-strong bg-surface text-text text-body2 inline-flex h-[30px] items-center rounded-full border px-3.5 font-medium">
-                  {band.pills[1]}
-                </li>
+                {band.pills.map((pill, pillIndex) => (
+                  <li
+                    key={pill}
+                    className={cn(
+                      'text-body2 inline-flex h-[30px] items-center rounded-full px-3.5 font-medium',
+                      pillIndex === 0
+                        ? 'bg-primary text-text-inverse'
+                        : 'border-border-strong bg-surface text-text border',
+                    )}
+                  >
+                    {pill}
+                  </li>
+                ))}
               </ul>
             </div>
 

@@ -62,7 +62,7 @@ export default function ProfileSetupModal({ open, defaultName, onDone }: Profile
    *    있을 때 이야기고, 서버가 저장을 못 받는 상황에서 창을 막으면 **아무것도 할 수
    *    없게 된다** — 이 창은 로그인 직후 스피너 위에 떠서 뒤로 갈 곳도 없다.
    *
-   *    실제로 `PATCH /user/profile` 은 아직 백엔드에 없어서(S15P21D101-395 대기) 지금은
+   *    실제로 `PATCH /user/birth-date` 가 이름까지 받는다. 지금은
    *    항상 여기로 온다. 엔드포인트가 올라오면 이 경로는 진짜 장애일 때만 돈다.
    */
   const [saveFailed, setSaveFailed] = useState(false)

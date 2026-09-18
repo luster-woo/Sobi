@@ -13,6 +13,13 @@ interface SearchBarProps {
   /** 요청 중이면 버튼에 스피너. 자연어 검색은 수 초 걸린다 */
   isSearching?: boolean
   disabled?: boolean
+  /**
+   * 입력 길이 제한. 서버가 거절하는 길이가 있으면 넘긴다.
+   *
+   * 지원사업 자연어 검색은 `@Size(max = 200)` 이라 넘기면 400 이다 — 다 쓰고 나서
+   * 실패하는 것보다 애초에 안 써지는 편이 낫다.
+   */
+  maxLength?: number
   className?: string
 }
 
@@ -33,6 +40,7 @@ export default function SearchBar({
   placeholder = '상품명 · 기관명 검색',
   isSearching = false,
   disabled = false,
+  maxLength,
   className,
 }: SearchBarProps) {
   const [draft, setDraft] = useState(value)
@@ -68,6 +76,7 @@ export default function SearchBar({
         type="text"
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
+        maxLength={maxLength}
         placeholder={placeholder}
         aria-label={placeholder}
         disabled={disabled}

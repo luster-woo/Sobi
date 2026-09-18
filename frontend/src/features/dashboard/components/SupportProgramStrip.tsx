@@ -1,11 +1,13 @@
 import { useState } from 'react'
 
 import NavButton from '@/features/dashboard/components/NavButton'
-import { useBookmarkDraft } from '@/features/dashboard/hooks/useBookmarkDraft'
 import { toAmountRange, toDeadlineChip } from '@/features/dashboard/model/format'
 import type { DashboardSupportProgram, StripSummary } from '@/features/dashboard/model/types'
 import SupportProgramDetailModal from '@/features/support-program/components/SupportProgramDetailModal'
 import { ROUTES } from '@/shared/constants/routes'
+import { useBookmarkedIds } from '@/shared/hooks/useBookmarkedIds'
+import { useBookmarkToggle } from '@/shared/hooks/useBookmarkToggle'
+import { BOOKMARK_TARGET } from '@/shared/types'
 import CardStrip from '@/shared/ui/CardStrip'
 import EmptyState from '@/shared/ui/EmptyState'
 import ProductCard from '@/shared/ui/ProductCard'
@@ -21,6 +23,38 @@ function toChips(program: DashboardSupportProgram): string[] {
   return chips
 }
 
+/** 훅을 카드마다 하나씩 갖게 하려고 뺐다 — `LoanStrip` 의 `LoanCard` 와 같은 이유다 */
+function SupportProgramCard({
+  program,
+  bookmarked,
+  onClick,
+}: {
+  program: DashboardSupportProgram
+  bookmarked: boolean
+  onClick: () => void
+}) {
+  const toggle = useBookmarkToggle()
+  const shown = toggle.isPending ? toggle.variables.next : bookmarked
+
+  return (
+    <ProductCard
+      title={program.pblancNm}
+      organization={program.jrsdInsttNm}
+      chips={toChips(program)}
+      amount={toAmountRange(program.minBalance, program.maxBalance)}
+      isBookmarked={shown}
+      onToggleBookmark={() =>
+        toggle.mutate({
+          programId: program.supportProgramId,
+          type: BOOKMARK_TARGET.SUPPORT,
+          next: !shown,
+        })
+      }
+      onClick={onClick}
+    />
+  )
+}
+
 /**
  * 지원 가능한 정부 지원금 스트립.
  *
@@ -32,9 +66,9 @@ function toChips(program: DashboardSupportProgram): string[] {
  */
 export default function SupportProgramStrip({ programs }: SupportProgramStripProps) {
   const [openProgramId, setOpenProgramId] = useState<number | null>(null)
-  const bookmark = useBookmarkDraft(
-    programs.items.filter((p) => p.isBookmark).map((p) => p.supportProgramId),
-  )
+
+  // 대시보드 응답에 북마크 여부가 없어서 관심 목록으로 대조한다 (`useBookmarkedIds`)
+  const bookmarked = useBookmarkedIds()
 
   if (programs.items.length === 0) {
     return (
@@ -57,14 +91,10 @@ export default function SupportProgramStrip({ programs }: SupportProgramStripPro
         }
       >
         {programs.items.map((program) => (
-          <ProductCard
+          <SupportProgramCard
             key={program.supportProgramId}
-            title={program.pblancNm}
-            organization={program.jrsdInsttNm}
-            chips={toChips(program)}
-            amount={toAmountRange(program.minBalance, program.maxBalance)}
-            isBookmarked={bookmark.isBookmarked(program.supportProgramId)}
-            onToggleBookmark={() => bookmark.toggle(program.supportProgramId)}
+            program={program}
+            bookmarked={bookmarked.support.has(program.supportProgramId)}
             onClick={() => setOpenProgramId(program.supportProgramId)}
           />
         ))}

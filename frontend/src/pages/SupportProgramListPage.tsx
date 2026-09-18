@@ -69,6 +69,8 @@ export function SupportProgramListPage() {
         <div className="px-4 pt-4">
           <SearchBar
             value={q}
+            /* 백엔드 `SupportSearchTextRequest` 가 `@Size(max = 200)` 이다 */
+            maxLength={200}
             onSubmit={(next) =>
               setValues({
                 keyword: next || null,

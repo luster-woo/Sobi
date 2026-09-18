@@ -72,8 +72,8 @@ export const endpoints = {
     /**
      * 생년월일만 저장. body·응답 모두 `{ birthDate }`.
      *
-     * ⚠️ **지금은 아무도 안 쓴다.** 이름까지 같이 받기로 하면서 아래 `profile` 로
-     *    옮겼다. 백엔드에는 아직 살아 있어서 남겨 둔다 — `profile` 이 올라오면 지운다.
+     * 아래 `profile` 이 백엔드에 없을 때의 **폴백**이다 — 이름은 못 저장해도 생년월일은
+     * 저장돼야 자격 판정이 돈다 (`features/auth/api/profile.ts`).
      */
     birthDate: '/user/birth-date',
     /**
@@ -100,7 +100,7 @@ export const endpoints = {
      * 성공하면 서버가 role 을 ENTREPRENEUR 로 바꾼다 — 새 토큰을 받아야 반영된다.
      */
     register: '/business',
-    /** 사이드바 하단 카드에 쓰는 내 업체 정보. 미등록이면 404 BUSINESS_O04 */
+    /** 사이드바 하단 카드에 쓰는 내 업체 정보. 미등록이면 404 BUSINESS_004 */
     me: '/business/me',
   },
 

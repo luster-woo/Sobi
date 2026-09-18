@@ -33,7 +33,6 @@ function toLoan(raw: LoanItemResponse): DashboardLoan | null {
     maxLoanBalance: raw.maxLoanBalance,
     period: raw.period,
     endDate: null,
-    isBookmark: false,
   }
 }
 
@@ -49,7 +48,6 @@ function toSupportProgram(raw: SupportItemResponse): DashboardSupportProgram | n
     maxBalance: raw.max_balance,
     interestRate: raw.interestRateOfSP,
     endDate: raw.end_date,
-    isBookmark: false,
   }
 }
 

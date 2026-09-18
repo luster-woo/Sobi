@@ -49,7 +49,13 @@ export function formatCountdown(seconds: number): string {
  *
  * 만 원 미만은 버립니다. 상품 한도에 1원 단위가 의미 있는 경우가 없습니다.
  */
-export function formatMoneyShort(won: number): string {
+export function formatMoneyShort(won: number | null | undefined): string {
+  /*
+   * null 을 받는다. 지원사업 금액은 공고 원문에 안 적혀 있으면 서버가 필드를 아예
+   * 빼고 준다(`@JsonInclude(NON_NULL)`) — 부르는 쪽마다 `?? 0` 을 붙이면 '0원' 이라는
+   * 없는 사실을 그리게 된다. 여기서 '-' 로 받는 편이 낫다.
+   */
+  if (won === null || won === undefined) return '-'
   if (!Number.isFinite(won) || won < 0) return '-'
 
   const eok = Math.floor(won / HUNDRED_MILLION)

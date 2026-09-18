@@ -1,5 +1,6 @@
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
+import { getErrorStatus } from '@/shared/api/errors'
 import type { ISODate } from '@/shared/types'
 
 export interface ProfileSetupRequest {
@@ -9,28 +10,58 @@ export interface ProfileSetupRequest {
   birthDate: ISODate
 }
 
-/** 저장된 값을 되돌려 준다. 보낸 값을 그대로 쓰지 않는 이유는 아래 주석 참고 */
+/** 서버가 저장된 값을 되돌려 준다 */
 type ProfileSetupResponse = ProfileSetupRequest
+
+/**
+ * 매핑이 없어서 실패했는가.
+ *
+ * ⚠️ 404 만으로는 안 된다. `GlobalExceptionHandler` 가 `@ExceptionHandler(Exception.class)`
+ *    캐치올을 두고 있어서, 매핑 없는 경로가 던지는 `NoResourceFoundException` 까지 잡아
+ *    **500 + 공통 봉투**로 만들어 낸다. 그래서 둘 다 본다.
+ *
+ *    400 은 여기 해당하지 않는다 — 그건 서버가 요청을 받았고 값이 틀렸다는 뜻이라
+ *    폴백하면 안 되고 그대로 보여줘야 한다.
+ */
+function isNotImplemented(error: unknown): boolean {
+  const status = getErrorStatus(error)
+  return status === 404 || status === 405 || status === 500
+}
 
 /**
  * 구글 가입자의 이름·생년월일 저장.
  *
  * 구글은 생일을 주지 않아 `users.birth_date` 가 비어 있고(V23 마이그레이션 주석),
  * 이름은 구글 프로필 이름이 들어가 있다(`AuthServiceImpl` 의 `.name(googleUser.getName())`).
- * 실명이 아닐 수 있어 둘 다 로그인 직후에 확인받는다. 로컬 가입은 `SignupRequest` 에서
- * 이미 받으므로 이 흐름을 타지 않는다.
+ * 로컬 가입은 `SignupRequest` 에서 이미 받으므로 이 흐름을 타지 않는다.
  *
- * 둘을 한 요청으로 보낸다. 나눠 보내면 이름만 저장되고 생년월일은 실패하는 경우가
- * 생기는데, 화면에서 그 반쪽 상태를 사용자에게 설명할 방법이 없다.
+ * ⚠️ **두 엔드포인트를 순서대로 시도한다.**
  *
- * 응답으로 저장된 값을 받아 세션을 갱신한다 — 서버가 공백을 다듬는 등 손볼 여지를
- * 남겨두려는 것이다.
+ *    `PATCH /user/profile`(이름+생년월일)은 요청해 뒀지만 아직 백엔드에 없다.
+ *    그것만 부르면 배포 환경에서 구글 온보딩이 통째로 막힌다 — 생년월일이 없으면
+ *    자격 판정을 못 돌리므로 그 사용자는 서비스를 쓸 수가 없다.
  *
- * ⚠️ **백엔드 작업 대기 중이다.** 지금 있는 것은 `PATCH /user/birth-date`(생년월일만)뿐이고,
- *    이름까지 받는 `PATCH /user/profile` 은 요청해 둔 상태다. 그때까지는 목이 받는다 —
- *    `mocks/lib/serverFirst.ts` 의 `MOCK_ONLY` 참고.
+ *    그래서 없으면 `PATCH /user/birth-date`(생년월일만, 백엔드에 있음)로 떨어진다.
+ *    이름은 구글이 준 값이 그대로 남는다 — 저장할 곳이 없다.
+ *
+ *    백엔드에 `/user/profile` 이 올라오면 **코드를 고치지 않아도** 첫 시도가 성공해서
+ *    이름까지 저장된다. 그때 이 폴백과 `mocks/lib/serverFirst.ts` 의 `MOCK_ONLY` 줄을
+ *    같이 지우면 된다.
  */
 export async function updateProfile(body: ProfileSetupRequest) {
-  const { data } = await api.patch<ProfileSetupResponse>(endpoints.user.profile, body)
-  return data
+  try {
+    const { data } = await api.patch<ProfileSetupResponse>(endpoints.user.profile, body)
+    return data
+  } catch (error) {
+    if (!isNotImplemented(error)) throw error
+
+    console.warn('[auth] /user/profile 이 없어 생년월일만 저장합니다. 이름은 구글 값을 유지합니다.')
+
+    const { data } = await api.patch<{ birthDate: ISODate }>(endpoints.user.birthDate, {
+      birthDate: body.birthDate,
+    })
+
+    // 서버가 이름을 안 돌려주므로 화면이 알고 있던 값을 그대로 쓴다
+    return { name: body.name, birthDate: data.birthDate }
+  }
 }

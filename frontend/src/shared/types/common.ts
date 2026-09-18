@@ -32,9 +32,10 @@ export interface ApiResponse<T> {
  * `code` 는 `global/exception/ErrorCode.java` 의 값이다.
  *   COMMON_001 입력값 검증 실패 · COMMON_002 서버 오류 · U001 없는 사용자
  *   BUSINESS_001 사업자번호 없음 · BUSINESS_002 사업자 정보 불일치
- *   BUSINESS_003 업종 코드 없음 · BUSINESS_O04 등록된 업체 없음
+ *   BUSINESS_003 업종 코드 없음 · BUSINESS_004 등록된 업체 없음
  *
- * ⚠️ BUSINESS_O04 는 숫자 0 이 아니라 영문 O 다. 백엔드 오타이므로 코드로 분기할 때 주의.
+ * ⚠️ BUSINESS_004 는 한동안 영문 대문자 O 가 섞인 'BUSINESS_O04' 였다. 백엔드가 고쳤으니
+ *    옛 값으로 분기하는 코드가 남아 있으면 안 탄다.
  */
 export interface ApiError {
   code: string

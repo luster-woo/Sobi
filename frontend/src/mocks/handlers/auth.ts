@@ -332,9 +332,9 @@ const usedResetTokens = new Set<string>()
  *
  * ⚠️ 남은 계약 불일치
  *    - 로그인 응답이 `refreshToken` 을 바디로 준다. 실제로는 httpOnly 쿠키다
- *    - `GET /user/me` 는 백엔드 미구현이라 목이 유일한 구현이다 — S15P21D101-377.
- *      같은 경로의 **DELETE(탈퇴)와 `PATCH /user/password` 는 백엔드에 있다** —
- *      그쪽은 실서버가 뜨면 실서버 우선 규칙에 따라 목이 비켜선다 (S15P21D101-379)
+ *    - `PATCH /user/profile` 만 백엔드에 없다. 나머지(`GET /user/me` · `GET /user/mypage` ·
+ *      `DELETE /user/me` · `PATCH /user/password` · `PATCH /user/notification`)는 전부
+ *      구현돼 있어서 실서버가 뜨면 목이 비켜선다
  *
  * 가입 흐름은 목에서도 순서를 지켜야 통과한다.
  *    중복 확인 → 발송(쿨다운) → 검증(123456) → 가입

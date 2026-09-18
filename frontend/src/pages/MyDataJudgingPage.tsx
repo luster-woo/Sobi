@@ -2,11 +2,11 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
 import JobProgressPanel from '@/features/mydata/components/JobProgressPanel'
-import { useEstimatedProgress } from '@/features/mydata/hooks/useEstimatedProgress'
 import { useMydataLinkResult } from '@/features/mydata/hooks/useMydata'
-import type { JobStepDef } from '@/features/mydata/model/progress'
 import { ROUTES } from '@/shared/constants/routes'
+import { useEstimatedProgress } from '@/shared/hooks/useEstimatedProgress'
 import Spinner from '@/shared/ui/Spinner'
+import type { JobStepDef } from '@/shared/utils/estimatedProgress'
 
 /**
  * 이 화면이 머무는 시간. 디자인의 '약 10초' 보다 짧게 잡았다.

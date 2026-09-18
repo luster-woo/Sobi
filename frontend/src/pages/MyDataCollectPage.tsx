@@ -2,12 +2,12 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
 import JobProgressPanel from '@/features/mydata/components/JobProgressPanel'
-import { useEstimatedProgress } from '@/features/mydata/hooks/useEstimatedProgress'
 import { useMydataLink, useMydataLinkState } from '@/features/mydata/hooks/useMydata'
-import type { JobStepDef } from '@/features/mydata/model/progress'
 import { ROUTES } from '@/shared/constants/routes'
+import { useEstimatedProgress } from '@/shared/hooks/useEstimatedProgress'
 import Button from '@/shared/ui/Button'
 import Spinner from '@/shared/ui/Spinner'
+import type { JobStepDef } from '@/shared/utils/estimatedProgress'
 
 /** 백엔드가 밝힌 소요 시간 15~40초의 가운데. 빗나가도 막대가 멈추지는 않는다 */
 const EXPECTED_MS = 30_000

@@ -7,12 +7,14 @@ import ApplicationSubmitForm from '@/features/application/components/Application
 import {
   useApplicationDetail,
   useCancelApplication,
-  useRequestDraft,
+  useDownloadProgramDocument,
   useSubmitApplication,
   useUploadDocument,
+  useWriteDraft,
 } from '@/features/application/hooks/useApplication'
 import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
 import { submitApplicationErrorMessage } from '@/features/application/model/applicationError'
+import { downloadErrorMessage } from '@/features/application/model/downloadError'
 import { productName, productSummary } from '@/features/application/model/summary'
 import {
   SUBMIT_ACCEPT_LABEL,
@@ -21,6 +23,7 @@ import {
 } from '@/features/application/model/upload'
 import { uploadErrorMessage } from '@/features/application/model/uploadError'
 import { ROUTES } from '@/shared/constants/routes'
+import { useEstimatedProgress } from '@/shared/hooks/useEstimatedProgress'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import { APPLICATION_STATUS_LABEL } from '@/shared/types/application'
 import Badge from '@/shared/ui/Badge'
@@ -29,7 +32,6 @@ import EmptyState from '@/shared/ui/EmptyState'
 import Modal from '@/shared/ui/Modal'
 import Panel from '@/shared/ui/Panel'
 import Skeleton from '@/shared/ui/Skeleton'
-import { toSafeExternalUrl } from '@/shared/utils/externalUrl'
 import { formatMoneyShort } from '@/shared/utils/formatters'
 import { maskAccountNo } from '@/shared/utils/mask'
 
@@ -55,7 +57,8 @@ export function ApplicationApplyPage() {
   const { data: detail, isLoading, isError } = useApplicationDetail(applicationId)
   const { data: accounts } = usePayoutAccounts()
   const upload = useUploadDocument(applicationId)
-  const draft = useRequestDraft(applicationId)
+  const draft = useWriteDraft()
+  const downloadOriginal = useDownloadProgramDocument()
   const submit = useSubmitApplication(applicationId)
   const cancel = useCancelApplication()
 
@@ -148,41 +151,24 @@ export function ApplicationApplyPage() {
     )
   }
 
-  const handleRequestDraft = (applicationDocumentId: number) => {
-    draft.mutate(applicationDocumentId, {
-      onSuccess: () => showToast('초안을 만들고 있어요. 잠시만 기다려 주세요.'),
-      onError: () => showToast('초안 작성에 실패했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+  /**
+   * AI 초안 받기.
+   *
+   * 만들기와 받기가 한 번이라 성공하면 훅이 그대로 파일을 저장한다. 최대 5분이라
+   * 진행 모달을 띄운다 — 버튼만 잠그면 사용자가 멈춘 줄 알고 떠난다.
+   */
+  const handleWriteDraft = (programDocumentId: number) => {
+    draft.mutate(programDocumentId, {
+      onSuccess: () => showToast('초안을 받았어요. 내용을 확인하고 올려주세요.'),
+      onError: (error) => void downloadErrorMessage(error).then((m) => showToast(m, 'danger')),
     })
   }
 
-  /*
-   * 새 탭으로 열어 브라우저가 받게 한다. a[download] 를 쓰면 다른 출처의 파일에는
-   * 속성이 무시되어 내려받기 대신 이동이 되는데, 그럴 바엔 처음부터 열어 주는 편이 낫다.
-   *
-   * ⚠️ 여는 주소를 먼저 거른다. `templateUrl`·`draftUrl` 은 공공데이터에서 흘러온
-   *    값이라 서버가 줬다고 안전하지 않다. `javascript:` 가 섞여 있으면 window.open 이
-   *    **우리 출처 권한으로 실행해 버린다** — 메모리에 둔 토큰도 같은 페이지 스크립트라
-   *    그대로 꺼내 간다.
-   *
-   *    noreferrer 를 같이 준다. noopener 만 있으면 새 탭이 우리 주소를 referrer 로
-   *    가져간다 — 신청 화면 주소에는 applicationId 가 들어 있다.
-   */
-
-  const handleDownload = (url: string | null) => {
-    // ⚠️ 413 대기. 서식·초안을 어떻게 내려받을지 아직 정해지지 않았다
-    if (url === null) {
-      showToast('서식 내려받기는 준비 중이에요.', 'warning')
-      return
-    }
-
-    const safe = toSafeExternalUrl(url)
-
-    if (!safe) {
-      showToast('열 수 없는 주소예요. 담당 기관에 문의해 주세요.', 'danger')
-      return
-    }
-
-    window.open(safe, '_blank', 'noopener,noreferrer')
+  /** 기관이 배포하는 빈 서식 받기 */
+  const handleDownloadOriginal = (programDocumentId: number) => {
+    downloadOriginal.mutate(programDocumentId, {
+      onError: (error) => void downloadErrorMessage(error).then((m) => showToast(m, 'danger')),
+    })
   }
 
   /**
@@ -254,8 +240,9 @@ export function ApplicationApplyPage() {
               documents={documents}
               onUpload={handleUpload}
               onFileError={(message) => showToast(message, 'warning')}
-              onRequestDraft={handleRequestDraft}
-              onDownload={handleDownload}
+              onWriteDraft={handleWriteDraft}
+              draftingDocumentId={draft.isPending ? (draft.variables ?? null) : null}
+              onDownloadOriginal={handleDownloadOriginal}
               readOnly={!isEditable}
             />
 
@@ -446,6 +433,58 @@ export function ApplicationApplyPage() {
           </p>
         )}
       </Modal>
+
+      {/*
+        초안 진행 모달. 닫을 수 없다 — 창을 닫아도 요청은 계속 돌고, 다 만든 파일을
+        받을 자리가 사라진다. AI 가 한 번 도는 비용이 그대로 버려진다.
+      */}
+      <DraftProgressModal open={draft.isPending} />
     </div>
+  )
+}
+
+/** 예상 소요. 서버 read timeout 이 300초라 그 절반쯤을 보통으로 잡는다 */
+const DRAFT_EXPECTED_MS = 150_000
+
+/**
+ * 초안 만드는 중 화면.
+ *
+ * 진행률은 **추정값이다.** 서버가 응답 하나만 주고 그 사이 어디까지 했는지 알려주지
+ * 않는다 — 마이데이터 연동과 같은 상황이라 같은 훅을 쓴다. 응답 전에는 95% 에서
+ * 멈추고, 도착하면 100 까지 채운다.
+ *
+ * 링이 아니라 막대를 쓰는 이유는 5분이 링으로 버티기에 너무 길어서다. 링은 3초나
+ * 5분이나 똑같이 보여서 사용자가 멈춘 줄 안다. 막대는 느려도 움직이는 것이 보인다.
+ */
+function DraftProgressModal({ open }: { open: boolean }) {
+  const { percent } = useEstimatedProgress({
+    defs: [],
+    expectedMs: DRAFT_EXPECTED_MS,
+    minMs: 400,
+    settled: !open,
+  })
+
+  return (
+    <Modal open={open} onClose={() => {}} title="초안을 만들고 있어요">
+      <div className="flex flex-col gap-3">
+        <div className="bg-bg-canvas h-2 overflow-hidden rounded-full">
+          <div
+            role="progressbar"
+            aria-valuenow={Math.round(percent)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="초안 생성 진행률"
+            className="bg-primary h-full rounded-full transition-[width] duration-200 ease-out"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+
+        <p className="text-body2 text-text-secondary break-keep">
+          사업자 정보와 마이데이터를 읽어 서식을 채우고 있어요.{' '}
+          <b className="text-text">최대 5분 가량 소요될 수 있습니다.</b> 창을 닫지 말고 기다려
+          주세요.
+        </p>
+      </div>
+    </Modal>
   )
 }

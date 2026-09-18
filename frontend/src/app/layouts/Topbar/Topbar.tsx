@@ -4,6 +4,8 @@ import { NotificationBell } from '@/app/layouts/Topbar/NotificationBell'
 import { useLogout } from '@/features/auth/hooks/useLogout'
 import { resolvePageTitle } from '@/shared/constants/pageTitles'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
+import { useSidebarStore } from '@/shared/lib/store/useSidebarStore'
+import { SidebarToggleIcon } from '@/shared/ui/icons'
 
 /**
  * 알림 벨을 그릴지.
@@ -30,16 +32,34 @@ export function Topbar() {
   const userName = useAuthStore((s) => s.user?.name)
   const { mutate: requestLogout, isPending } = useLogout()
 
+  const collapsed = useSidebarStore((s) => s.collapsed)
+  const toggleSidebar = useSidebarStore((s) => s.toggle)
+
   const title = resolvePageTitle(pathname)
 
   return (
-    <header className="bg-surface border-border h-header flex shrink-0 items-center justify-between gap-4 border-b px-5">
-      {/* h1 은 사이드바 로고가 아니라 이 문구다. 로고를 h1 으로 두면 모든 화면 제목이 같아진다 */}
-      {title ? (
-        <h1 className="font-heading truncate text-[16.5px] font-bold">{title}</h1>
-      ) : (
-        <span />
-      )}
+    <header className="bg-surface border-border h-header flex shrink-0 items-center justify-between gap-3 border-b px-5">
+      <div className="flex min-w-0 items-center gap-2.5">
+        {/*
+          사이드바 여닫기. 사이드바가 아니라 여기 둔다 — 접으면 사이드바가 좁아지면서
+          그 안의 버튼도 같이 옮겨가서, 다시 펴려면 버튼을 눈으로 찾아야 한다.
+          상단바는 폭이 변해도 왼쪽 끝이 그대로다.
+        */}
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          aria-expanded={!collapsed}
+          aria-controls="app-sidebar"
+          aria-label={collapsed ? '사이드바 열기' : '사이드바 접기'}
+          title={collapsed ? '사이드바 열기' : '사이드바 접기'}
+          className="text-text-secondary hover:bg-surface-muted hover:text-text -ml-1.5 shrink-0 rounded-sm p-1.5 transition-colors"
+        >
+          <SidebarToggleIcon className="size-[18px]" />
+        </button>
+
+        {/* h1 은 사이드바 로고가 아니라 이 문구다. 로고를 h1 으로 두면 모든 화면 제목이 같아진다 */}
+        {title && <h1 className="font-heading truncate text-[16.5px] font-bold">{title}</h1>}
+      </div>
 
       <div className="flex shrink-0 items-center gap-2.5">
         {SHOW_NOTIFICATION_BELL && <NotificationBell />}

@@ -157,34 +157,47 @@ function daysAgo(days: number) {
 }
 
 /**
- * 사업자 계정이 보는 값. 리디자인 시안 18 · 18-3 의 숫자를 옮겼다.
+ * 사업자 계정이 보는 값. 백엔드 `MyPageResponse` 와 같은 모양이다.
  *
- * 예비창업자는 이 셋이 전부 null 이다 — 사업자등록이 없으면 마이데이터를 연동할 근거가
- * 없고, 연동이 없으면 계좌도 없다. '연동 전' 이 아니라 '연동할 수 없음' 이다.
+ * ⚠️ `myData` · `accountSummary` 는 **null 이 아니다.** 연동 전인지는 `linked` 와
+ *    0 으로 표현한다 — 서버가 그렇게 준다. 목이 null 을 주면 화면의 분기가 실서버에서
+ *    다르게 돈다.
  */
 const OWNER_EXTRA = {
-  businessInfo: {
-    business_name: '한상차림',
-    bsn: '123-45-67890',
-    name: '김소상',
-    business_type: '음식점업 (한식)',
+  business: {
+    businessName: '한상차림',
+    brn: '123-45-67890',
+    ownerName: '김소상',
+    industryName: '한식음식점',
     address: '대구광역시 북구 산격동 1287-1',
     openDate: '2023-04-10',
   },
-  myData: { creditRating: 'AA', createdAt: daysAgo(1) },
-  withdrawAccount: [
-    { bankName: '대구은행', accountNo: '0324003842123412', balance: 12_400_000 },
-    { bankName: '국민은행', accountNo: '0324003842122251', balance: 6_100_000 },
-    { bankName: '대구은행', accountNo: '0324003842128907', balance: 3_200_000 },
-  ],
-  linkedAccount: { balanceSum: 21_700_000, loanSum: 55_200_000, accountNum: 3 },
+  myData: { linked: true, updatedAt: daysAgo(1) },
+  accountSummary: {
+    totalBalance: 21_700_000,
+    totalLoanBalance: 55_200_000,
+    accountCount: 5,
+    institutionCount: 2,
+  },
+  payoutAccount: { bankName: '대구은행', accountNo: '0324003842123412' },
 }
 
+/**
+ * 예비창업자.
+ *
+ * 사업자등록이 없으면 마이데이터를 연동할 근거가 없고, 연동이 없으면 계좌도 없다.
+ * '연동 전' 이 아니라 '연동할 수 없음' 이다.
+ */
 const PRE_OWNER_EXTRA = {
-  businessInfo: null,
-  myData: null,
-  withdrawAccount: [],
-  linkedAccount: null,
+  business: null,
+  myData: { linked: false, updatedAt: null },
+  accountSummary: {
+    totalBalance: 0,
+    totalLoanBalance: 0,
+    accountCount: 0,
+    institutionCount: 0,
+  },
+  payoutAccount: null,
 }
 
 /**
@@ -216,11 +229,7 @@ function meResponse(user: SessionUser) {
   return { ...user, provider: providerOf(user.email) }
 }
 
-/**
- * `GET /user/mypage` 응답. 마이페이지 한 화면 분량을 한 번에 준다.
- *
- * ⚠️ 백엔드 미구현이라 목이 유일한 구현이다 (S15P21D101-377).
- */
+/** `GET /user/mypage` 응답. 백엔드 `MyPageResponse` 와 1:1 이다 */
 function myPageResponse(user: SessionUser) {
   const extra = user.role === USER_ROLE.ENTREPRENEUR ? OWNER_EXTRA : PRE_OWNER_EXTRA
 
@@ -228,6 +237,7 @@ function myPageResponse(user: SessionUser) {
     userId: user.userId,
     name: user.name,
     email: user.email,
+    birthDate: user.birthDate,
     role: user.role,
     provider: providerOf(user.email),
     notification: isNotificationOn(user.email),
@@ -590,12 +600,9 @@ export const authHandlers = [
   }),
 
   /*
-   * GET /api/v1/user/mypage — 백엔드 미구현이라 목이 유일한 구현이다 (S15P21D101-377).
+   * GET /api/v1/user/mypage — 백엔드에 구현돼 있다. 실서버가 뜨면 목이 비켜선다.
    *
-   * ⚠️ `lib/serverFirst.ts` 의 `MOCK_ONLY` 에 올려서 실서버를 아예 안 물어본다.
-   *    매핑이 없는데도 `GlobalExceptionHandler` 의 캐치올이 500 + 공통 봉투를 만들어
-   *    내서, 그냥 두면 '백엔드가 응답했다' 로 판정돼 이 목이 안 탄다. 백엔드에 조회가
-   *    올라오면 그 목록에서 빼야 한다 — 저절로 빠지지 않는다.
+   * 실서버는 잔액을 금융망에서 실시간으로 받아와 1~2초 더 걸린다. 목은 바로 답한다.
    */
   http.get('/api/v1/user/mypage', () => {
     const user = hasSession() ? currentUser() : null

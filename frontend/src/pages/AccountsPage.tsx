@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 
+import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
 import { useLoanProducts } from '@/features/loan-repayment/hooks/useRepayment'
 import { useMydataRefresh } from '@/features/mydata/hooks/useMydata'
 import Breadcrumb from '@/features/mypage/components/Breadcrumb'
@@ -13,8 +14,15 @@ import Skeleton from '@/shared/ui/Skeleton'
 import { formatMoneyShort } from '@/shared/utils/formatters'
 import { maskAccountNo } from '@/shared/utils/mask'
 
-/** '2026-09-11T14:20:00' → '2026. 9. 11 14:20' */
-function toUpdatedAt(iso: string) {
+/**
+ * '2026-09-11T14:20:00' → '2026. 9. 11 14:20'
+ *
+ * 연동은 했는데 판정 시각이 비어 올 수 있다 — 서버가 `linked` 와 `updatedAt` 을
+ * 따로 주고 둘이 어긋날 여지가 있다.
+ */
+function toUpdatedAt(iso: string | null) {
+  if (!iso) return '시각 미상'
+
   const month = Number(iso.slice(5, 7))
   const day = Number(iso.slice(8, 10))
   return `${iso.slice(0, 4)}. ${month}. ${day} ${iso.slice(11, 16)}`
@@ -72,17 +80,22 @@ function AccountRow({
  * 얼마가 있는지, 대출은 얼마가 남았는지다. 한 목록에 섞으면 합계가 무슨 뜻인지
  * 알 수 없다.
  *
- * ⚠️ 두 목록의 출처가 다르다. 입출금은 `GET /user/mypage` 의 `withdrawAccount`, 대출은
- *    `POST /repayment/finan/list` 다. 마이데이터 응답에 대출 계좌 목록이 없고 합계만
- *    있어서, 개별 대출은 상환 쪽에서 가져온다.
+ * ⚠️ 출처가 셋이다. `GET /user/mypage` 는 **합계만** 주고 계좌 목록은 안 준다
+ *    (`payoutAccount` 는 출금 계좌 한 건뿐이다). 그래서 입출금 목록은
+ *    `GET /account/list`, 대출 목록은 `POST /repayment/finan/list` 에서 따로 받는다.
+ *
+ * ⚠️ `GET /account/list` 에는 **잔액이 없다.** 마이페이지가 주는 건 합계뿐이라
+ *    계좌별 금액은 지금 채울 방법이 없다 — 줄마다 금액 자리를 비워 둔다.
+ *    `usePayoutAccounts` 는 신청 화면과 같이 쓰게 됐으니 shared 로 올릴 때가 됐다
+ *    (`features/application/api/accounts.ts` 주석 참고).
  */
 export function AccountsPage() {
   const { data, isLoading, isError } = useMyPage()
   const refresh = useMydataRefresh()
 
-  const { data: loans } = useLoanProducts({
-    enabled: !isPreOwner(data?.profile.role ?? null),
-  })
+  const owner = !isPreOwner(data?.profile.role ?? null)
+  const { data: deposits } = usePayoutAccounts()
+  const { data: loans } = useLoanProducts({ enabled: owner })
 
   if (isLoading) {
     return (
@@ -108,7 +121,8 @@ export function AccountsPage() {
     )
   }
 
-  const { myData, accountSummary, deposits } = data
+  const { myData, accountSummary, payoutAccount } = data
+  const depositAccounts = deposits ?? []
   const loanAccounts = loans ?? []
 
   if (!accountSummary || !myData) {
@@ -154,29 +168,32 @@ export function AccountsPage() {
         }
       />
 
-      {/*
-       * 세 번째 타일이 '연동 기관' 이 아니라 '연결 계좌' 다. 응답의 `accountNum` 은
-       * 계좌 수이고 기관 수는 오지 않는다 — 한 은행에 계좌가 둘일 수 있어서 둘은 다르다.
-       */}
       <dl className="border-border bg-border grid grid-cols-3 gap-px overflow-hidden rounded-md border">
         <Tile term="입출금 잔액" value={formatMoneyShort(accountSummary.totalBalance)} />
         <Tile term="대출 잔액" value={formatMoneyShort(accountSummary.totalLoanBalance)} />
-        <Tile term="연결 계좌" value={String(accountSummary.accountCount)} unit="개" />
+        <Tile term="연동 기관" value={String(accountSummary.institutionCount)} unit="곳" />
       </dl>
 
       <section>
         <h3 className="text-text-secondary text-body2 mb-2 font-medium">
-          입출금 계좌 {deposits.length}
+          입출금 계좌 {depositAccounts.length}
         </h3>
         <Panel>
-          {deposits.length === 0 ? (
+          {depositAccounts.length === 0 ? (
             <EmptyState size="sm" title="연동된 입출금 계좌가 없어요" />
           ) : (
-            deposits.map((account) => (
+            depositAccounts.map((account) => (
               <AccountRow
-                key={account.accountNo}
+                key={account.accountId}
                 title={`${account.bankName} ${maskAccountNo(account.accountNo)}`}
-                amount={formatMoneyShort(account.balance)}
+                /*
+                 * 계좌별 잔액이 응답에 없다. 합계는 위 타일이 보여주므로 여기서는
+                 * 금액 자리를 비운다 — 0원으로 적으면 잔액이 없는 계좌로 읽힌다.
+                 */
+                description={
+                  payoutAccount?.accountNo === account.accountNo ? '출금 계좌' : undefined
+                }
+                amount=""
               />
             ))
           )}

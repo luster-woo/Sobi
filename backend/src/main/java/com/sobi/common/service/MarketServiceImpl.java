@@ -249,7 +249,7 @@ public class MarketServiceImpl implements MarketService {
     }
 
     /**
-     * 매출 구조. 비율은 분기/월 환산과 무관하고 금액만 월 환산된 값이다.
+     * 매출 구조. 금액은 원천 데이터의 월 매출 그대로다.
      * 매출 자체가 결측이면 블록 전체가 null 이다.
      */
     private RevenueStructure toRevenueStructure(SeoulCommercialData target) {
@@ -266,8 +266,8 @@ public class MarketServiceImpl implements MarketService {
         ByDayType byDayType = new ByDayType(
                 ratio(weekday, dayTotal),
                 ratio(weekend, dayTotal),
-                toMonthly(weekday),
-                toMonthly(weekend)
+                weekday,
+                weekend
         );
 
         ByGender byGender = null;
@@ -280,8 +280,8 @@ public class MarketServiceImpl implements MarketService {
             byGender = new ByGender(
                     ratio(male, genderTotal),
                     ratio(female, genderTotal),
-                    toMonthly(male),
-                    toMonthly(female),
+                    male,
+                    female,
                     ratio(genderTotal, monthRevenue)
             );
         }
@@ -369,11 +369,7 @@ public class MarketServiceImpl implements MarketService {
             return null;
         }
 
-        return Math.round(row.getMonthRevenue() / (double) MONTHLY_DIVISOR / row.getTotalCount());
-    }
-
-    private static long toMonthly(long quarterValue) {
-        return Math.round(quarterValue / (double) MONTHLY_DIVISOR);
+        return Math.round(row.getMonthRevenue() / (double) row.getTotalCount());
     }
 
     private static double averageStoreCount(List<SeoulCommercialData> rows) {

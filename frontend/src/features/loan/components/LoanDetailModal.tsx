@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 
 import { useCreateApplication } from '@/features/application/hooks/useApplication'
+import { startApplicationErrorMessage } from '@/features/application/model/applicationError'
 import { APPLICATION_SOURCE } from '@/features/application/model/types'
 import { useLoanDetail } from '@/features/loan/hooks/useLoanDetail'
 import { describeConditions } from '@/features/loan/model/conditions'
@@ -96,7 +97,7 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
       { type: APPLICATION_SOURCE.LOAN, programId: loanId },
       {
         onSuccess: (application) => navigate(routeTo.loanApply(application.applicationId)),
-        onError: () => showToast('신청을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+        onError: (error) => showToast(startApplicationErrorMessage(error), 'danger'),
       },
     )
   }

@@ -12,7 +12,8 @@ import {
   useUploadDocument,
 } from '@/features/application/hooks/useApplication'
 import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
-import { amountRange, productName, productSummary } from '@/features/application/model/summary'
+import { submitApplicationErrorMessage } from '@/features/application/model/applicationError'
+import { productName, productSummary } from '@/features/application/model/summary'
 import {
   SUBMIT_ACCEPT_LABEL,
   UPLOAD_MAX_SIZE_MB,
@@ -103,8 +104,8 @@ export function ApplicationApplyPage() {
   const { documents, status } = detail
   const name = productName(detail)
   const summary = productSummary(detail)
-  /* 범위가 있으면 돈이 오가는 신청이다. 금액·계좌 입력과 제출 본문이 여기서 갈린다 */
-  const needsMoney = amountRange(detail) !== null
+  /* 금액·계좌는 대출에서만 받는다. 지원사업은 유형과 무관하게 돈이 오가지 않는다 */
+  const isLoan = detail.loan !== null
 
   /*
    * 제출 결과. 있으면 모달이 결과 화면으로 바뀐다.
@@ -113,14 +114,17 @@ export function ApplicationApplyPage() {
    * 사유가 남는다. 성공한 사람을 신청 현황으로 보내면 할 일이 없는 화면을 본다.
    */
   const submitResult = submit.data ?? null
-  const submitResultTitle =
-    submitResult?.status === 'PAID'
-      ? detail.loan
-        ? '대출이 실행됐어요'
-        : '지원금이 지급됐어요'
-      : '심사에서 거절됐어요'
+  const submitResultTitle = (() => {
+    if (submitResult?.status !== 'PAID') return '심사에서 거절됐어요'
+    return isLoan ? '대출이 실행됐어요' : '지급이 완료됐어요'
+  })()
+
+  /*
+   * 다음에 할 일이 있는 곳으로 보낸다. 대출이 실행됐으면 그게 상환이고, 나머지는 전부
+   * 신청 현황이다 — 지원사업은 상환이 없고, 거절이면 사유가 신청 현황에 남는다.
+   */
   const submitDoneTo =
-    submitResult?.status === 'PAID' ? ROUTES.LOAN_REPAYMENTS : ROUTES.APPLICATIONS
+    isLoan && submitResult?.status === 'PAID' ? ROUTES.LOAN_REPAYMENTS : ROUTES.APPLICATIONS
   // 제출하고 나면 서류도 금액도 더 손댈 수 없다
   const isEditable = status === 'PREPARING'
   const selectedAccount = accounts?.find((account) => account.accountId === accountId)
@@ -209,14 +213,14 @@ export function ApplicationApplyPage() {
   const handleSubmit = () => {
     submit.mutate(
       {
-        // 돈이 오가지 않는 공고('기타')는 둘 다 안 보낸다
-        amount: needsMoney ? Number(amount) : null,
-        accountId: needsMoney ? accountId : null,
+        // 지원사업은 둘 다 안 보낸다
+        amount: isLoan ? Number(amount) : null,
+        accountId: isLoan ? accountId : null,
       },
       {
-        onError: () => {
+        onError: (error) => {
           setSubmitOpen(false)
-          showToast('신청에 실패했어요. 잠시 후 다시 시도해 주세요.', 'danger')
+          showToast(submitApplicationErrorMessage(error, { isLoan }), 'danger')
         },
       },
     )
@@ -363,10 +367,15 @@ export function ApplicationApplyPage() {
           // 진행 중에는 닫히지 않는다. 금융망 호출이 도는 중이다
           if (submit.isPending) return
           setSubmitOpen(false)
-          if (submit.data) navigate(submit.data.status === 'PAID' ? ROUTES.LOAN_REPAYMENTS : backTo)
+          // X 로 닫든 버튼으로 닫든 같은 곳으로 간다
+          if (submit.data) navigate(submitDoneTo)
         }}
         title={
-          submitResult ? submitResultTitle : `${formatMoneyShort(Number(amount))}을 신청할까요?`
+          submitResult
+            ? submitResultTitle
+            : isLoan
+              ? `${formatMoneyShort(Number(amount))}을 신청할까요?`
+              : '신청할까요?'
         }
         description={submitResult ? undefined : name}
         footer={
@@ -377,7 +386,7 @@ export function ApplicationApplyPage() {
                 navigate(submitDoneTo)
               }}
             >
-              {submitResult.status === 'PAID' ? '상환 관리로' : '신청 현황으로'}
+              {submitDoneTo === ROUTES.LOAN_REPAYMENTS ? '상환 관리로' : '신청 현황으로'}
             </Button>
           ) : (
             <>
@@ -398,31 +407,39 @@ export function ApplicationApplyPage() {
         {submitResult ? (
           <div className="text-body2 text-text-secondary flex flex-col gap-2 break-keep">
             {submitResult.status === 'PAID' ? (
-              <>
-                {submitResult.amount !== null && (
-                  <p className="text-body1 text-text font-semibold">
-                    {formatMoneyShort(submitResult.amount)}
-                  </p>
-                )}
-                {selectedAccount && (
-                  <p>
-                    {selectedAccount.bankName} {selectedAccount.accountNo} 로 입금됩니다.
-                  </p>
-                )}
-                {submitResult.loanAccountNo && (
-                  <p>
-                    대출 계좌 {submitResult.loanAccountNo} · 내일부터 같은 계좌에서 자동이체로
-                    상환됩니다.
-                  </p>
-                )}
-              </>
+              isLoan ? (
+                <>
+                  {submitResult.amount !== null && (
+                    <p className="text-body1 text-text font-semibold">
+                      {formatMoneyShort(submitResult.amount)}
+                    </p>
+                  )}
+                  {selectedAccount && (
+                    <p>
+                      {selectedAccount.bankName} {selectedAccount.accountNo} 로 입금됩니다.
+                    </p>
+                  )}
+                  {submitResult.loanAccountNo && (
+                    <p>
+                      대출 계좌 {submitResult.loanAccountNo} · 내일부터 같은 계좌에서 자동이체로
+                      상환됩니다.
+                    </p>
+                  )}
+                </>
+              ) : (
+                /*
+                 * 지원사업은 금액도 계좌도 대출 계좌번호도 없어서, 대출 쪽 가지를 그대로
+                 * 태우면 본문이 통째로 빈다. 다음에 무엇을 보면 되는지만 남긴다.
+                 */
+                <p>신청이 끝났어요. 진행 내역은 신청 현황에서 볼 수 있어요.</p>
+              )
             ) : (
               <p>{submitResult.rejectReason ?? '사유가 확인되지 않았어요.'}</p>
             )}
           </div>
         ) : (
           <p className="text-body2 text-text-secondary break-keep">
-            {needsMoney && selectedAccount
+            {isLoan && selectedAccount
               ? `${selectedAccount.bankName} ${selectedAccount.accountNo} 로 입금되고, 다음 날부터 같은 계좌에서 자동이체로 상환됩니다. `
               : ''}
             신청 후에는 취소할 수 없어요.

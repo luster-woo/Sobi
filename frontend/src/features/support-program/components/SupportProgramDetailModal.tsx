@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 
 import { useCreateApplication } from '@/features/application/hooks/useApplication'
+import { startApplicationErrorMessage } from '@/features/application/model/applicationError'
 import { APPLICATION_SOURCE } from '@/features/application/model/types'
 import { useSupportProgramDetail } from '@/features/support-program/hooks/useSupportProgramDetail'
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
@@ -107,7 +108,7 @@ export default function SupportProgramDetailModal({
       {
         onSuccess: (application) =>
           navigate(routeTo.supportProgramApply(application.applicationId)),
-        onError: () => showToast('신청을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+        onError: (error) => showToast(startApplicationErrorMessage(error), 'danger'),
       },
     )
   }

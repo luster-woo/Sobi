@@ -27,8 +27,8 @@ function withComma(digits: string): string {
 /**
  * 금액·계좌 입력과 최종 제출.
  *
- * 금액·계좌는 돈이 오가는 신청에만 받는다. '기타' 지원사업(컨설팅·교육 등)은 금액
- * 범위가 없고 서버도 둘 다 받지 않는다 — 그래서 범위 유무로 가른다.
+ * 금액·계좌는 대출에서만 받는다. 지원사업은 유형이 '지원금' 이든 '대출' 이든 우리가
+ * 돈을 옮기지 않아서 입력란 자체를 그리지 않는다 — 받아도 쓸 데가 없다.
  *
  * 막는 이유를 버튼 문구로 알려준다. 비활성 버튼만 있고 이유가 없으면 사용자가 무엇을
  * 더 해야 하는지 알 수 없다.
@@ -44,11 +44,13 @@ export default function ApplicationSubmitForm({
   onSubmit,
 }: ApplicationSubmitFormProps) {
   /*
-   * 범위가 있으면 돈이 오가는 신청이다. 대출은 항상 있고, 지원사업은 '기타' 일 때만
-   * 없다. 이 하나로 금액 입력·계좌 선택·제출 본문이 모두 갈린다.
+   * 대출인지로 가른다. 이 하나로 금액 입력·계좌 선택·제출 본문이 다 갈린다.
+   *
+   * 범위 유무(amountRange !== null)로 가르지 않는다. 그러면 한도가 비어 있는 상품에서
+   * 입력란이 통째로 사라지는데, 서버는 그래도 금액을 요구한다.
    */
+  const isLoan = detail.loan !== null
   const range = amountRange(detail)
-  const needsMoney = range !== null
 
   const rangeText = range
     ? `${formatMoneyShort(range.min)} ~ ${formatMoneyShort(range.max)}`
@@ -61,8 +63,8 @@ export default function ApplicationSubmitForm({
       : undefined
 
   const remaining = countRemaining(detail.documents)
-  const needsAmount = needsMoney && (amountNumber === null || Boolean(amountError))
-  const needsAccount = needsMoney && accountId === null
+  const needsAmount = isLoan && (amountNumber === null || Boolean(amountError))
+  const needsAccount = isLoan && accountId === null
   const blocked = remaining > 0 || needsAmount || needsAccount
 
   const label = (() => {
@@ -74,7 +76,7 @@ export default function ApplicationSubmitForm({
 
   return (
     <div className="flex flex-col gap-6">
-      {needsMoney && (
+      {isLoan && (
         <section>
           <h2 className="text-body2 text-text-secondary mb-3 font-semibold">신청 금액</h2>
           <Input
@@ -90,8 +92,8 @@ export default function ApplicationSubmitForm({
         </section>
       )}
 
-      {/* 돈이 오가지 않는 공고는 계좌도 받지 않는다 */}
-      {needsMoney && (
+      {/* 지원사업은 우리가 돈을 옮기지 않아 계좌를 받지 않는다 */}
+      {isLoan && (
         <section>
           <h2 className="text-body2 text-text-secondary mb-3 font-semibold">출금 계좌</h2>
           <Select

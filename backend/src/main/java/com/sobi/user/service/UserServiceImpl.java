@@ -83,9 +83,9 @@ public class UserServiceImpl implements UserService {
                 .filter(u -> u.getDeletedAt() == null)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NO_USER));
 
-        user.updateBirthDate(request.getBirthDate());
+        user.updateProfile(request.getName(), request.getBirthDate());
 
-        return new BirthDateResponse(user.getBirthDate());
+        return new BirthDateResponse(user.getName(), user.getBirthDate());
     }
 
     @Override

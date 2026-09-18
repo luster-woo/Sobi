@@ -14,4 +14,8 @@ public class BirthDateRequest {
     @NotNull
     @Past
     private LocalDate birthDate;
+
+    @NotBlank
+    @Size(max = 100)
+    private String name;
 }

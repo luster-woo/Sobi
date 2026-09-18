@@ -568,6 +568,86 @@ function toListItem(app: MockApplication): ApplicationListItem {
   }
 }
 
+/**
+ * 신청 생성 결과. 자금 조합(handlers/funding.ts)이 항목마다 이 함수를 부른다.
+ *
+ * 핸들러 안에 두면 조합 쪽에서 쓸 수 없고, 조합이 따로 만들면 같은 규칙이 두 벌이 된다 —
+ * 서버도 FundingService 가 ApplicationService.create() 를 그대로 부른다.
+ */
+type CreateResult =
+  | { ok: true; applicationId: number }
+  | { ok: false; code: string; message: string }
+
+/** 새 신청을 막는 상태. 반려(REJECTED)는 다시 신청할 수 있어서 빠진다 */
+const BLOCKING_STATUSES: ApplicationStatus[] = ['SUBMITTED', 'REVIEWING', 'APPROVED', 'PAID']
+
+function createMockApplication(type: string | null, programId: number): CreateResult {
+  if (!type || !programId) {
+    return { ok: false, code: ERROR_CODE.APPLICATION_TYPE_INVALID, message: '유효하지 않은 요청입니다.' }
+  }
+
+  const isLoan = type === 'LOAN'
+
+  /*
+   * 대출에는 마감이 없다. 지원사업은 공고라 접수 기간이 있고, 서버가 최근 신청을 보기도
+   * 전에 먼저 막는다 — 이어서 작성하려는 경우에도 기간이 지났으면 못 한다
+   * (ApplicationServiceImpl.createSupportApplication).
+   */
+  if (!isLoan && isSupportProgramClosed(programId)) {
+    return {
+      ok: false,
+      code: ERROR_CODE.APPLICATION_PERIOD_CLOSED,
+      message: '신청 기간이 아닌 지원사업입니다.',
+    }
+  }
+
+  // 같은 상품의 가장 최근 신청으로 판단한다 (checkLatestApplication)
+  const latest = [...applications.values()]
+    .filter((app) => (isLoan ? app.loanId === programId : app.supportProgramId === programId))
+    .sort((a, b) => b.applicationId - a.applicationId)[0]
+
+  // 작성 중이면 새로 만들지 않고 그걸 이어서 쓴다
+  if (latest?.status === 'PREPARING') {
+    return { ok: true, applicationId: latest.applicationId }
+  }
+
+  if (latest && BLOCKING_STATUSES.includes(latest.status)) {
+    return {
+      ok: false,
+      code: ERROR_CODE.APPLICATION_ALREADY_IN_PROGRESS,
+      message: '이미 신청이 진행 중이거나 지급이 완료된 상품입니다.',
+    }
+  }
+
+  /*
+   * 지원사업은 support 목에서 가져온다. 여기서 따로 들고 있으면 목록에서 고른 공고와
+   * 신청 화면의 상품이 어긋난다.
+   */
+  const app: MockApplication = {
+    applicationId: nextApplicationId++,
+    loanId: isLoan ? programId : null,
+    supportProgramId: isLoan ? null : programId,
+    status: 'PREPARING',
+    rejectReason: null,
+    applyAmount: null,
+    accountNo: null,
+    loan: isLoan ? (findLoanProductSummary(programId) ?? FALLBACK_LOAN) : null,
+    support: isLoan ? null : findSupportProductSummary(programId),
+    documents: createDocuments(isLoan ? LOAN_DOCUMENT_TEMPLATES : SUPPORT_DOCUMENT_TEMPLATES),
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    completeAt: null,
+  }
+  applications.set(app.applicationId, app)
+
+  return { ok: true, applicationId: app.applicationId }
+}
+
+/** 자금 조합 목이 항목마다 부른다. 서버와 같은 경로를 타게 하려는 것이다 */
+export function createApplicationFromBatch(type: string, programId: number): CreateResult {
+  return createMockApplication(type, programId)
+}
+
 export const applicationHandlers = [
   /**
    * 내 신청 목록.
@@ -604,65 +684,12 @@ export const applicationHandlers = [
    */
   http.post('/api/v1/application', ({ request }) => {
     const url = new URL(request.url)
-    const type = url.searchParams.get('type')
-    const programId = Number(url.searchParams.get('programId'))
-
-    if (!type || !programId) {
-      return failure('/api/v1/application', '유효하지 않은 요청입니다.', ERROR_CODE.APPLICATION_TYPE_INVALID)
-    }
-
-    const isLoan = type === 'LOAN'
-
-    /*
-     * 대출에는 마감이 없다. 지원사업은 공고라 접수 기간이 있고, 서버가 최근 신청을
-     * 보기도 전에 먼저 막는다 — 이어서 작성하려는 경우에도 기간이 지났으면 못 한다
-     * (ApplicationServiceImpl.createSupportApplication).
-     */
-    if (!isLoan && isSupportProgramClosed(programId)) {
-      return failure(
-        '/api/v1/application',
-        '신청 기간이 아닌 지원사업입니다.',
-        ERROR_CODE.APPLICATION_PERIOD_CLOSED,
-      )
-    }
-
-    /*
-     * 지원사업은 support 목에서 가져온다. 여기서 따로 들고 있으면 목록에서 고른
-     * 공고와 신청 화면의 상품이 어긋난다.
-     */
-    const loan = isLoan ? (findLoanProductSummary(programId) ?? FALLBACK_LOAN) : null
-    const support = isLoan ? null : findSupportProductSummary(programId)
-
-    // 같은 상품에 준비중인 건이 있으면 새로 만들지 않고 그걸 돌려준다
-    const existing = [...applications.values()].find(
-      (app) =>
-        app.status === 'PREPARING' &&
-        (isLoan ? app.loanId === programId : app.supportProgramId === programId),
+    const result = createMockApplication(
+      url.searchParams.get('type'),
+      Number(url.searchParams.get('programId')),
     )
-    if (existing) {
-      return HttpResponse.json(
-        success('/api/v1/application', '이미 진행 중인 신청이 있습니다.', {
-          applicationId: existing.applicationId,
-        }),
-      )
-    }
 
-    const app: MockApplication = {
-      applicationId: nextApplicationId++,
-      loanId: isLoan ? programId : null,
-      supportProgramId: isLoan ? null : programId,
-      status: 'PREPARING',
-      rejectReason: null,
-      applyAmount: null,
-      accountNo: null,
-      loan,
-      support,
-      documents: createDocuments(isLoan ? LOAN_DOCUMENT_TEMPLATES : SUPPORT_DOCUMENT_TEMPLATES),
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
-      completeAt: null,
-    }
-    applications.set(app.applicationId, app)
+    if (!result.ok) return failure('/api/v1/application', result.message, result.code)
 
     /*
      * 서버는 id 하나만 준다(ApplicationCreateResponse). 상세를 돌려주면 목이 서버보다
@@ -671,7 +698,7 @@ export const applicationHandlers = [
      */
     return HttpResponse.json(
       success('/api/v1/application', '신청 목록 테이블이 생성되었습니다.', {
-        applicationId: app.applicationId,
+        applicationId: result.applicationId,
       }),
     )
   }),

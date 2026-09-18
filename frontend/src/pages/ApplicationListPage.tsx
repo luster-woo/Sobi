@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 
 import ApplicationCard from '@/features/application/components/ApplicationCard'
 import ApplicationProgressStepper from '@/features/application/components/ApplicationProgressStepper'
 import ApplicationStatusTabs from '@/features/application/components/ApplicationStatusTabs'
 import { useApplications } from '@/features/application/hooks/useApplication'
 import type { ApplicationFilter } from '@/features/application/model/filter'
-import { filterApplications } from '@/features/application/model/filter'
+import { filterApplications, toApplicationFilter } from '@/features/application/model/filter'
 import EmptyState from '@/shared/ui/EmptyState'
 import Skeleton from '@/shared/ui/Skeleton'
 
@@ -25,7 +26,17 @@ import Skeleton from '@/shared/ui/Skeleton'
  */
 export function ApplicationListPage() {
   const { data: applications, isLoading, isError } = useApplications()
-  const [filter, setFilter] = useState<ApplicationFilter>('ONGOING')
+
+  /*
+   * 탭을 주소에 둔다. 자금 조합으로 신청을 만들면 전부 준비 중이라 그 탭을 지목해서
+   * 보내야 하는데, 컴포넌트 안의 상태로는 밖에서 가리킬 수가 없다.
+   *
+   * replace 로 바꾼다. 탭은 조회 조건이라 뒤로가기가 탭을 되돌리면, 들어올 때 지목된
+   * 탭으로 돌아가려다 한 번 더 눌러야 화면을 벗어나게 된다.
+   */
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filter = toApplicationFilter(searchParams.get('tab'))
+  const setFilter = (next: ApplicationFilter) => setSearchParams({ tab: next }, { replace: true })
   /** 한 번에 하나만 펼친다. 여러 개가 열려 있으면 화면이 길어져 비교가 어렵다 */
   const [expandedId, setExpandedId] = useState<number | null>(null)
 

@@ -37,6 +37,18 @@ async function fetchSessionUser(accessToken: string): Promise<SessionUser> {
 async function restoreSession() {
   try {
     const { accessToken } = await reissue()
+
+    /*
+     * ⚠️ 토큰을 **먼저** 스토어에 넣는다. axios 요청 인터셉터가 스토어에서 읽어
+     *    Authorization 을 붙이는데, 넣기 전에 `getMe()` 를 부르면 헤더 없이 나가
+     *    401 이 된다. 인터셉터가 재발급으로 살려내긴 하지만 왕복이 두 번 늘고
+     *    refreshToken 이 한 번 더 회전한다.
+     *
+     *    `setAccessToken` 은 status 를 건드리지 않아서, 이 시점에도 보호 라우트와
+     *    다른 쿼리들은 계속 'loading' 으로 기다린다.
+     */
+    useAuthStore.getState().setAccessToken(accessToken)
+
     const user = await fetchSessionUser(accessToken)
 
     useAuthStore.getState().setSession(accessToken, user)

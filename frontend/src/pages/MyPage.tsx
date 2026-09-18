@@ -121,6 +121,19 @@ export function MyPage() {
 
   const { profile, business, myData, accountSummary, notification } = data
 
+  /*
+   * 회원 유형은 **role 로 가른다.** `business` 가 있는지로 가르면 안 된다 —
+   * 사업자인데 응답의 businessInfo 가 비어 오는 경우(백엔드 오류, 조회 실패)에
+   * 화면이 '예비 창업자' 로 바뀌고 '사업자 인증하기' 버튼을 띄운다. 이미 등록한
+   * 사람을 등록 화면으로 보내는 셈인데, 거기서 같은 사업자번호를 다시 넣으면
+   * unique 제약에 걸려 500 이 나고 다른 번호로는 행이 둘 생긴다. 그러면
+   * `findByUserId` 가 단건을 못 골라 `/business/me` 와 `/insurance` 가 영구 500 이 된다
+   * (`SidebarBusinessCard` 주석에 같은 사고가 적혀 있다).
+   *
+   * 그래서 '누구인가' 는 role 이, '무엇을 그릴 수 있나' 는 business 가 정한다.
+   */
+  const preOwner = isPreOwner(profile.role)
+
   const inProgressCount = (applications ?? []).filter(
     (application) => application.status !== APPLICATION_STATUS.PAID,
   ).length
@@ -132,7 +145,7 @@ export function MyPage() {
           <span className="min-w-0">
             <b className="text-text text-body1 block font-semibold">{profile.name}</b>
             <span className="text-text-muted text-caption block truncate">
-              {profile.email} · {business ? '사업자' : '예비 창업자'} 회원
+              {profile.email} · {preOwner ? '예비 창업자' : '사업자'} 회원
             </span>
           </span>
 
@@ -166,7 +179,19 @@ export function MyPage() {
          * 연동할 수 없고, 연동이 없으면 계좌도 없다. 빈 패널을 '연동 전' 으로
          * 남겨두면 할 수 있는데 안 한 것처럼 보인다 — 할 수 없는 것이다.
          */}
-        {business ? (
+        {preOwner ? (
+          <Panel>
+            <PanelHead title="사업자 정보" aside={<Badge variant="outline">미인증</Badge>} />
+            <div className="flex flex-wrap items-center justify-between gap-3 px-[15px] py-3.5">
+              <p className="text-text-secondary text-body2 leading-[1.7]">
+                사업자 인증을 하면 매출·신용 기준으로 자격을 판정하고
+                <br />
+                마이데이터 연동과 계좌 관리를 쓸 수 있어요.
+              </p>
+              <SmallLink to={ROUTES.BUSINESS_VERIFY}>사업자 인증하기</SmallLink>
+            </div>
+          </Panel>
+        ) : (
           <>
             {accountSummary && (
               <Panel>
@@ -200,19 +225,31 @@ export function MyPage() {
 
             <Panel>
               <PanelHead title="사업자 정보" aside={<Badge variant="success">인증됨</Badge>} />
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-2 px-[15px] py-3">
-                <Field term="상호" description={business.businessName} />
-                {/*
-                 * 등록번호를 가린다. 상호·대표자·개업일이 한 화면에 같이 떠 있어서,
-                 * 전체를 보여주면 국세청 진위확인을 그대로 통과하는 조합이 된다
-                 * (`/business/verify` 가 셋을 받는다).
-                 */}
-                <Field term="사업자등록번호" description={maskBizNo(business.brn)} />
-                <Field term="대표자" description={business.ownerName} />
-                <Field term="업종" description={business.industryName} />
-                <Field term="사업장" description={business.address} />
-                <Field term="개업일" description={business.openDate.replaceAll('-', '. ')} />
-              </dl>
+
+              {/*
+               * ⚠️ 사업자인데 내용이 비어 올 수 있다. 그때도 '미인증' 으로 그리지 않는다 —
+               * 등록 화면으로 보내면 같은 번호로 중복 등록을 시도하게 되고, 그게
+               * `/business/me` 를 영구 500 으로 만드는 경로다. 못 불러왔다고만 알린다.
+               */}
+              {business ? (
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-2 px-[15px] py-3">
+                  <Field term="상호" description={business.businessName} />
+                  {/*
+                   * 등록번호를 가린다. 상호·대표자·개업일이 한 화면에 같이 떠 있어서,
+                   * 전체를 보여주면 국세청 진위확인을 그대로 통과하는 조합이 된다
+                   * (`/business/verify` 가 셋을 받는다).
+                   */}
+                  <Field term="사업자등록번호" description={maskBizNo(business.brn)} />
+                  <Field term="대표자" description={business.ownerName} />
+                  <Field term="업종" description={business.industryName} />
+                  <Field term="사업장" description={business.address} />
+                  <Field term="개업일" description={business.openDate.replaceAll('-', '. ')} />
+                </dl>
+              ) : (
+                <p className="text-text-muted text-body2 px-[15px] py-3.5">
+                  업체 정보를 불러오지 못했어요. 잠시 후 새로고침해 주세요.
+                </p>
+              )}
             </Panel>
 
             <Panel>
@@ -257,18 +294,6 @@ export function MyPage() {
               />
             </Panel>
           </>
-        ) : (
-          <Panel>
-            <PanelHead title="사업자 정보" aside={<Badge variant="outline">미인증</Badge>} />
-            <div className="flex flex-wrap items-center justify-between gap-3 px-[15px] py-3.5">
-              <p className="text-text-secondary text-body2 leading-[1.7]">
-                사업자 인증을 하면 매출·신용 기준으로 자격을 판정하고
-                <br />
-                마이데이터 연동과 계좌 관리를 쓸 수 있어요.
-              </p>
-              <SmallLink to={ROUTES.BUSINESS_VERIFY}>사업자 인증하기</SmallLink>
-            </div>
-          </Panel>
         )}
       </div>
 

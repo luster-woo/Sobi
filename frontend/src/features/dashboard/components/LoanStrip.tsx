@@ -1,17 +1,55 @@
 import { useState } from 'react'
 
 import NavButton from '@/features/dashboard/components/NavButton'
-import { useBookmarkDraft } from '@/features/dashboard/hooks/useBookmarkDraft'
 import { toAmountRange } from '@/features/dashboard/model/format'
 import type { DashboardLoan, StripSummary } from '@/features/dashboard/model/types'
 import LoanDetailModal from '@/features/loan/components/LoanDetailModal'
 import { ROUTES } from '@/shared/constants/routes'
+import { useBookmarkedIds } from '@/shared/hooks/useBookmarkedIds'
+import { useBookmarkToggle } from '@/shared/hooks/useBookmarkToggle'
+import { BOOKMARK_TARGET } from '@/shared/types'
 import CardStrip from '@/shared/ui/CardStrip'
 import EmptyState from '@/shared/ui/EmptyState'
 import ProductCard from '@/shared/ui/ProductCard'
 
 interface LoanStripProps {
   loans: StripSummary<DashboardLoan>
+}
+
+/**
+ * 카드 한 장.
+ *
+ * 컴포넌트로 뺀 이유는 훅 때문이다. `loans.items.map` 안에서 `useBookmarkToggle` 을
+ * 부르면 카드 수만큼 훅이 불려 규칙 위반이고, 스트립에서 하나만 부르면 한 장을 눌렀을 때
+ * 네 장이 다 눌린 것처럼 보인다(`isPending` 을 공유해서다). 목록 화면의
+ * `BookmarkToggle` 이 같은 이유로 컴포넌트다.
+ */
+function LoanCard({
+  loan,
+  bookmarked,
+  onClick,
+}: {
+  loan: DashboardLoan
+  bookmarked: boolean
+  onClick: () => void
+}) {
+  const toggle = useBookmarkToggle()
+  // 응답을 기다리면 리본이 한 박자 늦게 바뀐다. 누르는 동안에는 눌릴 결과를 먼저 보여준다
+  const shown = toggle.isPending ? toggle.variables.next : bookmarked
+
+  return (
+    <ProductCard
+      title={loan.accountName}
+      organization={loan.bankName}
+      chips={[`납입횟수 ${loan.period}회`]}
+      amount={toAmountRange(loan.minLoanBalance, loan.maxLoanBalance)}
+      isBookmarked={shown}
+      onToggleBookmark={() =>
+        toggle.mutate({ programId: loan.loanId, type: BOOKMARK_TARGET.LOAN, next: !shown })
+      }
+      onClick={onClick}
+    />
+  )
 }
 
 /**
@@ -27,9 +65,12 @@ interface LoanStripProps {
  */
 export default function LoanStrip({ loans }: LoanStripProps) {
   const [openLoanId, setOpenLoanId] = useState<number | null>(null)
-  const bookmark = useBookmarkDraft(
-    loans.items.filter((loan) => loan.isBookmark).map((loan) => loan.loanId),
-  )
+
+  /*
+   * 대시보드 응답에 북마크 여부가 없어서 관심 목록으로 대조한다.
+   * 백엔드가 `isBookmark` 를 실어 주면 이 조회를 지우고 `loan.isBookmark` 를 쓰면 된다.
+   */
+  const bookmarked = useBookmarkedIds()
 
   if (loans.items.length === 0) {
     return (
@@ -52,14 +93,10 @@ export default function LoanStrip({ loans }: LoanStripProps) {
         }
       >
         {loans.items.map((loan) => (
-          <ProductCard
+          <LoanCard
             key={loan.loanId}
-            title={loan.accountName}
-            organization={loan.bankName}
-            chips={[`납입횟수 ${loan.period}회`]}
-            amount={toAmountRange(loan.minLoanBalance, loan.maxLoanBalance)}
-            isBookmarked={bookmark.isBookmarked(loan.loanId)}
-            onToggleBookmark={() => bookmark.toggle(loan.loanId)}
+            loan={loan}
+            bookmarked={bookmarked.loan.has(loan.loanId)}
             onClick={() => setOpenLoanId(loan.loanId)}
           />
         ))}

@@ -171,7 +171,8 @@ export default function SupportProgramDetailModal({
           {data.type !== 'ETC' && (
             <Row label="금액">
               최소 {formatMoneyShort(data.minBalance)} ~ 최대 {formatMoneyShort(data.maxBalance)}
-              {data.type === 'LOAN' && (
+              {/* 융자형인데 금리가 안 적힌 공고가 있다. 없으면 이 문구를 아예 안 붙인다 */}
+              {data.type === 'LOAN' && data.interestRate !== null && (
                 <span className="text-text-muted ml-2">연 {data.interestRate.toFixed(1)}%</span>
               )}
             </Row>

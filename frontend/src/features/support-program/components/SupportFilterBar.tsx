@@ -12,10 +12,27 @@ const TYPE_OPTIONS = [
   })),
 ]
 
-/** judgement 는 status 7종 중 하나를 보낸다 */
+/**
+ * 판정 결과 세 가지만 고를 수 있다.
+ *
+ * ⚠️ `SUPPORT_STATUS` 를 그대로 펼치면 안 된다. 서버가 거를 때 쓰는 값은
+ *    `SupportStatus.of(judgement, null)` 로 만들어지는데(`SupportServiceImpl`), 두 번째
+ *    인자(최근 신청 상태)가 **항상 null 로 고정**이라 결과가 이 셋뿐이다. 신청 상태
+ *    (PREPARING·SUBMITTED·REVIEWING·APPROVED·PAID)를 넣으면 400 도 아니고 **조용히
+ *    0건**이 나와서, 사용자는 해당하는 공고가 없다고 오해한다.
+ *
+ *    대출 목록은 `LoanServiceImpl` 이 뱃지 값과 직접 비교해 7종이 다 걸린다 —
+ *    두 도메인 동작이 다르니 이쪽 코드를 저쪽에 복사하지 말 것.
+ */
+const JUDGEMENT_VALUES = [
+  SUPPORT_STATUS.ELIGIBLE,
+  SUPPORT_STATUS.UNKNOWN,
+  SUPPORT_STATUS.INELIGIBLE,
+] as const
+
 const JUDGEMENT_OPTIONS = [
   { value: '', label: '판정 전체' },
-  ...Object.values(SUPPORT_STATUS).map((status) => ({
+  ...JUDGEMENT_VALUES.map((status) => ({
     value: status,
     label: SUPPORT_STATUS_LABEL[status],
   })),

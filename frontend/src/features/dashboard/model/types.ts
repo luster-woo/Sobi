@@ -77,7 +77,6 @@ export interface DashboardLoan {
   period: number
   /** 접수 마감일. null 이면 상시 */
   endDate: ISODate | null
-  isBookmark: boolean
 }
 
 export interface DashboardSupportProgram {
@@ -106,7 +105,6 @@ export interface DashboardSupportProgram {
   interestRate: number | null
   /** 접수 마감일. null 이면 상시 */
   endDate: ISODate | null
-  isBookmark: boolean
 }
 
 export interface RepaymentSummary {

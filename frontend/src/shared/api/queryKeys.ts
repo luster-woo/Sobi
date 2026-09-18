@@ -47,6 +47,8 @@ export const queryKeys = {
   bookmark: {
     all: ['bookmark'] as const,
     me: ['bookmark', 'me'] as const,
+    /** 대시보드 리본용 id 집합. 같은 엔드포인트지만 쓰는 모양이 달라 키를 나눈다 */
+    ids: ['bookmark', 'ids'] as const,
   },
 
   /**

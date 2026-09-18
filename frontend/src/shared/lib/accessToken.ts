@@ -4,9 +4,9 @@ import { USER_ROLE, type UserRole } from '@/shared/types'
 /**
  * accessToken 에서 사용자 정보를 꺼낸다.
  *
- * ⚠️ 임시 수단이다. 원래는 `GET /user/me` 가 줘야 하는데 백엔드에 아직 없다
- *    (`com.sobi.user` 에 controller·service·dto 전무, BE-02). 그게 붙으면 이 파일을
- *    쓰는 곳은 `useSession` 한 군데뿐이라 거기만 지우면 된다.
+ * `GET /user/me` 가 백엔드에 생겨서(`UserController.me`) 이제는 **조회가 실패했을 때의
+ * 안전망**이다. 쓰는 곳은 `useSession` 한 군데뿐이라, 안전망이 필요 없다고 판단되면
+ * 이 파일과 거기 폴백을 같이 지우면 된다.
  *
  * 서명을 검증하지 않는다. 검증은 서버가 한다 — 여기서 꺼낸 값으로 권한을 판단하면 안 되고,
  * 화면에 이름·역할을 그리는 용도로만 쓴다. 위조한 토큰을 넣어도 API 가 401 을 준다.

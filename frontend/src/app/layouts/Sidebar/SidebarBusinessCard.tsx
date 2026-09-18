@@ -52,7 +52,7 @@ export function SidebarBusinessCard() {
    *    그러면 `findByUserId` 가 단건을 못 골라 `/business/me` 와 `/insurance` 가
    *    영구 500 이 된다. 잘못된 안내 하나가 계정을 못 쓰게 만드는 경로다.
    *
-   *    미등록 응답은 404 BUSINESS_O04 뿐이다(`BusinessServiceImpl`).
+   *    미등록 응답은 404 BUSINESS_004 뿐이다(`BusinessServiceImpl`).
    */
   if (isError && getErrorStatus(error) === 404) {
     return (

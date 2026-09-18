@@ -20,8 +20,16 @@ function supportAmount(program: SupportProgramListItem): string {
   switch (program.type) {
     case 'SUPPORT':
       return `최대 ${formatMoneyShort(program.maxBalance)}`
-    case 'LOAN':
-      return `연 ${program.interestRate.toFixed(1)}% · 최대 ${formatMoneyShort(program.maxBalance)}`
+    /*
+     * 융자형인데 금리가 안 적힌 공고가 있다. 없으면 금액만 보여준다 —
+     * 예전에는 `.toFixed(1)` 을 바로 불러서 그런 행 하나가 표 전체를 죽였다.
+     */
+    case 'LOAN': {
+      const amount = `최대 ${formatMoneyShort(program.maxBalance)}`
+      if (program.interestRate === null) return amount
+
+      return `연 ${program.interestRate.toFixed(1)}% · ${amount}`
+    }
     case 'ETC':
       return '—'
   }

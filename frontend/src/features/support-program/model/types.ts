@@ -28,10 +28,28 @@ interface SupportProgramBase {
   isBookmark: boolean
 }
 
-/** 원 단위 금액. 지원금·대출에만 온다 */
+/**
+ * 원 단위 금액. 지원금·대출에만 온다.
+ *
+ * ⚠️ 유형이 맞아도 **값이 없으면 응답에서 키가 빠진다.** `support_program` 의
+ *    min_balance·max_balance 가 nullable 인데 백엔드 DTO 에 `@JsonInclude(NON_NULL)` 이
+ *    붙어 있어서다 — 공고 원문에 금액이 안 적힌 건이 실제로 있다.
+ *    관심 목록 쪽은 이미 null 을 받고 있다(`features/mypage/model/types.ts`).
+ */
 interface WithBalance {
-  minBalance: number
-  maxBalance: number
+  minBalance: number | null
+  maxBalance: number | null
+}
+
+/**
+ * 연 이율(%). 유형이 LOAN 일 때만 온다.
+ *
+ * ⚠️ 위와 같은 이유로 **LOAN 인데도 빠질 수 있다.** `interest_rate` 가 nullable 이고
+ *    공고 원문에 금리가 안 적힌 건이 있다(`ai/scripts/extract_conditions.py` 가
+ *    '없으면 null' 로 추출한다). 그리기 전에 반드시 null 을 확인할 것.
+ */
+interface WithInterestRate {
+  interestRate: number | null
 }
 
 /**
@@ -46,7 +64,7 @@ interface WithBalance {
  */
 export type SupportProgramListItem =
   | (SupportProgramBase & WithBalance & { type: 'SUPPORT' })
-  | (SupportProgramBase & WithBalance & { type: 'LOAN'; interestRate: number })
+  | (SupportProgramBase & WithBalance & WithInterestRate & { type: 'LOAN' })
   | (SupportProgramBase & { type: 'ETC' })
 
 export interface SupportProgramListData {
@@ -133,5 +151,5 @@ interface SupportProgramDetailBase {
 
 export type SupportProgramDetail =
   | (SupportProgramDetailBase & WithBalance & { type: 'SUPPORT' })
-  | (SupportProgramDetailBase & WithBalance & { type: 'LOAN'; interestRate: number })
+  | (SupportProgramDetailBase & WithBalance & WithInterestRate & { type: 'LOAN' })
   | (SupportProgramDetailBase & { type: 'ETC' })

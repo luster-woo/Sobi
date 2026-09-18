@@ -229,9 +229,9 @@ export const supportHandlers = [
       const sign = direction === 'desc' ? -1 : 1
       filtered = [...filtered].sort((a, b) => {
         if (field === 'maxBalance') {
-          // ETC 는 금액이 없어 맨 뒤로 보낸다
-          const left = 'maxBalance' in a ? a.maxBalance : -1
-          const right = 'maxBalance' in b ? b.maxBalance : -1
+          // ETC 와 '금액 미기재' 는 둘 다 금액이 없어 맨 뒤로 보낸다
+          const left = ('maxBalance' in a ? a.maxBalance : null) ?? -1
+          const right = ('maxBalance' in b ? b.maxBalance : null) ?? -1
           return (left - right) * sign
         }
         // 상시(마감일 없음)는 급할 게 없으니 맨 뒤로 보낸다

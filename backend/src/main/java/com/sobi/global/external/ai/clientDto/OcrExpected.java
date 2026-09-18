@@ -21,6 +21,7 @@ public class OcrExpected {
 
     private final String brn;           // business_info.brn
     private final String ownerName;     // users.name
+    private final LocalDate birthDate;  // users.birth_date (등본·지방세 납세증명서 등 개인 서류 대조용)
     private final String businessName;  // business_info.business_name
     private final String address;       // business_info.address
     private final String region;        // business_info.region (시도 표준 표기)

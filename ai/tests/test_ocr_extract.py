@@ -104,6 +104,63 @@ class RuleFieldsTest(unittest.TestCase):
     def test_strip_label_with_spaced_label(self):
         self.assertEqual(extract.strip_label("성명(대 표 자) 이경옥", "성명(대표자)"), "이경옥")
 
+    def test_en_dash_brn(self):
+        cells = [Line(0, "사업자등록번호 101–01–01010", 0.9, box(0, 0, 400))]
+        self.assertEqual(extract.find_brn(cells), "1010101010")
+
+
+class PersonalFieldsTest(unittest.TestCase):
+    """P1 샘플(지방세 납세증명서 · 주민등록등본 · 사업자등록증 · 통장사본)의 실제 인식 결과"""
+
+    def test_birth_from_masked_resident_number_with_en_dash(self):
+        cells = [Line(0, "납세자 Name(Name of representative) 김표준 Resident Registration Number 940311–*******",
+                      0.97, box(0, 0, 900))]
+        self.assertEqual(extract.find_birth_dates(cells), ("1994-03-11",))
+
+    def test_birth_century_from_gender_digit(self):
+        self.assertEqual(extract.birth_from_id("010203", "3******"), "2001-02-03")
+        self.assertEqual(extract.birth_from_id("940311", "1234567"), "1994-03-11")
+
+    def test_corporate_registration_number_is_not_a_birth(self):
+        cells = [Line(0, "개업연월일 2024년06월24일 법인등록번호: 110111-8947321", 0.9, box(0, 0, 700))]
+        self.assertEqual(extract.find_birth_dates(cells), ())
+
+    def test_birth_from_applicant_and_label(self):
+        cells = [Line(0, "( 등본) 용도및목적: 금융기관제출용 신청인:김표준(1994-03-11)", 0.95, box(0, 0, 700)),
+                 Line(0, "생 년 월 일 : 1994년03월11일", 0.92, box(0, 100, 300)),
+                 Line(0, "신청인(납세자) 김표준 2026년 09월 18일", 0.9, box(0, 200, 400))]   # 신청일은 생년월일이 아님
+        self.assertEqual(extract.find_birth_dates(cells), ("1994-03-11",))
+
+    def test_applicant_and_birth_rows_are_not_issue_dates(self):
+        cells = [Line(0, "( 등본) 신청인:김표준(1994-03-11)", 0.95, box(0, 0, 500)),
+                 Line(0, "2026 년09월18 일", 0.94, box(0, 100, 200))]
+        self.assertEqual(extract.find_dates(cells)[0], "2026-09-18")
+
+    def test_passbook_holder_and_account(self):
+        cells = extract.merge_cells([
+            Line(0, "저희 우리은행은 커진 만큼 큰 보답을 드리겠습니다.", 0.92, box(300, 0, 500)),
+            Line(0, "김 표준 님", 0.94, box(560, 60, 250)),
+            Line(0, "계좌번호 0010-1010-1010-1010", 1.0, box(40, 120, 460)),
+            Line(0, "신고된서명만으로예금을찾으실경우에는예금주가본인의", 0.98, box(40, 700, 500)),
+        ])
+        self.assertEqual(extract.find_account_holder(cells), "김표준")
+        self.assertEqual(extract.extract_rule_fields(cells).account_no, "0010-1010-1010-1010")
+
+    def test_holder_label_on_internet_banking_copy(self):
+        cells = [Line(0, "예금주가 본인의 주민등록증을 제시", 0.9, box(0, 0, 400)),
+                 Line(0, "예금주 : 맛있는 한상", 0.9, box(0, 100, 300))]
+        self.assertEqual(extract.find_account_holder(cells), "맛있는한상")
+
+
+class MaskTest(unittest.TestCase):
+    def test_resident_number_with_en_dash_is_masked_before_gms(self):
+        from app.ocr import prompt
+
+        for raw in ("940311-1234567", "940311–1234567", "940311 — 1234567", "940311–*******"):
+            masked = prompt.mask_id_numbers(f"주민등록번호 {raw} 김표준")
+            self.assertNotIn("940311", masked, raw)
+            self.assertIn("******-*******", masked, raw)
+
 
 class ToImagesTest(unittest.TestCase):
     def test_png_is_decoded_to_bgr(self):

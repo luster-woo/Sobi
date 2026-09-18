@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 Status = Literal["PASSED", "FAILED"]
 Level = Literal["FAIL", "WARN", "OK", "SKIP"]
 CheckField = Literal[
-    "readable", "doc_title", "brn", "owner_name",
+    "readable", "doc_title", "brn", "owner_name", "birth_date",
     "validity", "business_name", "address", "open_date",
 ]
 CheckResult = Literal[
@@ -26,6 +26,7 @@ class Expected(BaseModel):
 
     brn: str | None = None            # business_info.brn. 하이픈 유무 무관
     owner_name: str | None = None     # users.name
+    birth_date: date | None = None    # users.birth_date. 등본·지방세 납세증명서 등 개인 서류 대조용
     business_name: str | None = None  # business_info.business_name
     address: str | None = None        # business_info.address
     region: str | None = None         # business_info.region (시도 표준 표기)
@@ -49,10 +50,12 @@ class Extracted(BaseModel):
     issue_date: date | None = None
     valid_until: date | None = None
     brn: str | None = None            # 숫자 10자리
-    owner_name: str | None = None
+    owner_name: str | None = None     # 통장사본이면 예금주
+    birth_date: date | None = None
     business_name: str | None = None
     address: str | None = None
     open_date: date | None = None
+    account_no: str | None = None     # 통장사본
 
 
 class VerifyResponse(BaseModel):

@@ -7,16 +7,13 @@ OCR 텍스트만 보내고, 주민·법인등록번호는 보내기 전에 가�
 
 import json
 import logging
-import re
 
 from app.core import gms
+from app.ocr.extract import ID_NUMBER_RE
 
 logger = logging.getLogger(__name__)
 
 FIELDS = ("doc_title", "issuer", "owner_name", "business_name", "address")
-
-# 주민·법인등록번호 6-7자리 (뒷자리가 이미 * 로 가려진 것 포함)
-ID_NUMBER_RE = re.compile(r"(?<!\d)\d{6}\s*-\s*[\d*]{7}(?!\d)")
 
 SYSTEM_PROMPT = """너는 한국 증명서류의 OCR 결과에서 값을 옮겨 적는 도구다.
 입력은 OCR 이 인식한 줄들이다. 표의 한 행이 한 줄로 합쳐져 라벨·값·영문 번역이 섞여 있을 수 있고,

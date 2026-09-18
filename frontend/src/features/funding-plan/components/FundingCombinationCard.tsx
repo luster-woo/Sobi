@@ -18,6 +18,12 @@ interface FundingCombinationCardProps {
    * 가져다 쓰는 자리다.
    */
   onOpenItem: (item: FundingItem) => void
+  /**
+   * '이 조합으로 진행'. 확인 모달은 페이지가 띄운다 — onOpenItem 과 같은 이유다.
+   * 신청 건이 한 번에 여러 개 생겨서 되돌리려면 하나씩 취소해야 한다.
+   */
+  onApply: () => void
+  isApplying: boolean
 }
 
 function Summary({ label, value, unit }: { label: string; value: string; unit: string }) {
@@ -41,17 +47,16 @@ function Summary({ label, value, unit }: { label: string; value: string; unit: s
  * 무상 지원금은 금리 자리에 '무상' 이 들어간다. 금리 0 으로 판별한다 — type 이
  * SUPPORT 여도 융자성(이자 있는) 상품이 섞여 있다.
  *
- * ⚠️ '이 조합으로 진행' 과 '구성 상품 보기' 는 아직 눌리지 않는다.
- *    진행    /funding/batch 가 application 테이블에 행을 만드는데 그 테이블에
- *            support_program_id 가 없어서 지원사업 항목을 저장할 수 없다.
- *    구성 보기 이동할 화면이 정해지지 않았다. 상품별 상세를 펼치는 형태가 자연스러운데
- *            items 에 은행명·기간이 없어 보여줄 내용이 부족하다.
+ * ⚠️ '구성 상품 보기' 는 아직 눌리지 않는다. 이동할 화면이 정해지지 않았다 — 상품별
+ *    상세를 펼치는 형태가 자연스러운데 items 에 은행명·기간이 없어 보여줄 내용이 부족하다.
  */
 export default function FundingCombinationCard({
   combination,
   order,
   targetAmount,
   onOpenItem,
+  onApply,
+  isApplying,
 }: FundingCombinationCardProps) {
   const total = splitMoneyShort(combination.totalFinancingAmount)
   const monthly = splitMoneyShort(combination.monthlyRepaymentAmount)
@@ -137,7 +142,7 @@ export default function FundingCombinationCard({
           </p>
 
           <div className="p-3.5">
-            <Button className="w-full" disabled>
+            <Button className="w-full" onClick={onApply} loading={isApplying}>
               이 조합으로 진행
             </Button>
           </div>

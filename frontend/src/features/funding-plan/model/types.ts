@@ -1,3 +1,5 @@
+import type { ApplicationSource } from '@/features/application/model/types'
+
 /**
  * 자금 조합 (S15P21D101-200 · 265)
  *
@@ -83,12 +85,14 @@ export interface FundingRecommendParams {
 }
 
 /**
- * 신청할 조합을 보낼 때의 항목.
+ * 신청할 조합을 보낼 때의 항목. 서버 BatchItem 과 같은 모양이다.
  *
- * ⚠️ /funding/batch 는 아직 컨트롤러가 없다. 명세서 예시(`{ type, id }`)를 따라 뒀고,
- *    구현되면 실제 요청 모양에 맞춰야 한다.
+ * ⚠️ type 이 FundingSourceType 이 아니라 ApplicationSource 다. 서버가 이 값을
+ *    ApplicationType.from() 에 그대로 넘기는데 그건 LOAN·SUPPORT 만 받는다 —
+ *    조합 응답에 오는 LOAN_PRODUCT 를 그대로 실으면 APPLICATION_003(400) 이다.
+ *    변환은 model/batch.ts 의 toBatchItems 가 한다.
  */
 export interface FundingBatchItem {
-  type: FundingSourceType
+  type: ApplicationSource
   id: number
 }

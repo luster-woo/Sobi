@@ -1,16 +1,24 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 
+import { APPLICATION_FILTER } from '@/features/application/model/filter'
 import FundingAmountForm from '@/features/funding-plan/components/FundingAmountForm'
 import FundingCombinationCard from '@/features/funding-plan/components/FundingCombinationCard'
 import FundingCombinationSummaryCard from '@/features/funding-plan/components/FundingCombinationSummaryCard'
 import FundingComparisonTable from '@/features/funding-plan/components/FundingComparisonTable'
+import { useApplyFundingBatch } from '@/features/funding-plan/hooks/useApplyFundingBatch'
 import { useFundingRecommend } from '@/features/funding-plan/hooks/useFundingRecommend'
-import type { FundingItem } from '@/features/funding-plan/model/types'
+import { toBatchItems } from '@/features/funding-plan/model/batch'
+import type { FundingCombination, FundingItem } from '@/features/funding-plan/model/types'
 import LoanDetailModal from '@/features/loan/components/LoanDetailModal'
 import SupportProgramDetailModal from '@/features/support-program/components/SupportProgramDetailModal'
+import { ROUTES } from '@/shared/constants/routes'
+import { useUiStore } from '@/shared/lib/store/useUiStore'
+import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
+import Modal from '@/shared/ui/Modal'
 import Skeleton from '@/shared/ui/Skeleton'
+import { formatMoneyShort } from '@/shared/utils/formatters'
 
 /**
  * 자금 조합 (S15P21D101-200)
@@ -28,10 +36,23 @@ import Skeleton from '@/shared/ui/Skeleton'
  * loan·support-program feature 것이어서다 — funding-plan 안에서 부르면 feature 끼리
  * 물린다. 관심 목록 화면도 같은 방식이다.
  */
+/*
+ * 조합으로 만든 신청은 전부 준비 중이다. 기본 탭(진행 중)으로 보내면 방금 만든 것이
+ * 하나도 안 보여서 실패한 것처럼 읽힌다.
+ */
+const PREPARING_TAB = `${ROUTES.APPLICATIONS}?tab=${APPLICATION_FILTER.PREPARING}`
+
 export function FundingPlanPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const showToast = useUiStore((state) => state.showToast)
+
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [openItem, setOpenItem] = useState<FundingItem | null>(null)
+  /* 확인 모달에 올린 조합. 한 번에 신청 건이 여러 개 생겨서 먼저 확인받는다 */
+  const [applyTarget, setApplyTarget] = useState<FundingCombination | null>(null)
+
+  const applyBatch = useApplyFundingBatch()
 
   const rawAmount = Number(searchParams.get('amount'))
   const amount = Number.isFinite(rawAmount) && rawAmount > 0 ? rawAmount : undefined
@@ -49,6 +70,30 @@ export function FundingPlanPage() {
 
   // 목록이 줄어든 뒤에도 예전 인덱스를 가리키지 않게 막는다
   const selected = combinations?.[selectedIndex] ?? combinations?.[0]
+
+  /**
+   * 고른 조합으로 신청을 한 번에 만든다.
+   *
+   * 성공이든 실패든 신청 현황으로 보낸다. 서버가 항목을 하나씩 만들다가 중간에서 던지면
+   * 앞의 건은 이미 만들어져 있어서, 실패라고 이 화면에 머물면 사용자가 무엇이 생겼는지
+   * 볼 방법이 없다. 목록 무효화는 훅이 onSettled 로 한다.
+   */
+  const handleApply = () => {
+    if (!applyTarget) return
+
+    applyBatch.mutate(toBatchItems(applyTarget), {
+      onSuccess: () => {
+        setApplyTarget(null)
+        showToast('신청을 시작했어요. 서류를 올리면 접수됩니다.')
+        navigate(PREPARING_TAB)
+      },
+      onError: () => {
+        setApplyTarget(null)
+        showToast('일부만 시작됐을 수 있어요. 신청 현황에서 확인해 주세요.', 'warning')
+        navigate(PREPARING_TAB)
+      },
+    })
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
@@ -83,6 +128,8 @@ export function FundingPlanPage() {
           // 주소의 금액이 아니라 서버가 실제로 계산에 쓴 금액을 넘긴다
           targetAmount={data.targetAmount}
           onOpenItem={setOpenItem}
+          onApply={() => setApplyTarget(selected)}
+          isApplying={applyBatch.isPending}
         />
       )}
 
@@ -121,6 +168,47 @@ export function FundingPlanPage() {
           onClose={() => setOpenItem(null)}
         />
       )}
+
+      {/*
+        진행 확인. 신청 취소처럼 한 번 물어본다 — 되돌리려면 생긴 건을 하나씩 취소해야 한다.
+      */}
+      <Modal
+        open={applyTarget !== null}
+        onClose={() => {
+          // 진행 중에는 닫지 않는다. 신청이 하나씩 만들어지는 중이다
+          if (applyBatch.isPending) return
+          setApplyTarget(null)
+        }}
+        title="이 조합으로 신청을 시작할까요?"
+        description={
+          applyTarget
+            ? `${applyTarget.items.length}개 상품 · ${formatMoneyShort(applyTarget.totalFinancingAmount)}`
+            : undefined
+        }
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setApplyTarget(null)}
+              disabled={applyBatch.isPending}
+            >
+              돌아가기
+            </Button>
+            <Button onClick={handleApply} loading={applyBatch.isPending}>
+              신청 시작
+            </Button>
+          </>
+        }
+      >
+        <div className="text-body2 text-text-secondary flex flex-col gap-2 break-keep">
+          <p>
+            상품마다 신청 건이 하나씩 만들어져요. 아직 접수되는 건 아니고, 서류를 올린 뒤
+            상품별로 신청해야 합니다.
+          </p>
+          {/* 한 번에 여러 건이 생기니 어디서 이어서 하면 되는지 먼저 알려준다 */}
+          <p>만들어진 신청은 신청 현황의 '준비 중' 탭에 모입니다.</p>
+        </div>
+      </Modal>
     </div>
   )
 }

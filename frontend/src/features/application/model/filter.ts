@@ -11,6 +11,19 @@ export const APPLICATION_FILTER = {
 export type ApplicationFilter = (typeof APPLICATION_FILTER)[keyof typeof APPLICATION_FILTER]
 
 /**
+ * 주소의 tab 값을 탭으로 바꾼다. 모르는 값이면 기본 탭이다.
+ *
+ * 탭을 주소에 두는 이유는 다른 화면이 특정 탭을 지목해야 해서다 — 자금 조합으로
+ * 신청을 만들면 전부 준비 중이라, 기본 탭(진행 중)으로 보내면 방금 만든 것이
+ * 하나도 안 보인다. 새로고침해도 남고 링크로 공유도 된다.
+ */
+export function toApplicationFilter(value: string | null): ApplicationFilter {
+  const found = Object.values(APPLICATION_FILTER).find((filter) => filter === value)
+
+  return found ?? APPLICATION_FILTER.ONGOING
+}
+
+/**
  * 탭이 거르는 규칙.
  *
  * 탭에 붙는 개수와 실제로 보이는 목록이 어긋나면 안 되니 한 함수로 둔다.

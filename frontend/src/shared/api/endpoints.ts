@@ -153,7 +153,7 @@ export const endpoints = {
     cancel: (applicationId: number) => `/application/${applicationId}`,
     /** 최종 신청. 본문에 amount·accountId */
     submit: (applicationId: number) => `/application/${applicationId}/submit`,
-    /** ⚠️ 412 대기. 서버에 아직 multipart 엔드포인트가 없다 */
+    /** 서류 업로드. multipart 로 applicationDocumentId · file */
     uploadDocument: '/document',
     /** ⚠️ 413 대기. 서버에 아직 없다 */
     requestDraft: '/document/draft',

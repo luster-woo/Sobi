@@ -59,19 +59,21 @@ export function productSummary(detail: ApplicationDetail): string {
 }
 
 /**
- * 신청 금액 범위. 없으면 금액을 입력받지 않는다.
+ * 신청 금액 범위. 대출에만 있다.
  *
- * 대출은 항상 있다. 지원사업은 '기타'(컨설팅·교육 등)면 돈이 오가지 않아 없다 —
- * 서버도 그때는 금액·계좌를 받지 않는다.
+ * 지원사업은 금액도 계좌도 입력받지 않는다. 유형에 '지원금'·'대출' 이 있지만 우리
+ * 서비스에서 실제로 돈이 오가는 건 순수 대출뿐이다 — 서버도 지원사업 제출에서는
+ * 금융망을 부르지 않고 신청 행에 값만 적는다.
+ *
+ * 공고의 minBalance·maxBalance 는 요약 줄에 계속 나온다(describeSupport 의
+ * '최대 500만 원'). 그건 공고가 주는 금액이지 사용자가 입력할 값이 아니라 여기서 안 쓴다.
+ *
+ * ⚠️ 서버는 아직 '기타' 가 아닌 지원사업에 amount·accountId 를 요구한다
+ *    (ApplicationServiceImpl.submitSupport). 둘 다 없으면 APPLICATION_009 로 막힌다.
+ *    백엔드가 그 분기를 걷어내면 맞물린다 — 프론트는 이대로 둔다.
  */
 export function amountRange(detail: ApplicationDetail): { min: number; max: number } | null {
-  if (detail.loan) {
-    return { min: detail.loan.minLoanBalance, max: detail.loan.maxLoanBalance }
-  }
+  if (!detail.loan) return null
 
-  if (detail.support && detail.support.minBalance !== null && detail.support.maxBalance !== null) {
-    return { min: detail.support.minBalance, max: detail.support.maxBalance }
-  }
-
-  return null
+  return { min: detail.loan.minLoanBalance, max: detail.loan.maxLoanBalance }
 }

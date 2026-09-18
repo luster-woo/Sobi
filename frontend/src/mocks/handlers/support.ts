@@ -58,19 +58,32 @@ function daysFromNow(days: number): string {
   return date.toISOString().slice(0, 10)
 }
 
+/**
+ * 접수가 끝난 공고. 마지막 하나만 마감으로 둔다.
+ *
+ * ⚠️ 실서버 목록은 마감 공고를 빼고 준다(SupportServiceImpl). 목이 굳이 보여주는 건
+ *    마감 안내(APPLICATION_004)를 화면에서 눌러볼 방법이 그것뿐이어서다 — 목록에서도
+ *    빼면 닿을 수 없는 코드가 된다.
+ */
+const CLOSED_PROGRAM_ID = 27
+
 function makeProgram(index: number): SupportProgramListItem {
   const id = index + 1
   const type = TYPES[index % 3]
+  const closed = id === CLOSED_PROGRAM_ID
 
   const base = {
     supportProgramId: id,
-    pblancNm: `${INSTITUTIONS[index % 5]} 소상공인 지원사업 ${id}호`,
+    pblancNm: closed
+      ? `${INSTITUTIONS[index % 5]} 소상공인 지원사업 ${id}호 (접수 마감)`
+      : `${INSTITUTIONS[index % 5]} 소상공인 지원사업 ${id}호`,
     jrsdInsttNm: INSTITUTIONS[index % 5],
     excInsttNm: '소상공인시장진흥공단',
     // 8개마다 한 번은 상시(마감일 없음)
-    startDate: index % 8 === 0 ? null : daysFromNow(-30),
-    endDate: index % 8 === 0 ? null : daysFromNow([3, 22, 64, 120][index % 4]),
-    status: STATUSES[index % STATUSES.length],
+    startDate: closed ? daysFromNow(-90) : index % 8 === 0 ? null : daysFromNow(-30),
+    endDate: closed ? daysFromNow(-1) : index % 8 === 0 ? null : daysFromNow([3, 22, 64, 120][index % 4]),
+    // 마감 건은 판정까지 막히면 버튼을 못 눌러 마감 안내에 닿지 못한다
+    status: closed ? ('ELIGIBLE' as SupportStatus) : STATUSES[index % STATUSES.length],
     isBookmark: index % 3 === 0,
   }
 
@@ -86,7 +99,21 @@ function makeProgram(index: number): SupportProgramListItem {
   return { ...base, type }
 }
 
-const mockPrograms: SupportProgramListItem[] = Array.from({ length: 26 }, (_, i) => makeProgram(i))
+const mockPrograms: SupportProgramListItem[] = Array.from({ length: 27 }, (_, i) => makeProgram(i))
+
+/**
+ * 접수 기간이 지났는지. 신청 목(handlers/application.ts)이 가져간다.
+ *
+ * 서버는 생성할 때와 제출할 때 각각 검사한다 — 작성하는 사이에 마감될 수 있어서다
+ * (ApplicationServiceImpl.validateApplicationPeriod). 시작·마감일이 둘 다 없으면
+ * 예산 소진 시 마감이라 열어 둔다.
+ */
+export function isSupportProgramClosed(supportProgramId: number): boolean {
+  const found = mockPrograms.find((program) => program.supportProgramId === supportProgramId)
+  if (!found?.endDate) return false
+
+  return found.endDate < new Date().toISOString().slice(0, 10)
+}
 
 /** 시드 값에 사용자가 누른 것을 덮어쓴다. 목록·상세·관심 목록이 같은 값을 보게 한다 */
 function withBookmark(program: SupportProgramListItem): SupportProgramListItem {

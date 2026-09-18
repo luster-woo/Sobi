@@ -13,7 +13,8 @@ import type {
 } from '@/features/application/model/types'
 import { UPLOAD_MAX_SIZE_MB,uploadAccept } from '@/features/application/model/upload'
 import { findLoanProductSummary } from '@/mocks/handlers/loan'
-import { findSupportProductSummary } from '@/mocks/handlers/support'
+import { findSupportProductSummary, isSupportProgramClosed } from '@/mocks/handlers/support'
+import { ERROR_CODE } from '@/shared/api/errors'
 import type { ApiResponse } from '@/shared/types'
 import type { ApplicationStatus } from '@/shared/types/application'
 
@@ -407,6 +408,24 @@ const applications = new Map<number, MockApplication>([
       },
     ),
   ],
+  /*
+   * 작성하는 사이에 마감된 건. 27번 공고는 접수가 끝나 새 신청을 만들 수 없으므로
+   * (생성에서 APPLICATION_004 로 막힌다) 이 건이 없으면 제출 시점의 마감 안내에
+   * 닿을 방법이 없다. 서류는 다 통과라 바로 '신청하기' 를 누를 수 있다.
+   */
+  [
+    108,
+    seedTracked(
+      108,
+      { loanId: null, supportProgramId: 27 },
+      'PREPARING',
+      '2026-09-02T10:30:00',
+      null,
+      {
+        applyAmount: null,
+      },
+    ),
+  ],
 ])
 
 /** 업로드 시각으로 검증 단계를 계산한다. 고정된 서류는 그 값을 그대로 쓴다 */
@@ -487,6 +506,12 @@ function success<T>(path: string, message: string, data: T): ApiResponse<T> {
   return { statusCode: 200, timestamp: nowIso(), path, message, data, error: null }
 }
 
+/**
+ * 실패 응답.
+ *
+ * ⚠️ `code` 는 ErrorCode 의 **코드**('APPLICATION_014')다. enum 이름을 보내면 화면의
+ *    코드별 문구 매퍼가 한 건도 못 맞춘다 — 목에서만 맞는 상태가 된다.
+ */
 function failure(path: string, message: string, code = 'COMMON_001') {
   return HttpResponse.json(
     { statusCode: 400, timestamp: nowIso(), path, message, data: null, error: { code } },
@@ -583,10 +608,24 @@ export const applicationHandlers = [
     const programId = Number(url.searchParams.get('programId'))
 
     if (!type || !programId) {
-      return failure('/api/v1/application', '유효하지 않은 요청입니다.')
+      return failure('/api/v1/application', '유효하지 않은 요청입니다.', ERROR_CODE.APPLICATION_TYPE_INVALID)
     }
 
     const isLoan = type === 'LOAN'
+
+    /*
+     * 대출에는 마감이 없다. 지원사업은 공고라 접수 기간이 있고, 서버가 최근 신청을
+     * 보기도 전에 먼저 막는다 — 이어서 작성하려는 경우에도 기간이 지났으면 못 한다
+     * (ApplicationServiceImpl.createSupportApplication).
+     */
+    if (!isLoan && isSupportProgramClosed(programId)) {
+      return failure(
+        '/api/v1/application',
+        '신청 기간이 아닌 지원사업입니다.',
+        ERROR_CODE.APPLICATION_PERIOD_CLOSED,
+      )
+    }
+
     /*
      * 지원사업은 support 목에서 가져온다. 여기서 따로 들고 있으면 목록에서 고른
      * 공고와 신청 화면의 상품이 어긋난다.
@@ -652,7 +691,11 @@ export const applicationHandlers = [
     if (!app) return notFound(`/api/v1/application/${id}`)
 
     if (app.status !== 'PREPARING') {
-      return failure(`/api/v1/application/${id}`, '이미 신청이 완료되어 취소할 수 없습니다.')
+      return failure(
+        `/api/v1/application/${id}`,
+        '이미 신청이 완료되어 취소할 수 없습니다.',
+        ERROR_CODE.APPLICATION_CANCEL_NOT_ALLOWED,
+      )
     }
 
     applications.delete(id)
@@ -680,32 +723,53 @@ export const applicationHandlers = [
     if (!app) return notFound(path)
 
     if (app.status !== 'PREPARING') {
-      return failure(path, '이미 제출된 신청입니다.', 'APPLICATION_SUBMIT_NOT_ALLOWED')
+      return failure(path, '이미 제출된 신청입니다.', ERROR_CODE.APPLICATION_SUBMIT_NOT_ALLOWED)
     }
 
     // 서버도 종류를 가리지 않고 검증 통과만 본다 (validateDocumentsPassed)
     const remaining = app.documents.filter((doc) => resolveValidationStatus(doc) !== 'PASSED')
     if (remaining.length > 0) {
-      return failure(path, `아직 완료되지 않은 서류가 ${remaining.length}건 있습니다.`)
+      return failure(
+        path,
+        `아직 완료되지 않은 서류가 ${remaining.length}건 있습니다.`,
+        ERROR_CODE.APPLICATION_DOCUMENT_NOT_COMPLETED,
+      )
     }
 
-    // 금액 범위가 있으면 돈이 오가는 신청이다. '기타' 지원사업만 둘 다 안 받는다
+    /*
+     * 작성하는 사이에 마감될 수 있어서 서버가 제출 시점에도 기간을 본다
+     * (ApplicationServiceImpl.submitSupport). 생성 때 통과한 건이라고 봐주지 않는다.
+     */
+    if (app.support && isSupportProgramClosed(app.support.supportProgramId)) {
+      return failure(path, '신청 기간이 아닌 지원사업입니다.', ERROR_CODE.APPLICATION_PERIOD_CLOSED)
+    }
+
+    /*
+     * 금액·계좌는 대출만 받는다. 지원사업은 유형이 '지원금' 이든 '대출' 이든 우리가
+     * 돈을 옮기지 않아 화면이 입력란을 그리지 않는다.
+     *
+     * ⚠️ 실서버는 아직 '기타' 가 아닌 지원사업에 둘을 요구한다(submitSupport). 목을
+     *    거기 맞추면 화면이 보내지 않는 값을 목이 요구하게 되어 제출을 눌러볼 수 없다.
+     *    백엔드가 그 분기를 걷어내면 양쪽이 맞는다.
+     */
     const range = app.loan
       ? { min: app.loan.minLoanBalance, max: app.loan.maxLoanBalance }
-      : app.support && app.support.minBalance !== null && app.support.maxBalance !== null
-        ? { min: app.support.minBalance, max: app.support.maxBalance }
-        : null
+      : null
 
     if (range) {
       const amount = body.amount
       if (amount === null || amount === undefined) {
-        return failure(path, '신청 금액을 입력해 주세요.')
+        return failure(path, '신청 금액을 입력해 주세요.', ERROR_CODE.APPLICATION_AMOUNT_INVALID)
       }
       if (amount < range.min || amount > range.max) {
-        return failure(path, '신청 가능한 금액 범위를 벗어났습니다.')
+        return failure(
+          path,
+          '신청 가능한 금액 범위를 벗어났습니다.',
+          ERROR_CODE.APPLICATION_AMOUNT_INVALID,
+        )
       }
       if (body.accountId === null || body.accountId === undefined) {
-        return failure(path, '출금 계좌를 선택해 주세요.', 'APPLICATION_ACCOUNT_INVALID')
+        return failure(path, '출금 계좌를 선택해 주세요.', ERROR_CODE.APPLICATION_ACCOUNT_INVALID)
       }
     }
 
@@ -745,7 +809,7 @@ export const applicationHandlers = [
     const rawId = formData.get('applicationDocumentId')
 
     if (!(file instanceof File)) {
-      return failure(path, '파일을 선택해 주세요.', 'APPLICATION_DOCUMENT_FILE_EMPTY')
+      return failure(path, '파일을 선택해 주세요.', ERROR_CODE.APPLICATION_DOCUMENT_FILE_EMPTY)
     }
 
     const applicationDocumentId = Number(rawId)
@@ -758,14 +822,14 @@ export const applicationHandlers = [
         return failure(
           path,
           '이미 제출한 신청입니다.',
-          'APPLICATION_DOCUMENT_UPLOAD_NOT_ALLOWED',
+          ERROR_CODE.APPLICATION_DOCUMENT_UPLOAD_NOT_ALLOWED,
         )
       }
 
       // 검증이 도는 중에는 파일을 바꿀 수 없다
       const current = resolveValidationStatus(doc)
       if (current === 'PENDING' || current === 'VALIDATING') {
-        return failure(path, '검증이 진행 중입니다.', 'APPLICATION_DOCUMENT_VALIDATING')
+        return failure(path, '검증이 진행 중입니다.', ERROR_CODE.APPLICATION_DOCUMENT_VALIDATING)
       }
 
       // 서버가 확장자와 시그니처를 함께 본다. 목은 확장자만 본다
@@ -775,12 +839,12 @@ export const applicationHandlers = [
         return failure(
           path,
           '허용되지 않는 파일 형식입니다.',
-          'APPLICATION_DOCUMENT_FILE_TYPE_INVALID',
+          ERROR_CODE.APPLICATION_DOCUMENT_FILE_TYPE_INVALID,
         )
       }
 
       if (file.size > UPLOAD_MAX_SIZE_MB * 1024 * 1024) {
-        return failure(path, '파일이 너무 큽니다.', 'APPLICATION_DOCUMENT_FILE_TOO_LARGE')
+        return failure(path, '파일이 너무 큽니다.', ERROR_CODE.APPLICATION_DOCUMENT_FILE_TOO_LARGE)
       }
 
       doc.originalFilename = file.name
@@ -806,7 +870,7 @@ export const applicationHandlers = [
       )
     }
 
-    return failure(path, '해당 서류를 찾을 수 없습니다.', 'APPLICATION_DOCUMENT_NOT_FOUND')
+    return failure(path, '해당 서류를 찾을 수 없습니다.', ERROR_CODE.APPLICATION_DOCUMENT_NOT_FOUND)
   }),
 
   /**

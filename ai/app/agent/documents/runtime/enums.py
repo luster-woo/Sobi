@@ -3,6 +3,7 @@ from enum import StrEnum
 
 class RuntimeFieldStatus(StrEnum):
     RESOLVED = "RESOLVED"
+    LEFT_BLANK = "LEFT_BLANK"
     INPUT_REQUIRED = "INPUT_REQUIRED"
     NEEDS_REVIEW = "NEEDS_REVIEW"
     UNSUPPORTED = "UNSUPPORTED"

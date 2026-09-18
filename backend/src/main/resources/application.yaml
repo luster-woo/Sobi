@@ -83,6 +83,10 @@ file:
   # 업로드 파일 루트. 로컬은 backend/uploads, EC2 컨테이너는 /app/uploads (호스트 /home/ubuntu/app/uploads 마운트)
   upload-dir: ${FILE_UPLOAD_DIR:./uploads}
 
+document:
+  storage:
+    original-dir: ${DOCUMENT_ORIGINAL_DIR:/data/document-agent/original}
+
 mydata:
   # 갱신 1회에 GMS 크레딧 약 100 이 나간다. 연타를 막는다.
   refresh-cooldown: ${MYDATA_REFRESH_COOLDOWN:24h}

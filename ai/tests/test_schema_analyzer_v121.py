@@ -40,7 +40,7 @@ class AnalyzerV121Tests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('자신이 등록한 사업체의 사업자 소유자/대표자',prompt)
 
     async def test_user_input_date_independent_of_shape(self):
-        for label in ('생년월일','출산일'):
+        for label in ('자녀 생년월일','출산일'):
             original=candidate(label)  # SHORT_TEXT physical shape
             client=FakeClient(response(field(semantic='USER_INPUT',sources=[],value_type='DATE')))
             result=await GmsSchemaAnalyzer(client=client).analyze([original])
@@ -49,7 +49,7 @@ class AnalyzerV121Tests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result.fields[0].candidate.input_shape,'SHORT_TEXT')
 
     def test_date_fewshots_and_unique_ids(self):
-        for label in ('생년월일','출산일'):
+        for label in ('자녀 생년월일','출산일'):
             example=next(e for e in FEW_SHOT_EXAMPLES if e['candidate']['label']==label)
             analysis=AnalyzedField.model_validate(example['correct_analysis'])
             self.assertEqual(analysis.semantic_type,'USER_INPUT')

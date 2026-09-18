@@ -197,3 +197,12 @@ Parser 자체는 읽기만 한다. 단위 테스트에서 원본 SHA-256 전후 
 warnings를 확인하고 native_ref를 따라 실제 XML 요소가 다시 찾아지는지 점검한다.
 Normalizer는 이미 검증된 변환 결과를 공급하며 이 Parser 구현 때문에 변경하지 않는다.
 
+
+## PARAGRAPH_INLINE location 확장 (2026-09-18)
+
+LocationType enum에 PARAGRAPH_INLINE을 추가했다. Parser 자체는 이 target을 만들지 않는다.
+기존 ParsedParagraph의 text/location/native_ref를 이용해 CandidateExtractor가 inline 입력영역을 만든다.
+새 metadata는 target_location.native_ref.inline_range에 start/end/paragraph_text를 담는다.
+Parser의 XML 읽기, text 추출, element_path traversal 및 section/table index 정책은 변경하지 않았다.
+Writer 재파싱도 기존 public HwpxParser.parse를 그대로 사용한다.
+자세한 range/current_text 계약은 candidates/README.md와 writer/README.md를 참조한다.

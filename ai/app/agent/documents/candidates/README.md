@@ -188,3 +188,62 @@ SAME_CELL은 변경하지 않았다. 실제 필드명 전용 규칙을 추가하
 검증: 기존 61개 중 unit target 금지 정책 테스트 2개의 기대값만 변경하고 23개 추가.
 Candidate 84개 / 전체 178개 통과. 실제 카드수수료·물류비·출산급여 신청서 재검증은 별도 실행한다.
 RFP는 사용자 원본 분석에 따라 negative/reference sample로 기록하며 제목별 규칙을 추가하지 않는다.
+
+## 2026-09-18 — 문단 내부 inline blank
+
+기존 16개 TABLE_CELL 후보를 유지하면서 paragraph의 실제 입력 공백영역을 독립 Candidate로 탐지한다.
+`inline.py`의 구조 규칙만 사용하며 특정 label/SourceKey/semantic field_key 사전은 없다.
+
+실제 card_blank.hwpx 조사:
+
+- 신청서 하단: hp:p 하나, run 2개. 첫 run은 앞 공백 2개, 두 번째 run/t에 나머지 label·공백·suffix가 있다.
+  paragraph 경로는 [0,1,1,13,0,0,4]. table_index=1,row=9,column=0 안의 paragraph_index=4.
+- 동의서 하단: hp:p 하나, run 3개. 첫 업체명 공백은 첫 t 끝의 space 21개와 두 번째 run의 space 5개에 걸친다.
+  세 번째 run/t에 성명 label·공백·(서명/인)이 있다. 경로는 [20], top-level paragraph_index=20.
+- tab/control이 아닌 실제 ASCII space다. 경로/run style 값은 코드에 하드코딩하지 않는다.
+
+탐지 조건: 문단 전체가 앞 여백 + 두 개 이상의 `label : 최소 4 spaces` 그룹 + 고정 괄호 suffix 형태여야 한다.
+한글/영문으로 시작하는 짧은 label의 내부 공백은 보존한다. ':'와 '：'를 허용한다.
+일반 문장의 여러 spaces, 이미 작성된 값, 짧은 공백, separator 없는 문장, suffix 없는 문장은 제외한다.
+객체/Parser warning이 포함된 문단 및 fragment_index!=0은 후보에서 제외한다.
+단일 inline field, 임의 NLP 문장, tab/control 공백, 여러 줄 입력 양식은 이번 탐지 범위 밖이다.
+
+새 target은 `LocationType.PARAGRAPH_INLINE`, hints.target_kind=`inline_blank`, input_shape=SHORT_TEXT다.
+기존 relation enum의 SAME_CELL은 동일 본문 컨테이너 내부 관계 표현으로 재사용한다.
+label_location은 원문 PARAGRAPH 위치이며 target_location은 그 문단 경로와 아래 range를 가진다.
+
+```json
+{
+  "type": "PARAGRAPH_INLINE",
+  "native_ref": {
+    "section_file": "Contents/section0.xml",
+    "element_path": [20],
+    "element_name": "p",
+    "fragment_index": 0,
+    "text_element_paths": [[20,0,0],[20,1,0],[20,2,0]],
+    "inline_range": {
+      "start": 5,
+      "end": 31,
+      "paragraph_text": "업체명 :                          성  명 :                 (서명/인)"
+    }
+  }
+}
+```
+
+공통 section/block/table/row/column/paragraph index와 xml_id도 기존 paragraph에서 복사한다.
+start/end는 Python Unicode codepoint 기준 [start,end)이며 byte/UTF-16 offset이 아니다.
+current_text는 해당 range의 **정확한 원래 공백 문자열**이다. strip/collapse하지 않는다.
+paragraph_text 전체로 prefix/suffix도 검증할 수 있다. 이 structural 정보는 native_ref에만 저장하며 hints에 섞지 않는다.
+같은 paragraph의 range들을 독립 target으로 보존하고 start 순으로 정렬한다. candidate_id는 기존 방식으로 unique하게 부여한다.
+새 후보 추가로 candidate_id가 달라질 수 있으므로 기존 schema를 재사용하지 말고 새 전처리 template을 사용한다.
+
+기존 Parser 텍스트/경로만으로 충분하여 HwpxParser 구현/ParsedDocument 모델은 수정하지 않았다.
+parser/enums.py에 location type 값 하나만 추가했다. Persistence의 StoredLocationInfo JSONB는 그대로 수용하고
+Runtime도 opaque location_info를 유지하므로 두 구현 모두 수정하지 않았다.
+Analyzer는 location을 생성하지 않는다. 기존 _join의 중복 field_key suffix 처리를 유지한다.
+동일 BUSINESS_NAME/USER_NAME을 여러 schema field가 참조하는 것도 기존 계약에서 허용된다.
+
+실제 fixture는 16 → 20 Candidate(기존 table 16 + inline 4). 추가 label은
+`업 체 명`, `대표자`, `업체명`, `성  명`이다. 서명 suffix 자체는 후보가 아니다.
+신규 탐지 테스트 14개, Writer 테스트 13개, 실제 fixture E2E 1개를 추가했다.
+전체 588개 중 587개 통과, PostgreSQL 선택 통합 1개 skip.

@@ -1,32 +1,37 @@
 import argparse
 import asyncio
 import json
-from pathlib import Path
 import sys
 
 from .models import DocumentRuntimeRequest
 from .service import DocumentAgentRuntime
 
 
-async def run(request):
+class DisabledGenerationClient:
+    async def generate(self, **kwargs):
+        from .generated import GenerationError
+        from .enums import RuntimeFieldStatus
+        raise GenerationError("GENERATION_DISABLED", RuntimeFieldStatus.UNSUPPORTED)
+
+
+async def run(request, *, generate=False):
     from app.core import db
     await db.open_pool()
     try:
-        return await DocumentAgentRuntime().resolve(request)
+        return await DocumentAgentRuntime(gms_client=None if generate else DisabledGenerationClient()).resolve(request)
     finally:
         await db.close_pool()
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Document Runtime v1 개발 검증(Source DB 조회, Writer/GMS 실행 없음)")
+    parser = argparse.ArgumentParser(description="Document Runtime v3 개발 검증(Source DB 조회, --generate 선택 시 GMS 호출)")
     parser.add_argument("template_id", type=int)
     parser.add_argument("user_id", type=int)
-    parser.add_argument("--user-inputs", type=Path, help="field_key 기준 JSON 객체 파일")
     parser.add_argument("--show-values", action="store_true", help="개발 검증 전용: 개인정보를 포함할 수 있는 전체 결과 출력")
+    parser.add_argument("--generate", action="store_true", help="실제 GMS field 단위 호출 활성화")
     args = parser.parse_args()
     try:
-        inputs = json.loads(args.user_inputs.read_text(encoding="utf-8-sig")) if args.user_inputs else {}
-        result = asyncio.run(run(DocumentRuntimeRequest(template_id=args.template_id, user_id=args.user_id, user_inputs=inputs)))
+        result = asyncio.run(run(DocumentRuntimeRequest(template_id=args.template_id, user_id=args.user_id), generate=args.generate))
     except Exception:
         print(json.dumps({"code": "RUNTIME_FAILED", "message": "입력 및 DB 상태를 확인하세요."}, ensure_ascii=False), file=sys.stderr)
         return 1

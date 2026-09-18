@@ -7,6 +7,7 @@ from .enums import CandidateRelation as Relation
 from .models import FieldCandidate
 from .normalizer import normalize_label
 from . import rules
+from .inline import extract_inline
 
 
 def location_key(location):
@@ -56,6 +57,11 @@ class FieldCandidateExtractor:
                         previous = winners.get(key)
                         if previous is None or self._rank(candidate) > self._rank(previous):
                             winners[key] = candidate
+        # Inline ranges are independent targets even when they share one paragraph path.
+        for candidate in extract_inline(parsed):
+            native = candidate.target_location.native_ref
+            span = native["inline_range"]
+            winners[("inline", native["section_file"], tuple(native["element_path"]), span["start"], span["end"])] = candidate
         # 표/셀 위치순으로 ID를 부여한다. 같은 입력의 반복 추출 결과는 동일하다.
         ordered = sorted(winners.values(), key=self._order)
         return [candidate.model_copy(update={"candidate_id": f"candidate_{index:03d}"})
@@ -68,10 +74,12 @@ class FieldCandidateExtractor:
     @staticmethod
     def _order(candidate):
         loc = candidate.target_location
+        native = dict(loc.native_ref)
+        region = native.pop("inline_range", {})
         return (loc.section_index, loc.table_index if loc.table_index is not None else -1,
                 loc.row_index if loc.row_index is not None else -1,
                 loc.column_index if loc.column_index is not None else -1,
-                json.dumps(loc.native_ref, sort_keys=True, ensure_ascii=False))
+                json.dumps(native, sort_keys=True, ensure_ascii=False), region.get("start", -1))
 
     def _candidate(self, label, target, kind, relation, cells):
         shape = rules.input_shape(target, relation, cells)

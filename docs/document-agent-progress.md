@@ -716,3 +716,297 @@ CLI 기본 출력은 상태/집계만, --show-values로 개발 검증 시에만 
 기존 파일 변경은 이 누적 문서만. 새 DB table/결과 저장도 없음.
 제한: exact template 선택, 접근 권한은 상위 서비스 책임, load 이후 동시 재분석은 Writer 전에 재확인 필요.
 constraints/min_length/max_length는 보존만 하며 후속 Validation/Writer 단계에서 처리.
+
+## 2026-09-17 — Runtime v2: 기존 계산 Source 최소 지원
+
+Runtime v1 이후 COMPUTED 분기만 확장했다. 조사 기준은 repository의 Analyzer/Prompt/Catalog,
+Persistence, Source Resolver 및 DB 정의이며 운영 DB를 직접 조회한 것은 아니다.
+현재 operation/rate/cap/operand_field_key/field dependency 저장 계약은 없다.
+Analyzer는 COMPUTED+RESOLVED를 기존 계산 SourceKey와 허용 params로 정확하게 표현하도록 요구하며
+COMPUTED_REQUIRES_COMPUTED_KEY를 검사한다. Persistence는 해당 source 정의/params를 그대로 저장한다.
+
+기존 구조로 안전한 범위: 단일 계산 SourceKey + 기존 EmptyParams/PeriodParams.
+지원: REVENUE_SUM, REVENUE_AVERAGE, TAX_SUM, TAX_AVERAGE, BUSINESS_AGE_MONTHS, INSURANCE_ENROLLED.
+실제 계산은 기존 SourceService.resolve_source/Resolver에 맡기고 Runtime에서 산술/SQL을 복제하지 않는다.
+신규 computed.py의 ComputedExecutor는 정의 검증 및 이미 계산된 typed result 검증/반환만 담당하며
+DB/GMS/RAG 호출은 없다. 정의는 새 DB 계약이 아닌 기존 SourceKey/params의 내부 typed 표현이다.
+
+정의 없음/자연어 수식만/여러 source 역할 모호 → VALUE_MISSING.
+Source found=False → VALUE_MISSING. 미지원 Source → UNSUPPORTED.
+잘못된 params/type 및 계산 오류 → per-field ERROR. 다중 source를 SUM/fallback으로 추측하지 않는다.
+MULTIPLY_RATE/CAP/SUBTRACT/범용 SUM/MIN/MAX/연산 조합/user_inputs operand/field dependency는
+저장 계약이 없어 추가하지 않았다. constraints에 가짜 operation 계약을 만들지 않았다.
+금액은 기존 int/유한 Decimal 유지, float/숫자 문자열 변환 및 추가 rounding 없음.
+
+ResolvedField 모델 변경 없음. 기존 source_type/key/priority provenance와 location_info/native_ref/hints 보존.
+DIRECT/USER_INPUT 분기는 그대로이며 GENERATED는 NOT_IMPLEMENTED 유지.
+mapping_status 우선 차단과 ready_for_write 조건도 변경 없음.
+
+추가: runtime/computed.py, tests/test_runtime_computed.py(19개).
+수정: runtime/service.py COMPUTED 분기, runtime/README.md,
+tests/test_document_runtime.py의 기존 COMPUTED 미구현 기대값 1개, 이 진행 문서.
+신규 19개 + 기존 Runtime/CLI 39개 = Runtime 총 58개 통과.
+Source 29 / Analyzer 93 / Persistence 단위 24 / Preprocessing 17 / Batch 36 모두 통과.
+최근 추가된 팀원 OCR 테스트 51개도 의존성을 임시 준비하여 코드 수정 없이 검증했다.
+전체 458개 중 457개 통과, PostgreSQL 선택 테스트 1개 skip(전용 DSN 미설정).
+실제 GMS/RAG/Source DB/운영 EC2 문서 변경은 수행하지 않았다.
+Analyzer/Prompt/Persistence/Source/Registry/전처리/Batch/RAG/OCR/DB migration/공용 설정/requirements 변경 없음.
+
+## 2026-09-17 — Runtime v3 GENERATED
+
+Runtime v2 COMPUTED 최소 지원 완료: 기존 Source Resolver의 6개 구조화된 계산 Source만 사용한다.
+Runtime v3는 GENERATED + RESOLVED + TEXT에 대해 Source context 수집 및 공용 GMS field 단위 생성을 추가했다.
+V19의 여러 필요 데이터 계약에 따라 GENERATED sources는 context로 모두 수집한다.
+제공된 사실만 사용하고 없는 사실 생성 금지, 정보 부족 시 INPUT_REQUIRED/missing_information을 반환한다.
+location_info는 원형 보존하고 GMS에 전달하지 않는다. user_inputs dependency 계약은 없어 자동 연결하지 않는다.
+기존 추천 RAG API에는 query/support_program 범위 제한이 없어 필수 RAG는 UNSUPPORTED다.
+optional RAG만 생략하고 정형 근거가 있을 때 생성한다. RAG/Source/Analyzer/Persistence 코드는 변경하지 않았다.
+공용 app.core.gms client 재사용, 60초 timeout, 자동 retry/repair 없음, strict JSON/본문/길이 검증,
+field별 오류 격리, 기본 CLI 본문 숨김, --generate 실제 호출 opt-in을 적용했다.
+신규 Generated 테스트 25개, Runtime 83개, 전체 483개 중 482개 통과/PG 선택 통합 1개 skip.
+실제 GMS/RAG 호출은 하지 않았다. Runtime README에 단일 GENERATED field 검증 예제를 기록했다.
+Writer/DB draft 저장/API/migration은 구현하지 않았다. 정형 검증이 사실성을 보장하지는 않는다.
+
+## 2026-09-17 — HWPX Writer v1
+
+Document Agent Runtime v3 GENERATED 구현 완료 이후 deterministic HWPX Writer를 추가했다.
+Runtime DIRECT→Source Resolver / USER_INPUT→supplied input / COMPUTED→구조화된 계산 Source /
+GENERATED→structured facts+GMS 정책은 그대로다. Writer는 Runtime value+location_info만 사용한다.
+
+- TABLE_CELL의 section_file/element_path를 기존 Parser의 요소 자식 index 규칙대로 resolve한다.
+- element_name/좌표 metadata 및 current_text 정확 비교로 stale target을 거부한다.
+- ready_for_write=false면 실행 거부, RESOLVED만 작성, optional unresolved는 skip한다.
+- empty/helper/unit_suffix(BEFORE_SUFFIX)를 지원하며 placeholder/복잡한 구조는 거부한다.
+- TEXT/LF 및 NUMBER/Decimal을 지원한다. DATE/BOOLEAN/JSON 표시 계약은 없어 미지원이다.
+- 기존 cell/paragraph/run/style/namespace를 유지하고 변경 문단의 optional linesegarray만 무효화한다.
+- source normalized template은 읽기 전용 snapshot으로 사용하고 별도 output HWPX를 생성한다.
+- 전체 preflight → mutation → ZIP CRC/Parser round-trip/expected text 검증 → atomic no-clobber 게시.
+- Writer 자체는 의미 판단, GMS/RAG/Source/DB 호출을 하지 않는다. CLI에서만 Runtime→Writer를 연결한다.
+- 신규 Writer/CLI 56개 통과. 전체 539개 중 538개 통과, PostgreSQL 선택 통합 1개 skip.
+- 실제 HWPX fixture가 없어 최소 synthetic fixture와 Parser→Candidate→StoredLocationInfo round-trip으로 검증했다.
+- 실제 한글 렌더링/지원사업 5개 문서 검증은 Writer README의 CLI 절차로 후속 수행한다.
+- 안정화 모듈/Runtime/팀원 코드/requirements/migration은 수정하지 않았다. Writer 결과 DB 저장은 없다.
+
+## 2026-09-18 — Runtime USER_INPUT 정책 / Writer v1.1 DATE placeholder
+
+사용자가 수행한 실제 경상북도 카드수수료 지원사업 수동 Runtime→Writer E2E에서
+DIRECT Source 조회와 ready_for_write=true는 정상이었지만 OPEN_DATE의 placeholder 때문에
+TARGET_KIND_UNSUPPORTED가 발생했다. USER_INPUT DATE/BOOLEAN 자동작성도 서비스 목적과 불일치했다.
+
+이번 정책 변경:
+
+- USER_INPUT → LEFT_BLANK → value=null. 값 조회/추가 입력 요청/Source/GMS/계산 실행 없음.
+- ready_for_write는 USER_INPUT을 제외한 자동작성 required field 해결 여부다. 제출 가능 판정이 아니다.
+- 동의/미동의/서명 등은 USER_INPUT 계약으로 원본 그대로 남긴다. Writer는 status만 보고 skip한다.
+- 실제 사용처 조사 결과 외부 API 의존이 없어 Request.user_inputs와 양쪽 CLI --user-inputs를 제거했다.
+- Writer는 확인된 DATE placeholder(년 월 일)만 Python date/엄격한 ISO 날짜로 렌더링한다.
+- 실제 개업일 XML은 날짜 문단과 helper 문단이 분리되어 있어 날짜 text node만 수정한다.
+  결과: 2022년 03월 15일 + 기존 (사업자등록증 상) helper. helper 문단/style/cache는 보존한다.
+- BOOLEAN/DOCX/범용 날짜 rendering/다른 placeholder는 추가하지 않았다.
+
+검증:
+
+사용자가 지정한 manual/normalized의 실제 미작성 HWPX를 확인하고 creator/lastsaveby만 제거한
+card_blank.hwpx fixture를 추가했다. 개인정보가 입력된 결과 파일은 저장하지 않았다.
+Parser→Candidate/StoredLocation→실제 Runtime(fake Source provider)→Writer→Parser 통합 테스트 통과.
+RESOLVED=9 / LEFT_BLANK=5 / optional UNSUPPORTED=2, ready_for_write=true, written=9/skipped=7.
+개업일 helper 및 동의 표를 포함한 모든 비작성 셀의 XML, normalized 원본 bytes 불변을 확인했다.
+
+Runtime 정책 신규 7개, 기존 Runtime 7개/Generated 테스트 1개 수정. Runtime 전체 90개 통과.
+Writer 정책 신규 14개(실제 fixture 1개 포함), 기존 Writer 1개 수정. Writer 전체 70개 통과.
+전체 560개 중 559개 통과, PostgreSQL 선택 통합 1개 skip. 실제 GMS/RAG/운영 DB 호출 없음.
+Analyzer/Prompt/Source/Persistence/Computed/Generated 구현/Normalizer/Parser/팀원 코드/migration 수정 없음.
+수동 DB E2E 재실행 명령 및 한글 렌더링 확인 절차는 Runtime/Writer README에 갱신했다.
+
+## 2026-09-18 — Inline blank Candidate / Writer
+
+사용자 수동 카드수수료 서식 검증에서 반복 BUSINESS_NAME 위치 누락을 확인했다.
+원인은 Runtime/Writer 값 재사용이 아니라 기존 Extractor가 표의 옆 빈 셀만 탐지하고
+paragraph 내부 label:[spaces] 다음 label:[spaces] 구조를 후보로 만들지 못한 것이다.
+
+실제 fixture의 신청서 하단은 run 2개, 동의서 하단은 run 3개이며 후자의 첫 blank는 두 run에 걸친다.
+기존 Parser의 text/element_path/text_element_paths로 충분해 파싱 구현 변경 없이
+LocationType.PARAGRAPH_INLINE enum만 추가했다. Extractor가 inline_range(start/end/paragraph_text)를
+native_ref에 저장하며 current_text는 공백영역 원문이다. 기존 JSONB/version=1로 Persistence 수정 없이 보존한다.
+
+보수적인 두 label:긴 spaces + 고정 괄호 suffix 규칙을 추가해 기존16 + inline4 = 20 Candidate를 얻었다.
+semantic label/SourceKey hardcode 없음. Analyzer location 생성/Prompt 변경 없음.
+Writer는 TEXT inline range를 기존 text node substring에서만 치환하고 같은 문단은 offset 내림차순으로 적용한다.
+full paragraph/current_text stale guard, 겹침 거부, 원본/스타일/고정 suffix 보존, atomic/Parser 검증을 유지한다.
+USER_INPUT LEFT_BLANK 및 optional UNSUPPORTED 정책은 그대로다.
+
+실제 fixture + fake Analyzer 응답 + Runtime(fake Source) + Writer + Parser E2E 통과:
+BUSINESS_NAME 3곳, USER_NAME 4곳 작성. 총 작성13/보존7. 동의 XML/생년월일/매출/서명 suffix/원본 bytes 보존.
+신규 테스트 Candidate14 + Writer13 + 실제 fixture E2E1 = 28개.
+전체588개 중587개 통과, PostgreSQL 선택 통합1개 skip.
+실제 GMS/RAG/DB 재전처리는 실행하지 않았다. E-mail 실제 semantic 결과는 사용자 재전처리 후 확인해야 한다.
+
+Source/Runtime/Analyzer/Prompt/Persistence/공용 설정/migration/Draft API 변경 없음.
+새 template 재전처리 명령과 한글 육안 점검 항목은 Writer README에 추가했다.
+
+## 2026-09-18 후속 수동 E2E — USER Source 매핑 및 DATE empty
+
+### 실제 이슈와 조사
+
+사용자가 실제 DB + 실제 GMS preprocessing에서 대표자 정보 성명은 USER_NAME이지만
+일부 대표자/inline 성명 및 E-mail은 USER_INPUT으로 흔들리는 현상을 확인했다.
+기존 USER 키는 USER_NAME(name), USER_EMAIL(email), CREDIT_RATING(credit_rating)이다.
+생년월일 SourceKey는 없었고 Prompt가 생년월일 USER_INPUT을 명시적으로 지시하고 있었다.
+
+backend User.java:31의 birthDate는 LocalDate이다.
+backend/src/main/resources/db/migration/V23__add_birth_date_to_users.sql은 nullable DATE를 추가한다.
+코드 간 타입 불일치는 없었다. 실제 DB schema introspection/접속은 하지 않았다.
+SQL provider는 기존 psycopg 풀을 사용하며 date를 그대로 SourceResolveResult로 반환한다.
+JSON 직렬화만 ISO 문자열이며 NULL은 found=false/value=null이다.
+사용자 없음/삭제된 사용자는 기존 USER_NOT_FOUND 계약, user_id 없음은 MISSING_CONTEXT_ID다.
+
+### 변경과 경계
+
+- USER_BIRTH_DATE Enum/Registry/USER_FIELDS projection을 추가. 기존 DIRECT resolver를 재사용한다.
+  user_id → users.id/birth_date만 조회하며 별도 사업체/신청서 lookup은 없다.
+- Registry 기반 catalog에 신규 key가 자동 포함되며 세 USER fact 설명을 보강했다.
+- Prompt의 생년월일 금지 지침을 제거하고 대표자/신청인 본인의 이름·이메일·생년월일은
+  DIRECT/RESOLVED로 안내한다. 반복 inline 후보에도 같은 key 재사용을 명시한다.
+- 제3자(담당자/대리인/자녀/배우자/직원/상담자)와 모호한 인물 문맥을 구분한다.
+  USER_INPUT은 사용자 관련 정보라는 뜻이 아니며 저장된 객관 정보는 DIRECT 우선이다.
+- source-first는 기존 Prompt 재검토 정책이다. Python validation은 계약 검증만 수행한다.
+  semantic keyword 하드코딩/로컬 강제 교체/추가 GMS 호출은 넣지 않았다.
+  **GMS가 형식상 유효한 잘못된 USER_INPUT을 주면 그대로 남는다. 의미 정확도와
+  실행별 비결정성 해소는 아직 실제 재전처리 검증 대상이다.** 이 한계를 fake 테스트에도 명시했다.
+- Writer parse_date를 기존 placeholder에서 추출해 공유한다. TABLE_CELL empty DATE는 ISO,
+  placeholder DATE는 한국어 날짜. invalid date는 안전한 INVALID_DATE_VALUE다.
+- Runtime 구현은 변경하지 않았다. 새 키도 일반 DIRECT로 처리하며 required 데이터 NULL은
+  VALUE_MISSING/ready_for_write=false다. USER_INPUT은 계속 LEFT_BLANK/value=null/Writer skip이다.
+- 동의/미동의4개, 서명/날인, (인)/(서명/인) 정책을 유지하고 BOOLEAN rendering은 추가하지 않았다.
+- Parser, CandidateExtractor, inline 탐지/Writer, Normalizer, Persistence, migration, RAG,
+  공용 설정, 의존성 파일, 기존 팀원 코드와 Draft API는 이번 작업에서 수정하지 않았다.
+
+### 수정 파일 (이번 작업만)
+
+ai/ 아래:
+
+- app/agent/sources/enums.py, defaults.py, postgres.py, README.md
+- app/agent/documents/schema_analyzer/catalog.py, prompt.py, README.md
+- app/agent/documents/writer/hwpx.py, README.md
+- tests/test_user_sources.py (신규), test_schema_analyzer_user_facts.py (신규), test_writer_date_empty.py (신규)
+- tests/test_schema_analyzer_v121.py, test_document_writer.py, test_inline_targets.py
+
+그리고 이 docs/document-agent-progress.md. 원본 fixture bytes는 그대로다.
+
+### 검증
+
+- Source 신규8개: 쿼리/ID/DATE/직렬화/NULL/사용자 부재/기존 이름·이메일·등급/필수 context.
+- 일반 DIRECT Runtime 신규1개: birth date 성공과 required NULL → VALUE_MISSING.
+- Analyzer 신규10개, 기존2개 수정: 본인/제3자/반복 inline/Prompt/catalog/few-shot,
+  잘못된 USER_INPUT이 로컬에서 보정되지 않는 한계, 고정 fake 응답 반복성.
+- Writer DATE empty 신규8개, 기존 unsupported value 테스트1개 수정.
+  Python date/ISO/invalid/공유 parser/stale/원본/ZIP/reparse/LEFT_BLANK/범위 제한.
+- 기존 실제 card fixture E2E1개 수정: 후보20 그대로, BUSINESS_NAME3, USER_NAME4,
+  USER_EMAIL 및 USER_BIRTH_DATE 정상, 작성14/LEFT_BLANK4/UNSUPPORTED2.
+  기존 OPEN_DATE 한국어 placeholder/직원수 명 suffix/서명 suffix/동의 XML/스타일/원본 보존.
+- 전체 **615개 중 614 passed, 1 skipped** (기존 baseline 587 passed/1 skipped에서 27개 추가).
+  skip은 opt-in 실제 PostgreSQL 통합 테스트이다. Source/Analyzer/Runtime/Writer/Candidate/Parser/
+  Persistence/Preprocessing/Batch/Computed/Generated 및 기존 OCR/API 단위 테스트를 실행했다.
+- Windows Python 3.12 임시 테스트 환경. 미설치 OCR/API 의존성만 stage/testdeps에 설치했다.
+  numpy 2.5.3은 배포 pin 2.3.5와 다르며 실제 Python 3.11 Docker/OCR 엔진을 검증한 것은 아니다.
+  프로젝트 requirements/Dockerfile은 수정하지 않았다. 실제 GMS/RAG/DB 호출도 하지 않았다.
+
+### 수동 재전처리 및 검수
+
+Prompt 결과는 저장된 schema에 소급 적용되지 않는다. **preprocessing부터 다시 실행**한다.
+TemplateRepository.start는 동일 program_document/schema_version=1 template을 재사용하며,
+Persistence는 해당 template field/source를 replace-all한다. 반드시 새 ID가 생긴다고 가정하지 말고
+preprocessing 응답의 template_id를 다음 명령에 사용한다. '작성용' 문서만 대상이다.
+아래 명령은 실제 사용자 환경에서 실행하며, 이번 자동 테스트에서는 실행하지 않았다.
+
+```bash
+python -B -m app.agent.documents.preprocessing \
+  <program_document_id> \
+  /data/test/manual/original/card.hwp \
+  /data/test/manual/normalized \
+  --original-format HWP
+
+python -B -m app.agent.documents.runtime \
+  <template_id> <user_id> --show-values
+
+python -B -m app.agent.documents.writer \
+  <template_id> <user_id> \
+  --output /data/test/manual/generated/draft-user-source-test.hwpx
+
+python -B -m zipfile -t /data/test/manual/generated/draft-user-source-test.hwpx
+```
+
+output parent 디렉터리를 준비하고 이미 존재하는 output 파일명은 재사용하지 않는다.
+preprocessing 후 아래 SQL로 대표자/이메일/생년월일/inline 이름의 DIRECT/USER 매핑을 확인한다.
+
+```sql
+SELECT
+    fs.field_order,
+    fs.field_key,
+    fs.field_label,
+    fs.field_type,
+    fs.value_type,
+    fs.mapping_status,
+    s.source_type,
+    s.source_key
+FROM document_field_schema fs
+LEFT JOIN document_field_source s
+    ON s.field_schema_id = fs.id
+WHERE fs.template_id = <template_id>
+ORDER BY fs.field_order, s.priority;
+```
+
+Windows 한글 검수: 업체명3/이름4/생년월일/이메일, 동의·미동의 미선택, 서명·날인 비작성,
+고정 suffix 보존, 표·inline run 스타일, 줄넘침·페이지 밀림, HWPX 열기 오류 여부.
+실제 GMS 의미 안정성 및 화면 레이아웃은 fake/XML 회귀 테스트만으로 보장되지 않는다.
+
+## 2026-09-18 — Draft Generation Service + FastAPI API
+
+사용자 보고: Batch preprocessing 전체137개 중129개 성공/8개 실패.
+이번 작업에서 실제 DB로 이 수치를 재확인하지 않았으며 FAILED/PARSING/PENDING 문서는 Draft 대상에서 제외한다.
+COMPLETED template + program_document.type='작성용'만 초안 생성한다.
+
+### 구현
+
+- 신규 app/agent/documents/drafts/: models/service/settings/store/router/errors/__init__/README.
+- 기존 RuntimeRepository의 template JOIN program_document 및 schema/source 읽기 snapshot을 재사용한다.
+  별도 SQL을 복제하지 않고 요청별 TemplateSnapshot을 Runtime repository로 주입한다.
+- DB normalized_path의 일반 파일/HWPX 여부를 Runtime 실행 전에 검증한다.
+- POST /api/v1/document-agent/drafts: templateId/userId만 허용. 추가 path/value/userInputs는 422.
+- 기존 DocumentAgentRuntime.resolve → ready_for_write → 기존 HwpxWriter.write 연결.
+  요청 안에서 완료하는 동기 API이며 blocking Writer는 worker thread에서 실행한다.
+- GENERATED는 Runtime의 기존 GMS 연결/timeout/error를 그대로 사용한다. Draft의 직접 GMS/RAG 호출 없음.
+- USER_INPUT은 LEFT_BLANK/value=null, Writer skip. ready는 필수 자동 필드 준비 여부이며 제출 완료 의미가 아니다.
+  false면 409 DRAFT_NOT_READY 및 필수 자동 blocker의 key/label/status만 반환한다.
+- 파일은 DOCUMENT_AGENT_GENERATED_ROOT/draft-{UUID4}.hwpx. overwrite하지 않는다.
+  Writer 성공 → 실제 nonempty 파일/root 검증 → Store 등록 → HTTP201 metadata 순서다.
+- GET /api/v1/document-agent/drafts/{draft_id}/file: UUID → store → 존재/root/name/symlink 검증 → FileResponse.
+  MIME application/hwp+zip, attachment/UUID 파일명. client path 지정 불가.
+- Store는 Lock으로 보호하는 process-local metadata dict. field values를 보관하지 않는다.
+  응답/log에 경로/실제 사용자 값/GMS 전문/예외 전문을 넣지 않는다.
+- DOCUMENT_AGENT_DRAFT_API_ENABLED 기본false/503. generated root는 필수 절대 경로, 필요시 생성한다.
+- main.py는 router import/include_router 2줄 추가. 공용 config/dependencies 변경 없음.
+  Runtime/Writer/Parser/Candidate/Analyzer/Persistence/Batch/Source/Normalizer/RAG/migration 및 Spring 변경 없음.
+
+### 검증
+
+- 신규 service/store/settings unit32, API17, E2E3 = 52개.
+- 실제 card_blank.hwpx + fake 저장 schema/Source → DraftService → 실제 Runtime → 실제 Writer → Parser 검증.
+  작성14/LEFT_BLANK4/UNSUPPORTED2. 업체명3/이름4/생년월일/이메일, 한국어 개업일/직원수,
+  서명 suffix/동의 미선택/원본 bytes/ZIP 검증 통과.
+- COMPUTED + fake GENERATED의 실제 Writer 작성과 scoped RAG 미지원 blocker 테스트 포함.
+- 전체 **667개 중666 passed, PostgreSQL opt-in integration1 skipped**. 기존615개 회귀 없음.
+- 실제 GMS/RAG/DB 호출과 Docker build/run은 하지 않았다.
+  Windows Python3.12 임시 테스트 의존성 환경. numpy2.5.3은 배포 pin2.3.5와 다르며 배포 Docker 검증은 별도다.
+
+### 운영 제한과 다음 단계
+
+- 단일 worker/replica 권장. process 재시작 시 metadata 유실, multi-worker 공유 없음.
+- generated 파일 자동 cleanup/TTL/DB persistence 없음. 등록 실패/취소 시 orphan file 가능.
+- 별도 인증 없음. feature flag는 인증이 아니다. 내부망/reverse proxy 제한 및 외부 직접 노출 금지.
+- DB normalized_path와 container ro mount 경로가 반드시 일치해야 한다.
+- 향후 Spring이 인증된 userId로 POST 후 draftId 기반 GET을 호출한다. 이번 작업에는 Java 연동 없음.
+- Dockerfile 현재 CMD는 uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1.
+  기존 lifespan의 DB/embedding/OCR 기동 정책도 유지된다.
+- 정확한 PowerShell Docker 실행, POST/GET, COMPLETED template SQL, 한글 육안 검수 절차는
+  ai/app/agent/documents/drafts/README.md의 '수동 Docker / API E2E'에 기록했다.

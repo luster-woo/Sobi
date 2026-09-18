@@ -4,18 +4,6 @@ import FilterChip from '@/shared/ui/FilterChip'
 import Select from '@/shared/ui/Select'
 
 /**
- * ⚠️ 은행 목록을 받을 API 가 없습니다. 명세에 /common/businessCode(업종)는 있는데
- *    은행은 없고, loan.bank_name 이 자유 문자열이라 테이블도 없습니다.
- *    API 가 생기면 이 상수를 지우고 조회로 바꿉니다.
- */
-const BANK_OPTIONS = [
-  { value: '', label: '취급 기관 전체' },
-  { value: '싸피은행', label: '싸피은행' },
-  { value: '기업은행', label: '기업은행' },
-  { value: '대구은행', label: '대구은행' },
-]
-
-/**
  * 정렬 기준.
  *
  * 서버 enum(LoanSortType)을 그대로 쓴다. 방향이 값에 박혀 있어(금리는 낮은 순,
@@ -35,10 +23,15 @@ const STATUS_OPTIONS = [
   })),
 ]
 
-type FilterKey = 'bankName' | 'status' | 'bookmarked' | 'sort'
+/*
+ * 취급 기관 필터가 없다. 상품 수가 수십 건이라 기관으로 좁힐 일이 드물고, 검색어가
+ * 이미 상품명과 은행명을 함께 훑는다(LoanSearchCondition.keyword). 고를 수 있는 기관을
+ * 프론트가 상수로 들고 있어야 했던 것도 이유다 — 은행 목록 API 가 없고 bank_name 이
+ * 자유 문자열이라, 상수에 없는 기관의 상품은 영영 걸러낼 수 없었다.
+ */
+type FilterKey = 'status' | 'bookmarked' | 'sort'
 
 interface LoanFilterBarProps {
-  bankName: string
   status: string
   bookmarked: boolean
   sort: string
@@ -47,7 +40,6 @@ interface LoanFilterBarProps {
 }
 
 export default function LoanFilterBar({
-  bankName,
   status,
   bookmarked,
   sort,
@@ -55,15 +47,6 @@ export default function LoanFilterBar({
 }: LoanFilterBarProps) {
   return (
     <div className="border-border-subtle flex flex-wrap items-center gap-2 border-b px-4 py-3">
-      <Select
-        size="sm"
-        options={BANK_OPTIONS}
-        value={bankName}
-        onChange={(event) => onChange({ bankName: event.target.value || null })}
-        className="w-[148px]"
-        aria-label="취급 기관"
-      />
-
       <Select
         size="sm"
         options={STATUS_OPTIONS}

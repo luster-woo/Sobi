@@ -2,6 +2,7 @@ import type {
   ApplicationDetail,
   ApplicationListData,
   CreateApplicationParams,
+  CreateApplicationResult,
   SubmitApplicationBody,
   SubmitApplicationResult,
   UploadDocumentParams,
@@ -20,7 +21,9 @@ import { endpoints } from '@/shared/api/endpoints'
  * 봉투는 `client.ts` 인터셉터가 벗긴다. 여기서는 알맹이 타입만 쓴다.
  */
 export async function createApplication(params: CreateApplicationParams) {
-  const { data } = await api.post<ApplicationDetail>(endpoints.application.create, null, { params })
+  const { data } = await api.post<CreateApplicationResult>(endpoints.application.create, null, {
+    params,
+  })
   return data
 }
 

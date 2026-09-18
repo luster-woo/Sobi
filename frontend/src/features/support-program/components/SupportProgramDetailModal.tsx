@@ -5,6 +5,7 @@ import { useCreateApplication } from '@/features/application/hooks/useApplicatio
 import { startApplicationErrorMessage } from '@/features/application/model/applicationError'
 import { APPLICATION_SOURCE } from '@/features/application/model/types'
 import { useSupportProgramDetail } from '@/features/support-program/hooks/useSupportProgramDetail'
+import { balanceRangeText } from '@/features/support-program/model/amount'
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
 import {
   canApply,
@@ -19,7 +20,6 @@ import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
 import Skeleton from '@/shared/ui/Skeleton'
-import { formatMoneyShort } from '@/shared/utils/formatters'
 
 /**
  * 상태별 하단 버튼 문구와 갈 곳.
@@ -170,9 +170,9 @@ export default function SupportProgramDetailModal({
 
           {data.type !== 'ETC' && (
             <Row label="금액">
-              최소 {formatMoneyShort(data.minBalance)} ~ 최대 {formatMoneyShort(data.maxBalance)}
-              {/* 융자형인데 금리가 안 적힌 공고가 있다. 없으면 이 문구를 아예 안 붙인다 */}
-              {data.type === 'LOAN' && data.interestRate !== null && (
+              {balanceRangeText(data.minBalance, data.maxBalance)}
+              {/* 융자형이어도 이율이 공고문에 없으면 서버가 필드를 빼고 준다 */}
+              {data.type === 'LOAN' && data.interestRate !== undefined && (
                 <span className="text-text-muted ml-2">연 {data.interestRate.toFixed(1)}%</span>
               )}
             </Row>

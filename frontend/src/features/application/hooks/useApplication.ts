@@ -38,7 +38,13 @@ export function useApplicationDetail(applicationId?: number) {
     enabled: Boolean(applicationId),
     refetchInterval: (query) => {
       const data = query.state.data as ApplicationDetail | undefined
-      if (!data) return false
+      /*
+       * documents 까지 본다. `!data` 만으로는 부족하다 — 캐시에 상세가 아닌 것이
+       * 들어오면 객체는 있는데 documents 가 없어서 그대로 터진다. refetchInterval 은
+       * 렌더 중에 불려서 그 예외가 ErrorBoundary 까지 올라가 화면이 통째로 죽는다.
+       */
+      if (!data?.documents) return false
+
       return hasValidating(data.documents) ? POLL_INTERVAL_MS : false
     },
   })
@@ -55,9 +61,12 @@ export function useCreateApplication() {
 
   return useMutation({
     mutationFn: createApplication,
-    onSuccess: (data) => {
-      // 방금 받은 상세를 캐시에 심어 두면 신청 화면이 로딩 없이 바로 그려진다
-      queryClient.setQueryData(queryKeys.application.detail(data.applicationId), data)
+    onSuccess: () => {
+      /*
+       * 상세 캐시에 심지 않는다. 생성 응답은 applicationId 하나뿐이라, 심으면
+       * documents 가 없는 껍데기가 상세 자리에 들어가고 신청 화면의 폴링이 그걸
+       * 상세로 알고 읽는다. 로딩 한 번을 아끼려다 화면을 죽였다.
+       */
       queryClient.invalidateQueries({ queryKey: queryKeys.application.list })
     },
   })

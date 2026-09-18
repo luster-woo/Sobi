@@ -1,3 +1,4 @@
+import { maxBalanceText } from '@/features/support-program/model/amount'
 import type { SupportProgramListItem } from '@/features/support-program/model/types'
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
 import { SUPPORT_STATUS, SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
@@ -6,7 +7,7 @@ import BookmarkToggle from '@/shared/ui/BookmarkToggle'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
 import type { Column } from '@/shared/ui/Table'
 import { cn } from '@/shared/utils/cn'
-import { formatDeadlineDate, formatMoneyShort } from '@/shared/utils/formatters'
+import { formatDeadlineDate } from '@/shared/utils/formatters'
 
 /**
  * 지원 내용 한 칸에 type 별로 다른 내용을 넣는다.
@@ -19,17 +20,12 @@ import { formatDeadlineDate, formatMoneyShort } from '@/shared/utils/formatters'
 function supportAmount(program: SupportProgramListItem): string {
   switch (program.type) {
     case 'SUPPORT':
-      return `최대 ${formatMoneyShort(program.maxBalance)}`
-    /*
-     * 융자형인데 금리가 안 적힌 공고가 있다. 없으면 금액만 보여준다 —
-     * 예전에는 `.toFixed(1)` 을 바로 불러서 그런 행 하나가 표 전체를 죽였다.
-     */
-    case 'LOAN': {
-      const amount = `최대 ${formatMoneyShort(program.maxBalance)}`
-      if (program.interestRate === null) return amount
-
-      return `연 ${program.interestRate.toFixed(1)}% · ${amount}`
-    }
+      return maxBalanceText(program.maxBalance)
+    case 'LOAN':
+      // 융자형인데 이율이 공고문에 없는 건이 있다. 그러면 금액만 적는다
+      return program.interestRate === undefined
+        ? maxBalanceText(program.maxBalance)
+        : `연 ${program.interestRate.toFixed(1)}% · ${maxBalanceText(program.maxBalance)}`
     case 'ETC':
       return '—'
   }

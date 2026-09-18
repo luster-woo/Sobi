@@ -12,7 +12,7 @@ import Panel from '@/shared/ui/Panel'
 import SearchBar from '@/shared/ui/SearchBar'
 import Table from '@/shared/ui/Table'
 
-const FILTER_KEYS = ['keyword', 'bankName', 'status', 'bookmarked', 'sort'] as const
+const FILTER_KEYS = ['keyword', 'status', 'bookmarked', 'sort'] as const
 
 /**
  * 대출 상품 조회 · 검색 (S15P21D101-187 · 188)
@@ -35,7 +35,6 @@ export function LoanListPage() {
 
   const { data, isLoading, isFetching, isError } = useLoans({
     keyword: values.keyword || undefined,
-    bankName: values.bankName || undefined,
     status: (values.status as LoanStatus) || undefined,
     bookmarked: values.bookmarked === 'true' ? true : undefined,
     sort: (values.sort as LoanSort) || undefined,
@@ -53,9 +52,7 @@ export function LoanListPage() {
    */
   const shownCount = loans.length
   const totalCount = data?.totalCount ?? 0
-  const filtered = Boolean(
-    values.keyword || values.bankName || values.status || values.bookmarked === 'true',
-  )
+  const filtered = Boolean(values.keyword || values.status || values.bookmarked === 'true')
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
@@ -78,7 +75,6 @@ export function LoanListPage() {
         </div>
 
         <LoanFilterBar
-          bankName={values.bankName}
           status={values.status}
           bookmarked={values.bookmarked === 'true'}
           sort={values.sort}

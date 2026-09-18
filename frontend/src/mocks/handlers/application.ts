@@ -641,7 +641,9 @@ export const applicationHandlers = [
     )
     if (existing) {
       return HttpResponse.json(
-        success('/api/v1/application', '이미 진행 중인 신청이 있습니다.', toResponse(existing)),
+        success('/api/v1/application', '이미 진행 중인 신청이 있습니다.', {
+          applicationId: existing.applicationId,
+        }),
       )
     }
 
@@ -662,8 +664,15 @@ export const applicationHandlers = [
     }
     applications.set(app.applicationId, app)
 
+    /*
+     * 서버는 id 하나만 준다(ApplicationCreateResponse). 상세를 돌려주면 목이 서버보다
+     * 관대해져서, 프론트가 생성 응답을 상세처럼 써도 목에서는 안 터진다. 실제로 그렇게
+     * 가려져 있던 버그가 실서버에서 터졌다.
+     */
     return HttpResponse.json(
-      success('/api/v1/application', '신청 목록 테이블이 생성되었습니다.', toResponse(app)),
+      success('/api/v1/application', '신청 목록 테이블이 생성되었습니다.', {
+        applicationId: app.applicationId,
+      }),
     )
   }),
 

@@ -148,6 +148,15 @@ export interface CreateApplicationParams {
 }
 
 /**
+ * 신청 생성 결과.
+ *
+ * 서버 ApplicationCreateResponse에 applicationId 말고는 아무것도 없다. 상세가 필요하면 이 id 로 다시 조회해야 한다.
+ */
+export interface CreateApplicationResult {
+  applicationId: number
+}
+
+/**
  * 최종 신청 본문.
  *
  * 금액·계좌를 임시 저장하지 않고 제출할 때만 보낸다.

@@ -142,14 +142,14 @@ export interface SalesPoint {
 }
 
 export interface BusinessSnapshot {
-  /** 마이데이터 갱신일 */
-  updatedAt: ISODate
+  /** 마이데이터 갱신일. null 이면 갱신 문구를 뺀다 */
+  updatedAt: ISODate | null
   /** 최근 월 매출(원) */
   monthlySales: number
-  /** 전월 대비 매출 증감(%). 음수면 감소 */
-  salesChangeRate: number
-  /** 현금 흐름 증감(%). 음수면 악화 */
-  cashFlowChangeRate: number
+  /** 전월 대비 매출 증감(%). 음수면 감소, null 이면 칸을 뺀다 */
+  salesChangeRate: number | null
+  /** 현금 흐름 증감(%). 음수면 악화, null 이면 칸을 뺀다 */
+  cashFlowChangeRate: number | null
   /** 총 대출 잔액(원) */
   totalLoanBalance: number
   /** 최근 6개월 매출. 오래된 달이 앞이다 */

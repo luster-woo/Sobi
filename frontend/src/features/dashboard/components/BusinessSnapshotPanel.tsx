@@ -9,6 +9,11 @@ interface BusinessSnapshotPanelProps {
   snapshot: BusinessSnapshot
 }
 
+function toRateItem(label: string, rate: number | null): KeyValueItem[] {
+  if (rate === null) return []
+  return [{ label, value: toSignedPercent(rate), tone: rate > 0 ? 'primary' : 'default' }]
+}
+
 /**
  * 마이데이터로 가져온 내 사업장 숫자.
  *
@@ -24,22 +29,16 @@ export default function BusinessSnapshotPanel({ snapshot }: BusinessSnapshotPane
 
   const items: KeyValueItem[] = [
     { label: '최근 월 매출', value: sales.value, unit: sales.unit },
-    {
-      label: '전월 대비',
-      value: toSignedPercent(snapshot.salesChangeRate),
-      tone: snapshot.salesChangeRate > 0 ? 'primary' : 'default',
-    },
-    {
-      label: '현금 흐름',
-      value: toSignedPercent(snapshot.cashFlowChangeRate),
-      tone: snapshot.cashFlowChangeRate > 0 ? 'primary' : 'default',
-    },
+    ...toRateItem('전월 대비', snapshot.salesChangeRate),
+    ...toRateItem('현금 흐름', snapshot.cashFlowChangeRate),
     { label: '총 대출 잔액', value: balance.value, unit: balance.unit },
   ]
 
   return (
     <MiniPanel
-      label={`마이데이터 · ${toDotDate(snapshot.updatedAt)} 갱신`}
+      label={
+        snapshot.updatedAt ? `마이데이터 · ${toDotDate(snapshot.updatedAt)} 갱신` : '마이데이터'
+      }
       title="내 사업장 정보"
       aside={
         snapshot.isLinking ? (

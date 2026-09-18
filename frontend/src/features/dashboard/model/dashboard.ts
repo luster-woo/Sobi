@@ -18,6 +18,11 @@ import type {
   PreOwnerDashboardData,
   RepaymentSummary,
 } from '@/features/dashboard/model/types'
+import type { LoanListData } from '@/features/loan/model/types'
+import type {
+  SupportProgramListData,
+  SupportProgramListItem,
+} from '@/features/support-program/model/types'
 import { SUPPORT_PROGRAM_TYPE } from '@/shared/types'
 
 const IMMINENT_DAYS = 7
@@ -106,28 +111,57 @@ function toSnapshot(raw: OwnerDashboardResponse): BusinessSnapshot {
   }
 }
 
-export function toOwnerDashboard(raw: OwnerDashboardResponse): OwnerDashboardData {
-  const summary = raw.supportProgramSummary
-  const loanCount = raw.suggestLoans.length
-  const possible = loanCount + summary.availableCount
+function toJudgedSupportProgram(raw: SupportProgramListItem): DashboardSupportProgram | null {
+  if (raw.type === 'ETC' || raw.minBalance === undefined || raw.maxBalance === undefined) return null
+
+  return {
+    supportProgramId: raw.supportProgramId,
+    pblancNm: raw.pblancNm,
+    jrsdInsttNm: raw.jrsdInsttNm,
+    type: raw.type,
+    minBalance: raw.minBalance,
+    maxBalance: raw.maxBalance,
+    interestRate: raw.type === 'LOAN' ? (raw.interestRate ?? null) : null,
+    endDate: raw.endDate,
+  }
+}
+
+/**
+ * 대시보드 응답의 지원사업 요약은 판정 status 를 보지 않고 추천 행 전체를 센다.
+ * 판정은 전 사업에 행을 남기므로 가능 = 전체, 불가 = 0 이 된다. 목록 API 의 판정 필터로 다시 센다.
+ */
+export interface OwnerJudgement {
+  loans: LoanListData
+  eligiblePrograms: SupportProgramListData
+  ineligibleProgramCount: number
+  programCount: number
+}
+
+export function toOwnerDashboard(
+  raw: OwnerDashboardResponse,
+  judged: OwnerJudgement,
+): OwnerDashboardData {
+  const { loans, eligiblePrograms, ineligibleProgramCount, programCount } = judged
+  const loanPossible = loans.statusCounts.ELIGIBLE
+  const programPossible = eligiblePrograms.page.totalElements
 
   return {
     judgement: {
       updatedAt: null,
-      possible,
-      urgent: summary.imminentCount,
-      impossible: summary.unavailableCount,
-      total: possible + summary.unavailableCount,
+      possible: loanPossible + programPossible,
+      urgent: eligiblePrograms.programs.filter((program) => isImminent(program.endDate)).length,
+      impossible: loans.statusCounts.INELIGIBLE + ineligibleProgramCount,
+      total: loans.totalCount + programCount,
     },
     loans: {
-      possible: loanCount,
-      total: loanCount,
+      possible: loanPossible,
+      total: loans.totalCount,
       items: compact(raw.suggestLoans.map(toLoan)),
     },
     supportPrograms: {
-      possible: summary.availableCount,
-      total: summary.totalCount,
-      items: compact(raw.suggestsupportProgram.map(toSupportProgram)),
+      possible: programPossible,
+      total: programCount,
+      items: compact(eligiblePrograms.programs.map(toJudgedSupportProgram)),
     },
     repayment: toRepayment(raw.repaymentManagement),
     snapshot: toSnapshot(raw),
@@ -165,7 +199,6 @@ export function toPreOwnerDashboard(raw: PreOwnerDashboardResponse): PreOwnerDas
 export type Dashboard =
   { kind: 'owner'; data: OwnerDashboardData } | { kind: 'preOwner'; data: PreOwnerDashboardData }
 
-export function toDashboard(raw: DashboardResponse): Dashboard {
-  if ('suggestLoans' in raw) return { kind: 'owner', data: toOwnerDashboard(raw) }
-  return { kind: 'preOwner', data: toPreOwnerDashboard(raw) }
+export function isOwnerResponse(raw: DashboardResponse): raw is OwnerDashboardResponse {
+  return 'suggestLoans' in raw
 }

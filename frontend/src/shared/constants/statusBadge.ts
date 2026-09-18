@@ -1,5 +1,5 @@
 import type { SubmitDocumentStatus, WriteDocumentStatus } from '@/shared/constants/documentStatus'
-import type { ProductStatus } from '@/shared/constants/productStatus'
+import type { SupportStatus } from '@/shared/constants/productStatus'
 import type { ApplicationStatus } from '@/shared/types/application'
 import type { InsuranceStatus } from '@/shared/types/insurance'
 import type { BadgeVariant } from '@/shared/ui/Badge'
@@ -45,11 +45,13 @@ export const INSURANCE_STATUS_VARIANT: Record<InsuranceStatus, BadgeVariant> = {
 }
 
 /**
- * 대출·지원사업이 같은 값 집합을 쓴다. 색은 도메인이 아니라 "지금 누가 무엇을 해야
- * 하는가" 로 정해져서, 문구와 달리 갈릴 이유가 없다.
+ * 지원사업 값이 대출을 포함하므로(UNKNOWN 만 더 있다) 한 표로 둘 다 덮는다.
+ * 색은 도메인이 아니라 "지금 누가 무엇을 해야 하는가" 로 정해져서 갈릴 이유가 없다.
  */
-export const PRODUCT_STATUS_VARIANT: Record<ProductStatus, BadgeVariant> = {
+export const PRODUCT_STATUS_VARIANT: Record<SupportStatus, BadgeVariant> = {
   ELIGIBLE: 'success',
+  // 조건을 확인하지 못했을 뿐 신청은 된다. 막는 INELIGIBLE 과 색을 달리한다
+  UNKNOWN: 'warning',
   INELIGIBLE: 'outline', // 오류가 아니라 자격 미달이라 danger 가 아니다
   PREPARING: 'warning', // 사용자가 이어서 작성해야 한다
   SUBMITTED: 'neutral',

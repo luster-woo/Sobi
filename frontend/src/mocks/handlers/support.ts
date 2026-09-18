@@ -9,7 +9,7 @@ import type {
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
 import { isBookmarked } from '@/mocks/lib/bookmarkStore'
 import { fail, ok } from '@/mocks/lib/envelope'
-import type { ProductStatus } from '@/shared/constants/productStatus'
+import type { SupportStatus } from '@/shared/constants/productStatus'
 import type { SupportProgramType } from '@/shared/types'
 
 const INSTITUTIONS = [
@@ -20,14 +20,34 @@ const INSTITUTIONS = [
   '국가상공회의소',
 ]
 
-const STATUSES: ProductStatus[] = [
+/** 여덟 상태가 화면에 한 번씩은 나오게 전부 넣는다 */
+const STATUSES: SupportStatus[] = [
   'ELIGIBLE',
+  'UNKNOWN',
   'INELIGIBLE',
   'SUBMITTED',
   'REVIEWING',
   'APPROVED',
   'PREPARING',
+  'PAID',
 ]
+
+/**
+ * 공고 지역. 서버는 시도 약칭으로 거른다(program_condition.region_sido).
+ * business_info.region 의 CHECK 제약과 같은 값이다.
+ *
+ * '전국' 은 어느 지역을 골라도 결과에 포함된다. 시드에 섞어 두어야 그 동작을
+ * 화면에서 눌러볼 수 있다.
+ */
+const REGIONS = ['전국', '서울', '경기', '부산', '대구', '제주']
+
+/**
+ * 공고의 지역. 응답에는 없는 값이라 항목에 담지 않고 id 로 계산한다 —
+ * 서버도 region 을 거르는 데만 쓰고 SupportProgramSummaryResponse 에는 안 담는다.
+ */
+function regionOf(supportProgramId: number): string {
+  return REGIONS[supportProgramId % REGIONS.length]
+}
 
 const TYPES: SupportProgramType[] = ['SUPPORT', 'LOAN', 'ETC']
 
@@ -50,7 +70,7 @@ function makeProgram(index: number): SupportProgramListItem {
     // 8개마다 한 번은 상시(마감일 없음)
     startDate: index % 8 === 0 ? null : daysFromNow(-30),
     endDate: index % 8 === 0 ? null : daysFromNow([3, 22, 64, 120][index % 4]),
-    status: STATUSES[index % 6],
+    status: STATUSES[index % STATUSES.length],
     isBookmark: index % 3 === 0,
   }
 
@@ -159,7 +179,7 @@ export const supportHandlers = [
     const page = Number(url.searchParams.get('page') ?? 0)
     const size = Number(url.searchParams.get('size') ?? 20)
     const type = url.searchParams.get('type')
-    const jrsdInsttNm = url.searchParams.get('jrsdInsttNm')
+    const region = url.searchParams.get('region')
     const judgement = url.searchParams.get('judgement')
     const isBookmark = url.searchParams.get('isBookmark')
     const sort = url.searchParams.get('sort')
@@ -167,7 +187,13 @@ export const supportHandlers = [
     // 사용자가 누른 담기·빼기를 먼저 반영한다. 안 그러면 표의 리본이 시드에 고정된다
     let filtered = mockPrograms.map(withBookmark)
     if (type) filtered = filtered.filter((program) => program.type === type)
-    if (jrsdInsttNm) filtered = filtered.filter((program) => program.jrsdInsttNm === jrsdInsttNm)
+    // 전국 공고는 어느 지역을 골라도 남는다. 서버도 같은 규칙이다
+    if (region) {
+      filtered = filtered.filter((program) => {
+        const programRegion = regionOf(program.supportProgramId)
+        return programRegion === region || programRegion === '전국'
+      })
+    }
     if (judgement) filtered = filtered.filter((program) => program.status === judgement)
     if (isBookmark === 'true') filtered = filtered.filter((program) => program.isBookmark)
 

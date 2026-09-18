@@ -1,6 +1,6 @@
 import type { SupportProgramListItem } from '@/features/support-program/model/types'
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
-import { PRODUCT_STATUS, SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
+import { SUPPORT_STATUS, SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { BOOKMARK_TARGET } from '@/shared/types'
 import BookmarkToggle from '@/shared/ui/BookmarkToggle'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
@@ -47,7 +47,7 @@ export const supportColumns: Column<SupportProgramListItem>[] = [
         <b
           className={cn(
             'text-body2 block truncate font-medium',
-            program.status === PRODUCT_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text',
+            program.status === SUPPORT_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text',
           )}
         >
           {program.pblancNm}
@@ -67,7 +67,7 @@ export const supportColumns: Column<SupportProgramListItem>[] = [
       <span
         className={cn(
           'text-[12.5px] tabular-nums',
-          program.status === PRODUCT_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text',
+          program.status === SUPPORT_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text',
         )}
       >
         {supportAmount(program)}
@@ -83,7 +83,7 @@ export const supportColumns: Column<SupportProgramListItem>[] = [
       <span
         className={cn(
           'text-[12.5px] tabular-nums',
-          program.status === PRODUCT_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text-secondary',
+          program.status === SUPPORT_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text-secondary',
         )}
       >
         {formatDeadlineDate(program.endDate)}

@@ -1,4 +1,4 @@
-import type { ProductStatus } from '@/shared/constants/productStatus'
+import type { SupportStatus } from '@/shared/constants/productStatus'
 import type { AuthProvider, ID, ISODate, ISODateTime, UserRole } from '@/shared/types'
 
 /**
@@ -104,7 +104,11 @@ interface FavoriteBase {
   title: string
   /** 대출은 은행명, 지원사업은 소관기관명 */
   organization: string
-  status: ProductStatus
+  /**
+   * 두 도메인을 한 목록에 담아서 넓은 쪽(지원사업)의 값 집합을 쓴다.
+   * 대출에는 UNKNOWN 이 오지 않는다 — 정량 비교라 '모른다' 가 나올 수 없다.
+   */
+  status: SupportStatus
 }
 
 /**

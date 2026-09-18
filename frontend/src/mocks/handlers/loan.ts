@@ -4,11 +4,11 @@ import type { ApplicationLoanSummary } from '@/features/application/model/types'
 import type { LoanDetail, LoanListData, LoanListItem } from '@/features/loan/model/types'
 import { isBookmarked } from '@/mocks/lib/bookmarkStore'
 import { fail, ok } from '@/mocks/lib/envelope'
-import { PRODUCT_STATUS, type ProductStatus } from '@/shared/constants/productStatus'
+import { LOAN_STATUS, type LoanStatus } from '@/shared/constants/productStatus'
 
 const BANKS = ['싸피은행', '기업은행', '대구은행', '소상공인시장진흥공단', '중소벤처기업진흥공단']
 /** 생성 상품에 돌아가며 붙인다. 일곱 상태가 화면에 한 번씩은 나오게 전부 넣는다 */
-const STATUSES: ProductStatus[] = [
+const STATUSES: LoanStatus[] = [
   'ELIGIBLE',
   'INELIGIBLE',
   'SUBMITTED',
@@ -172,10 +172,10 @@ export function findLoanProductSummary(loanId: number): ApplicationLoanSummary |
  * 상태별 개수. 서버처럼 일곱 키를 0 으로 깔고 센다 — 해당 상품이 없는 상태도
  * 키가 있어야 화면에서 `statusCounts[value]` 를 그냥 읽을 수 있다.
  */
-function countByStatus(loans: LoanListItem[]): Record<ProductStatus, number> {
+function countByStatus(loans: LoanListItem[]): Record<LoanStatus, number> {
   const counts = Object.fromEntries(
-    Object.values(PRODUCT_STATUS).map((status) => [status, 0]),
-  ) as Record<ProductStatus, number>
+    Object.values(LOAN_STATUS).map((status) => [status, 0]),
+  ) as Record<LoanStatus, number>
 
   for (const loan of loans) counts[loan.status] += 1
   return counts

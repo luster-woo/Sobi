@@ -5,8 +5,8 @@ import { useCreateApplication } from '@/features/application/hooks/useApplicatio
 import { APPLICATION_SOURCE } from '@/features/application/model/types'
 import { useLoanDetail } from '@/features/loan/hooks/useLoanDetail'
 import { describeConditions } from '@/features/loan/model/conditions'
-import type { ProductStatus } from '@/shared/constants/productStatus'
-import { LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
+import type { LoanStatus } from '@/shared/constants/productStatus'
+import { canApply, LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { ROUTES, routeTo } from '@/shared/constants/routes'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import { BOOKMARK_TARGET } from '@/shared/types'
@@ -39,7 +39,7 @@ import { formatMoneyShort } from '@/shared/utils/formatters'
  *
  * INELIGIBLE 만 계속 비활성이다. 갈 곳이 없다.
  */
-const FOOTER_LABEL: Record<ProductStatus, string> = {
+const FOOTER_LABEL: Record<LoanStatus, string> = {
   ELIGIBLE: '신청하기',
   PREPARING: '이어서 작성하기',
   SUBMITTED: '신청 내역 보기',
@@ -84,12 +84,12 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
    */
   const createApplication = useCreateApplication()
 
-  const canApply = data?.status === 'ELIGIBLE' || data?.status === 'PREPARING'
+  const canApplyNow = data ? canApply(data.status) : false
   /*
    * 제출 이후 상태는 그 상품의 신청 건으로 보낸다. applicationId 는 상태가 신청에서
    * 온 경우에만 오므로 값 유무로 가른다.
    */
-  const trackedApplicationId = canApply ? null : (data?.applicationId ?? null)
+  const trackedApplicationId = canApplyNow ? null : (data?.applicationId ?? null)
 
   const handleApply = () => {
     createApplication.mutate(
@@ -138,7 +138,7 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
         data && (
           <Button
             className="w-full"
-            disabled={!canApply && trackedApplicationId === null}
+            disabled={!canApplyNow && trackedApplicationId === null}
             loading={createApplication.isPending}
             onClick={handleFooterClick}
           >

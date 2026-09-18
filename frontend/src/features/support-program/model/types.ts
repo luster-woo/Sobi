@@ -1,4 +1,4 @@
-import type { ProductStatus } from '@/shared/constants/productStatus'
+import type { SupportStatus } from '@/shared/constants/productStatus'
 import type { ISODate, PageMeta, SupportProgramType } from '@/shared/types'
 
 /**
@@ -24,7 +24,7 @@ interface SupportProgramBase {
   /** 둘 다 null 이면 '상시' 로 표시한다 */
   startDate: ISODate | null
   endDate: ISODate | null
-  status: ProductStatus
+  status: SupportStatus
   isBookmark: boolean
 }
 
@@ -56,20 +56,24 @@ export interface SupportProgramListData {
 
 /** 목록 조회 쿼리. undefined 인 필터는 axios 가 알아서 빼고 보낸다 */
 export interface SupportProgramListParams {
-  /** 0-base. 화면의 1-base 를 toServerPage 로 변환해서 넣는다 */
   page: number
   size: number
   /**
-   * 지원 유형 필터.
-   * ⚠️ 명세 파라미터 목록에는 없다. 화면에 유형 필터가 있어 'type' 으로 가정했다 —
-   *    이름이 확정되면 여기와 SupportFilterBar 만 고치면 된다.
+   * 시도 표준 표기 16개. '서울특별시' 처럼 보낸다.
+   *
+   * 전국 공고는 어느 지역을 골라도 결과에 포함된다 — 서버가 그렇게 거른다.
    */
+  region?: string
   type?: SupportProgramType
-  /** 소관기관명 */
-  jrsdInsttNm?: string
-  /** 판정 결과. status 7종 중 하나를 보낸다 */
-  judgement?: ProductStatus
+  /** 판정 결과 기준. 신청 상태(PREPARING 등)로는 거르지 않는다 */
+  judgement?: SupportStatus
   isBookmark?: boolean
+  /**
+   * 'endDate,asc' | 'maxBalance,desc'. 그 외 값은 서버가 기본 정렬로 처리한다.
+   *
+   * ⚠️ 대출은 서버 enum(INTEREST_RATE 등)으로 바뀌었는데 지원사업은 Spring 형식
+   *    문자열 그대로다. 두 도메인이 다르니 상수를 공유하지 말 것.
+   */
   sort?: string
 }
 
@@ -102,7 +106,7 @@ interface SupportProgramDetailBase {
   excInsttNm: string
   startDate: ISODate | null
   endDate: ISODate | null
-  status: ProductStatus
+  status: SupportStatus
   isBookmark: boolean
   /** 신청 방법 */
   reqstMthPapersCn: string | null

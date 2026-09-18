@@ -87,14 +87,23 @@ function makeProgram(index: number): SupportProgramListItem {
     isBookmark: index % 3 === 0,
   }
 
-  const balance = {
-    minBalance: [1_000_000, 3_000_000, 10_000_000][index % 3],
-    maxBalance: [5_000_000, 8_000_000, 50_000_000, 100_000_000][index % 4],
-  }
+  /*
+   * 서버는 값이 없으면 키를 빼고 준다(@JsonInclude(NON_NULL)). 공고문에 금액·이율이
+   * 안 적힌 건이 실제로 있어서 목도 일부를 빼야 화면이 그 경우를 만난다. 항상 채워주면
+   * 실서버에서만 터진다 — 이율이 없는 융자형에서 toFixed 로 화면이 죽은 적이 있다.
+   */
+  const balance =
+    index % 7 === 0
+      ? {}
+      : {
+          minBalance: [1_000_000, 3_000_000, 10_000_000][index % 3],
+          maxBalance: [5_000_000, 8_000_000, 50_000_000, 100_000_000][index % 4],
+        }
 
   if (type === 'SUPPORT') return { ...base, ...balance, type }
   if (type === 'LOAN') {
-    return { ...base, ...balance, type, interestRate: Number((2 + (index % 20) / 10).toFixed(1)) }
+    const rate = index % 5 === 0 ? {} : { interestRate: Number((2 + (index % 20) / 10).toFixed(1)) }
+    return { ...base, ...balance, type, ...rate }
   }
   return { ...base, type }
 }
@@ -150,11 +159,12 @@ export function bookmarkedSupportProgramRows() {
       pblancNm: program.pblancNm,
       jrsdInsttNm: program.jrsdInsttNm,
       // ETC 유형은 금액이 아예 없다. 공고에 안 적힌 건을 흉내 내는 자리이기도 하다
-      minBalance: 'minBalance' in program ? program.minBalance : null,
-      maxBalance: 'maxBalance' in program ? program.maxBalance : null,
+      // ?? null 이 필요하다. 키는 있는데 값이 undefined 인 경우가 생겼다
+      minBalance: ('minBalance' in program ? program.minBalance : null) ?? null,
+      maxBalance: ('maxBalance' in program ? program.maxBalance : null) ?? null,
       endDate: program.endDate,
       // 융자형(LOAN)에만 이율이 있다
-      interestRateOfSP: 'interestRate' in program ? program.interestRate : null,
+      interestRateOfSP: ('interestRate' in program ? program.interestRate : null) ?? null,
       status:
         program.status === 'ELIGIBLE'
           ? 'POSSIBLE'
@@ -187,8 +197,8 @@ export function findSupportProductSummary(
     supportType: SUPPORT_PROGRAM_TYPE_LABEL[found.type],
     startDate: found.startDate,
     endDate: found.endDate,
-    minBalance: found.type === 'ETC' ? null : found.minBalance,
-    maxBalance: found.type === 'ETC' ? null : found.maxBalance,
+    minBalance: (found.type === 'ETC' ? null : found.minBalance) ?? null,
+    maxBalance: (found.type === 'ETC' ? null : found.maxBalance) ?? null,
   }
 }
 
@@ -229,9 +239,12 @@ export const supportHandlers = [
       const sign = direction === 'desc' ? -1 : 1
       filtered = [...filtered].sort((a, b) => {
         if (field === 'maxBalance') {
-          // ETC 는 금액이 없어 맨 뒤로 보낸다
-          const left = 'maxBalance' in a ? a.maxBalance : -1
-          const right = 'maxBalance' in b ? b.maxBalance : -1
+          /*
+           * 금액이 없으면 맨 뒤로 보낸다. ETC 는 필드 자체가 없고, 지원금·융자도
+           * 공고문에 금액이 안 적혔으면 값이 undefined 다 — 둘을 같이 다룬다.
+           */
+          const left = ('maxBalance' in a ? a.maxBalance : undefined) ?? -1
+          const right = ('maxBalance' in b ? b.maxBalance : undefined) ?? -1
           return (left - right) * sign
         }
         // 상시(마감일 없음)는 급할 게 없으니 맨 뒤로 보낸다

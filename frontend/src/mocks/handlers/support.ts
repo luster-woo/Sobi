@@ -275,7 +275,6 @@ export const supportHandlers = [
     const found = mockPrograms.find((program) => program.supportProgramId === id)
 
     if (!found) {
-      // 지원사업 도메인은 백엔드 미구현이라 전용 에러 코드가 없다. 확정되면 교체
       return fail(404, 'COMMON_001', '공고를 찾을 수 없습니다.', `/api/v1/support/${id}`)
     }
 
@@ -292,6 +291,32 @@ export const supportHandlers = [
       isBookmark: withBookmark(found).isBookmark,
       reqstMthPapersCn: '온라인 접수 혹은 팩스를 통해 접수',
       refrncNm: '스마트상점전문기관 1600-6185',
+      /*
+       * 판정 결과. 마이데이터를 연동하지 않았으면 서버가 null·빈 배열을 준다.
+       * 가능한 경우에는 따로 설명할 게 없어 사유를 두지 않는다.
+       */
+      reason:
+        found.status === 'INELIGIBLE'
+          ? '업종이 공고 대상에 해당하지 않아요.'
+          : found.status === 'UNKNOWN'
+            ? '공고문에 직접 확인이 필요한 조건이 있어요.'
+            : null,
+      // 확인 항목이 남아 있는 것이 UNKNOWN 이 나오는 이유다. 짝을 맞춰 둔다
+      checkItems:
+        found.status === 'UNKNOWN'
+          ? [
+              '최근 1년 내 같은 지원사업을 받은 적이 없어야 해요',
+              '대표자가 만 39세 이하여야 해요',
+            ]
+          : [],
+      benefits: id % 3 === 0 ? ['청년 창업자는 가점이 있어요'] : [],
+      // 신청에서 온 상태일 때만 신청 id 가 있다. 목에서는 공고 id 를 그대로 쓴다
+      applicationId:
+        found.status === 'ELIGIBLE' ||
+        found.status === 'UNKNOWN' ||
+        found.status === 'INELIGIBLE'
+          ? null
+          : id,
     }
 
     const detail: SupportProgramDetail =

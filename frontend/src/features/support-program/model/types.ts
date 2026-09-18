@@ -100,7 +100,6 @@ export interface SupportProgramSearchParams {
  */
 interface SupportProgramDetailBase {
   pblancNm: string
-  /** 사업 개요 */
   bsnsSumryCn: string | null
   jrsdInsttNm: string
   excInsttNm: string
@@ -108,10 +107,28 @@ interface SupportProgramDetailBase {
   endDate: ISODate | null
   status: SupportStatus
   isBookmark: boolean
-  /** 신청 방법 */
   reqstMthPapersCn: string | null
-  /** 문의처 */
   refrncNm: string | null
+  /**
+   * 판정 사유 한 문장. 마이데이터를 연동하지 않았으면 null 이다.
+   *
+   * 상태가 왜 그렇게 나왔는지 설명하는 값이라 ELIGIBLE·UNKNOWN·INELIGIBLE 어디서든
+   * 온다. '가능' 인데 사유가 있는 것도 정상이다.
+   */
+  reason: string | null
+  /**
+   * 신청 전 본인이 확인해야 할 항목.
+   * 공고문에 사람이 직접 확인해야 하는 조건이 있다.
+   * UNKNOWN 이 나오는 이유. 판정이 없으면 빈 배열이다.
+   */
+  checkItems: string[]
+  /** 우대·가점 조건. 판정에는 쓰이지 않는다. 판정이 없으면 빈 배열 */
+  benefits: string[]
+  /**
+   * 진행 중인 신청 id. 상태가 신청에서 온 값일 때만 온다(PREPARING~PAID).
+   * ELIGIBLE·UNKNOWN·INELIGIBLE 이면 null — 아직 신청한 적이 없다는 뜻이다.
+   */
+  applicationId: number | null
 }
 
 export type SupportProgramDetail =

@@ -10,7 +10,7 @@ import {
   SUPPORT_STATUS_LABEL,
   type SupportStatus,
 } from '@/shared/constants/productStatus'
-import { routeTo } from '@/shared/constants/routes'
+import { ROUTES, routeTo } from '@/shared/constants/routes'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import { BOOKMARK_TARGET } from '@/shared/types'
 import BookmarkToggle from '@/shared/ui/BookmarkToggle'
@@ -35,8 +35,9 @@ import { formatMoneyShort } from '@/shared/utils/formatters'
  * UNKNOWN 은 공고 문장을 LLM 이 읽다가 사람이 직접 확인해야 하는 조건을 만난 경우다
  * 확실히 안 되는 INELIGIBLE 과 달리 될 수도 있으므로 ELIGIBLE 과 똑같이 열어 둔다
  *
- * ⚠️ SUBMITTED 이상은 아직 비활성이다. 그 공고의 신청 건으로 가야 하는데 상세 응답에
- *    applicationId 가 없어 어느 건인지 알 수 없다. INELIGIBLE 은 그 뒤에도 계속 비활성이다.
+ * SUBMITTED 이상은 applicationId 로 신청 현황에 보낸다. 그 값이 상태가 신청에서 온
+ * 경우에만 오므로, 상태를 다시 나열하지 않고 값이 있는지로 가른다.
+ * INELIGIBLE 만 계속 비활성이다 — 갈 곳이 없다.
  */
 const FOOTER_LABEL: Record<SupportStatus, string> = {
   ELIGIBLE: '신청하기',
@@ -86,6 +87,19 @@ export default function SupportProgramDetailModal({
   const createApplication = useCreateApplication()
 
   const canApplyNow = data ? canApply(data.status) : false
+  /*
+   * 제출 이후 상태는 그 공고의 신청 건으로 보낸다. applicationId 는 상태가 신청에서
+   * 온 경우에만 오므로 값 유무로 가른다 — 상태가 하나 더 생겨도 여기를 고칠 일이 없다.
+   */
+  const trackedApplicationId = canApplyNow ? null : (data?.applicationId ?? null)
+
+  const handleFooterClick = () => {
+    if (trackedApplicationId !== null) {
+      navigate(ROUTES.APPLICATIONS)
+      return
+    }
+    handleApply()
+  }
 
   const handleApply = () => {
     createApplication.mutate(
@@ -124,9 +138,9 @@ export default function SupportProgramDetailModal({
         data && (
           <Button
             className="w-full"
-            disabled={!canApplyNow}
+            disabled={!canApplyNow && trackedApplicationId === null}
             loading={createApplication.isPending}
-            onClick={handleApply}
+            onClick={handleFooterClick}
           >
             {FOOTER_LABEL[data.status]}
           </Button>
@@ -171,6 +185,50 @@ export default function SupportProgramDetailModal({
             연도는 남긴다 — 목록과 달리 여기는 내년 공고인지 확인하는 자리다.
           */}
           <Row label="접수">{data.endDate ? `~ ${data.endDate}` : '상시 접수'}</Row>
+
+          {/*
+            판정 결과. 상태 배지만으로는 '왜' 가 보이지 않는다.
+
+            reason 은 마이데이터를 연동하지 않았으면 null 이고, 조건이 다 맞는 경우에도
+            따로 설명할 게 없어 오지 않는다. 두 목록은 판정이 없으면 빈 배열이다.
+          */}
+          {(data.reason || data.checkItems.length > 0 || data.benefits.length > 0) && (
+            <div className="border-border-subtle mt-4 flex flex-col gap-3 border-t pt-4">
+              {data.reason && (
+                <p className="text-body2 text-text-secondary break-keep">{data.reason}</p>
+              )}
+
+              {data.checkItems.length > 0 && (
+                <div className="bg-warning-soft rounded-sm px-3.5 py-3">
+                  {/*
+                    미충족이라는 뜻이 아니다. 공고문에 사람이 직접 봐야 하는 조건이
+                    있다는 말이라, '안 됩니다' 로 읽히지 않게 문구를 고른다.
+                  */}
+                  <p className="text-body2 text-warning font-semibold">신청 전에 확인해 주세요</p>
+                  <ul className="text-body2 text-text-secondary mt-1.5 flex flex-col gap-1">
+                    {data.checkItems.map((item) => (
+                      <li key={item} className="break-keep">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {data.benefits.length > 0 && (
+                <div className="bg-primary-soft rounded-sm px-3.5 py-3">
+                  <p className="text-body2 text-primary font-semibold">이런 경우 더 유리해요</p>
+                  <ul className="text-body2 text-text-secondary mt-1.5 flex flex-col gap-1">
+                    {data.benefits.map((item) => (
+                      <li key={item} className="break-keep">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </dl>
       )}
     </Modal>

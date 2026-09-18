@@ -22,7 +22,9 @@ public class ApplicationDocumentResponse {
     public static ApplicationDocumentResponse from(ApplicationDocument document) {
         return new ApplicationDocumentResponse(
                 document.getId(),
-                document.getProgramDocument().getId(),
+                document.getProgramDocument() == null
+                        ? null
+                        : document.getProgramDocument().getId(),
                 resolveDocumentName(document),
                 document.getDocumentType(),
                 document.getValidationStatus(),

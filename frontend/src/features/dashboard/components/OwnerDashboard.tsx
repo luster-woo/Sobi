@@ -1,11 +1,14 @@
 import BusinessSnapshotPanel from '@/features/dashboard/components/BusinessSnapshotPanel'
-import DashboardFallback from '@/features/dashboard/components/DashboardFallback'
 import InsuranceMiniPanel from '@/features/dashboard/components/InsuranceMiniPanel'
 import JudgementSummaryPanel from '@/features/dashboard/components/JudgementSummaryPanel'
 import LoanStrip from '@/features/dashboard/components/LoanStrip'
 import RepaymentMiniPanel from '@/features/dashboard/components/RepaymentMiniPanel'
 import SupportProgramStrip from '@/features/dashboard/components/SupportProgramStrip'
-import { useOwnerDashboard } from '@/features/dashboard/hooks/useDashboard'
+import type { OwnerDashboardData } from '@/features/dashboard/model/types'
+
+interface OwnerDashboardProps {
+  dashboard: OwnerDashboardData
+}
 
 /**
  * 사업자 대시보드 (S15P21D101-176) — 시안 10번.
@@ -24,12 +27,8 @@ import { useOwnerDashboard } from '@/features/dashboard/hooks/useDashboard'
  *
  * 의무보험은 자기 엔드포인트(`GET /insurance`)가 따로 있어 패널이 직접 받아온다.
  */
-export default function OwnerDashboard() {
-  const { data, isError, refetch } = useOwnerDashboard()
-
-  if (!data) return <DashboardFallback isError={isError} onRetry={() => void refetch()} />
-
-  const { judgement, loans, supportPrograms, repayment, snapshot } = data
+export default function OwnerDashboard({ dashboard }: OwnerDashboardProps) {
+  const { judgement, loans, supportPrograms, repayment, snapshot } = dashboard
 
   return (
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">

@@ -44,6 +44,7 @@ export function useBusinessRegister() {
     onSuccess: () => {
       // 등록 전에 404 로 굳은 캐시가 남아 있으면 사이드바가 계속 '업체 등록하기' 다
       void queryClient.invalidateQueries({ queryKey: queryKeys.business.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
     },
   })
 }

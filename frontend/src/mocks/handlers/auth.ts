@@ -260,6 +260,10 @@ function currentUser(): SessionUser | null {
   return email ? (findAccount(email)?.user ?? null) : null
 }
 
+export function currentMockRole() {
+  return currentUser()?.role ?? null
+}
+
 /**
  * 백엔드 `JwtProvider` 와 같은 claim 을 담은 가짜 JWT.
  *

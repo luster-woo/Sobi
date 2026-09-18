@@ -20,7 +20,7 @@ export interface InsuranceDetailData {
 }
 
 /**
- * 키는 `MOCK_PRE_OWNER_DASHBOARD.insurances` 의 insuranceChecklistId 와 맞춰 두었다.
+ * 키는 MSW `mocks/handlers/dashboard.ts` 예비 창업자 응답의 insuranceChecklistId 와 맞춰 두었다.
  *
  * 보장 한도·과태료는 법령에 있는 값을 옮긴 것이지만 개정될 수 있다. 모달 하단에
  * 확인 안내를 붙여 두었다.

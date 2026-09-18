@@ -1,11 +1,14 @@
 import BusinessVerifyPromoCard from '@/features/dashboard/components/BusinessVerifyPromoCard'
-import DashboardFallback from '@/features/dashboard/components/DashboardFallback'
 import InsuranceMiniPanel from '@/features/dashboard/components/InsuranceMiniPanel'
 import JudgementSummaryPanel from '@/features/dashboard/components/JudgementSummaryPanel'
 import LoanStrip from '@/features/dashboard/components/LoanStrip'
 import StoreConditionPanel from '@/features/dashboard/components/StoreConditionPanel'
 import SupportProgramStrip from '@/features/dashboard/components/SupportProgramStrip'
-import { usePreOwnerDashboard } from '@/features/dashboard/hooks/useDashboard'
+import type { PreOwnerDashboardData } from '@/features/dashboard/model/types'
+
+interface PreOwnerDashboardProps {
+  dashboard: PreOwnerDashboardData
+}
 
 /**
  * 예비창업자 대시보드 (S15P21D101-178) — 시안 10-1.
@@ -20,12 +23,8 @@ import { usePreOwnerDashboard } from '@/features/dashboard/hooks/useDashboard'
  * 오른쪽은 상환·매출 대신 다음 단계(사업자 인증)와 미리 알아둘 것(의무보험), 그리고
  * 조건 입력이 온다. 아직 갚을 것도 벌어들인 것도 없는 사용자다.
  */
-export default function PreOwnerDashboard() {
-  const { data, isError, refetch } = usePreOwnerDashboard()
-
-  if (!data) return <DashboardFallback isError={isError} onRetry={() => void refetch()} />
-
-  const { condition, judgement, loans, supportPrograms, insurances } = data
+export default function PreOwnerDashboard({ dashboard }: PreOwnerDashboardProps) {
+  const { condition, judgement, loans, supportPrograms, insurances } = dashboard
 
   return (
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">

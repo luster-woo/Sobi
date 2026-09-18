@@ -62,3 +62,5 @@ export interface PreOwnerDashboardResponse {
   Loans: LoanItemResponse[]
   supportProgram: SupportItemResponse[]
 }
+
+export type DashboardResponse = OwnerDashboardResponse | PreOwnerDashboardResponse

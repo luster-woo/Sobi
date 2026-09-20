@@ -280,8 +280,13 @@ export function ApplicationApplyPage() {
         </Panel>
 
         <div className="flex flex-col gap-5">
-          <ApplicationChecklist documents={documents} />
+          {/*
+            서류가 없으면 체크리스트도 업로드 제한도 할 말이 없다. '0 / 0 완료' 와 받지도
+            않을 확장자 목록만 남아서, 빈 칸을 채우려고 둔 것처럼 보인다.
+          */}
+          {documents.length > 0 && <ApplicationChecklist documents={documents} />}
 
+          {documents.length > 0 && (
           <Panel title="업로드 제한">
             <dl className="text-body2 flex flex-col gap-2 px-[15px] py-4">
               {/* 제출 서류는 AI 가 OCR 로 읽어야 해서 형식이 좁다 */}
@@ -299,6 +304,7 @@ export function ApplicationApplyPage() {
               </div>
             </dl>
           </Panel>
+          )}
 
           {selectedAccount && (
             <Panel title="승인되면 출금 계좌로">

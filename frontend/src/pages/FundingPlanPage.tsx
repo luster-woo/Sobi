@@ -122,15 +122,21 @@ export function FundingPlanPage() {
       )}
 
       {selected && data && (
-        <FundingCombinationCard
-          combination={selected}
-          order={selectedIndex + 1}
-          // 주소의 금액이 아니라 서버가 실제로 계산에 쓴 금액을 넘긴다
-          targetAmount={data.targetAmount}
-          onOpenItem={setOpenItem}
-          onApply={() => setApplyTarget(selected)}
-          isApplying={applyBatch.isPending}
-        />
+        /*
+         * key 가 있어야 애니메이션이 다시 돈다. 없으면 React 가 같은 DOM 을 재사용해서
+         * 내용만 바뀌고 애니메이션은 처음 한 번만 돈다.
+         */
+        <div key={selectedIndex} className="animate-fade-slide-in">
+          <FundingCombinationCard
+            combination={selected}
+            order={selectedIndex + 1}
+            // 주소의 금액이 아니라 서버가 실제로 계산에 쓴 금액을 넘긴다
+            targetAmount={data.targetAmount}
+            onOpenItem={setOpenItem}
+            onApply={() => setApplyTarget(selected)}
+            isApplying={applyBatch.isPending}
+          />
+        </div>
       )}
 
       {combinations && combinations.length > 1 && (

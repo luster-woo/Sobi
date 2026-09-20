@@ -43,6 +43,28 @@ interface ApplicationDocumentListProps {
  * 카드 자체는 공용 컴포넌트가 그린다. 여기서는 서버 상태를 그 컴포넌트가 아는 UI
  * 상태로 옮겨 넘기는 일만 한다.
  */
+/**
+ * 등록된 필수 서류가 없는 신청.
+ *
+ * 공고에 서류가 아예 안 걸린 경우다(program_document 행이 없다). 화면에서는 두 섹션이
+ * 다 숨겨져 버튼만 남는데, 그러면 '서류 목록이 안 나온 것' 인지 '원래 없는 것' 인지
+ * 구분되지 않아 사용자가 기다린다.
+ *
+ * 기관이 접수 뒤에 따로 요구하는 경우가 있어서 '서류가 없다' 로 단정하지 않는다.
+ * 우리가 아는 것은 '이 화면에서 올릴 것이 없다' 까지다.
+ */
+function NoDocuments() {
+  return (
+    <div className="border-border bg-surface-alt rounded-md border border-dashed px-5 py-6 text-center">
+      <p className="text-body1 text-text font-semibold">올릴 서류가 없어요</p>
+      <p className="text-body2 text-text-secondary mt-1.5 break-keep">
+        이 공고는 등록된 제출 서류가 없어서 바로 신청할 수 있어요. 접수 뒤에 기관에서 따로
+        서류를 요청할 수 있으니 공고문을 한 번 확인해 주세요.
+      </p>
+    </div>
+  )
+}
+
 export default function ApplicationDocumentList({
   documents,
   onUpload,
@@ -53,6 +75,8 @@ export default function ApplicationDocumentList({
   readOnly = false,
 }: ApplicationDocumentListProps) {
   const { submit, write } = splitByType(documents)
+
+  if (documents.length === 0) return <NoDocuments />
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,7 +105,10 @@ export default function ApplicationDocumentList({
         <section>
           <h2 className="text-body2 text-text-secondary mb-3 font-semibold">작성 서류</h2>
           <div className="flex flex-col gap-3">
-            {write.map((doc) => (
+            {write.map((doc) => {
+              const { programDocumentId } = doc
+
+              return (
               <DocumentWriteItem
                 key={doc.applicationDocumentId}
                 name={doc.documentName ?? '이름 없는 서류'}
@@ -91,28 +118,34 @@ export default function ApplicationDocumentList({
                 maxSizeMb={UPLOAD_MAX_SIZE_MB}
                 /*
                  * 두 버튼 다 programDocumentId 로 부른다. 대출 신청의 서류는 이 값이
-                 * null 이라 버튼이 아예 안 생긴다 — 대출에는 작성 서류도 서식 파일도 없다.
+                 * 없어서 버튼이 아예 안 생긴다 — 대출에는 작성 서류도 서식 파일도 없다.
+                 *
+                 * `== null` 이 일부러 느슨하다. 서버가 이 필드를 늦게 넣어서 배포가
+                 * 밀리면 값이 null 이 아니라 아예 안 온다. `=== null` 로 막으면 undefined
+                 * 가 통과해 주소에 그대로 박히고(/program-documents/undefined/download)
+                 * 500 이 난다 — 실제로 그렇게 터졌다.
                  *
                  * 읽기 전용이면 초안만 막는다. 빈 서식은 제출한 뒤에도 받을 수 있어야
                  * 무엇을 냈는지 다시 볼 수 있다.
                  */
                 onDownloadOriginal={
-                  doc.programDocumentId === null
+                  programDocumentId == null
                     ? undefined
-                    : () => onDownloadOriginal(doc.programDocumentId as number)
+                    : () => onDownloadOriginal(programDocumentId)
                 }
                 onWriteDraft={
-                  readOnly || doc.programDocumentId === null
+                  readOnly || programDocumentId == null
                     ? undefined
-                    : () => onWriteDraft(doc.programDocumentId as number)
+                    : () => onWriteDraft(programDocumentId)
                 }
-                isDraftPending={draftingDocumentId === doc.programDocumentId}
+                isDraftPending={programDocumentId != null && draftingDocumentId === programDocumentId}
                 onSelectFile={
                   readOnly ? undefined : (file) => onUpload(doc.applicationDocumentId, file)
                 }
                 onFileError={onFileError}
               />
-            ))}
+              )
+            })}
           </div>
         </section>
       )}

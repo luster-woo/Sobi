@@ -6,6 +6,7 @@ import { startApplicationErrorMessage } from '@/features/application/model/appli
 import { APPLICATION_SOURCE } from '@/features/application/model/types'
 import { useSupportProgramDetail } from '@/features/support-program/hooks/useSupportProgramDetail'
 import { balanceRangeText } from '@/features/support-program/model/amount'
+import { toNoticeLines } from '@/features/support-program/model/noticeText'
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
 import {
   canApply,
@@ -20,6 +21,7 @@ import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
 import Skeleton from '@/shared/ui/Skeleton'
+import { cn } from '@/shared/utils/cn'
 
 /**
  * 상태별 하단 버튼 문구와 갈 곳.
@@ -120,7 +122,7 @@ export default function SupportProgramDetailModal({
       size="lg"
       onClose={onClose}
       title={data?.pblancNm ?? '지원사업'}
-      description={data?.bsnsSumryCn ?? undefined}
+      description={data?.bsnsSumryCn ? <NoticeText raw={data.bsnsSumryCn} /> : undefined}
       headerRight={
         data && <ProductStatusBadge status={data.status} labels={SUPPORT_STATUS_LABEL} />
       }
@@ -178,7 +180,11 @@ export default function SupportProgramDetailModal({
             </Row>
           )}
 
-          {data.reqstMthPapersCn && <Row label="신청방법">{data.reqstMthPapersCn}</Row>}
+          {data.reqstMthPapersCn && (
+            <Row label="신청방법">
+              <NoticeText raw={data.reqstMthPapersCn} />
+            </Row>
+          )}
           {data.refrncNm && <Row label="문의처">{data.refrncNm}</Row>}
 
           {/*
@@ -234,5 +240,27 @@ export default function SupportProgramDetailModal({
         </dl>
       )}
     </Modal>
+  )
+}
+
+/**
+ * 공고 원문을 줄로 나눠 그린다.
+ *
+ * 공공데이터가 개요·신청방법을 줄바꿈 없이 한 덩어리로 준다. 화면 폭에 맞춰 접히기만
+ * 해서, 항목이 여섯 개든 열 개든 한 문단으로 읽힌다 — 어디까지가 한 항목인지 알 수 없다.
+ *
+ * 규칙은 model/noticeText.ts 에 있다. 여기서는 세부 항목만 들여쓴다.
+ */
+function NoticeText({ raw }: { raw: string }) {
+  const lines = toNoticeLines(raw)
+
+  return (
+    <span className="flex flex-col gap-0.5">
+      {lines.map((line, index) => (
+        <span key={index} className={cn('break-keep', line.depth === 1 && 'pl-3')}>
+          {line.text}
+        </span>
+      ))}
+    </span>
   )
 }

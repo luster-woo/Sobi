@@ -12,7 +12,11 @@ interface ModalProps {
   onClose: () => void
   title: string
   /** 제목 바로 아래 한 줄 설명 */
-  description?: string
+  /**
+   * 제목 아래 설명. 여러 줄을 넣을 수 있게 ReactNode 다 — 공고 개요처럼 원문에
+   * 글머리표가 섞인 글은 한 줄로 이으면 읽히지 않는다.
+   */
+  description?: ReactNode
   /**
    * 제목 바로 옆에 붙는 요소. 상태 배지처럼 제목이 가리키는 대상의 **속성**.
    * 제목이 길면 다음 줄로 내려간다. 누르는 것은 headerAction 에 둔다.

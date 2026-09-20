@@ -167,8 +167,9 @@ class WriterTests(unittest.TestCase):
         with zipfile.ZipFile(self.output) as archive:
             xml=archive.read('Contents/section0.xml');self.assertIn(b'styleIDRef="8"',xml);self.assertIn(b'charPrIDRef="7"',xml);self.assertNotIn(b'linesegarray',xml)
         self.assertEqual(self.output_texts(),['본문\n(안내)'])
-    def test_empty_multiple_paragraphs_rejected(self):
-        self.document([cell(paragraphs=paragraph('')+paragraph(''))]);self.assert_error('TARGET_STRUCTURE_UNSUPPORTED')
+    def test_empty_multiple_paragraphs_supported(self):
+        self.document([cell(paragraphs=paragraph('')+paragraph(''))]);self.write()
+        self.assertEqual(self.output_texts(), ['성현상사\n'])
     def test_control_structure_rejected(self):
         self.document([cell(paragraphs='<hp:p><hp:run><hp:ctrl/><hp:t/></hp:run></hp:p>')]);self.assert_error('TARGET_STRUCTURE_UNSUPPORTED')
     def test_wrong_insertion_mode(self):

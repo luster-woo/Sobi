@@ -230,16 +230,22 @@ def preflight(field, documents, parsed_cells):
         if not current.strip():
             raise Error("TARGET_CONTENT_MISMATCH")
     paragraphs, anchor = supported_structure(target)
-    # Removing paragraphs would destroy structure. Multi-paragraph whitespace is unsupported.
-    if kind == "empty" and len(paragraphs) != 1:
-        raise Error("TARGET_STRUCTURE_UNSUPPORTED")
+    if kind == "empty":
+        # Safe p/run/t structure must correspond one-to-one to Parser paragraphs.
+        # Never flatten a fragmented/ambiguous cell or accept nonblank paragraphs.
+        if len(paragraphs) != len(cell.paragraphs):
+            raise Error("TARGET_STRUCTURE_UNSUPPORTED")
+        if any(p.text.strip() for p in cell.paragraphs):
+            raise Error("TARGET_CONTENT_MISMATCH")
     if kind == "placeholder":
         text, expected, nodes = date_placeholder(field, hints, paragraphs, current)
         return Mutation(key, target, paragraphs, anchor, kind, text, expected, nodes)
     text = (parse_date(field.value).isoformat()
             if kind == "empty" and field.value_type == "DATE" else format_value(field))
-    return Mutation(key, target, paragraphs, anchor, kind, text,
-                    text if kind == "empty" else text + current)
+    # Parser joins every cell paragraph with LF, including blank trailing paragraphs.
+    expected = ("\n".join([text, *(p.text for p in cell.paragraphs[1:])])
+                if kind == "empty" else text + current)
+    return Mutation(key, target, paragraphs, anchor, kind, text, expected)
 
 
 def insert_text(run, text):
@@ -261,9 +267,9 @@ def insert_text(run, text):
 
 
 def mutate(plan):
-    changed = plan.paragraphs if plan.kind == "empty" else plan.paragraphs[:1]
+    changed = plan.paragraphs[:1]
     if plan.kind == "empty":
-        for p in plan.paragraphs:
+        for p in changed:
             for run in elements(p):
                 if run.localName == "run":
                     for t in elements(run):

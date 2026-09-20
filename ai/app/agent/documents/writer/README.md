@@ -81,11 +81,14 @@ target cell을 새로 만들거나 표 구조를 재생성하지 않는다.
 
 | target_kind | 수정 | logical result 예 |
 | --- | --- | --- |
-| empty | 단일 문단의 기존 t 내용(공백 포함)만 비우고 첫 run에 값 삽입 | `성현상사` |
+| empty | 첫 문단의 기존 t 내용(공백 포함)만 비우고 첫 run에 값 삽입. 후속 빈 문단은 보존 | 단일 `성현상사`, 3개 빈 문단 `성현상사\n\n` |
 | helper | 첫 문단 첫 t 앞에 값 삽입. helper 텍스트/기존 노드는 유지 | `도소매업\n(사업자등록증 상)` |
 | unit_suffix | BEFORE_SUFFIX만 지원. 기존 suffix 전체 앞에 값 삽입 | `4000000 원` |
 
-empty의 여러 whitespace 문단은 문단을 삭제하지 않고는 정확한 목표 텍스트를 만들 수 없어 거부한다.
+empty는 single paragraph 및 구조 검증을 통과한 여러 whitespace-only paragraph를 지원한다.
+첫 문단만 수정하며 나머지 문단은 whitespace/run/t/style/linesegarray까지 그대로 보존한다.
+expected는 Parser 계약대로 `"\n".join([작성값, *기존 후속 문단 텍스트])`로 계산한다.
+문단을 삭제/병합하거나 output verification을 생략하지 않는다. 복잡한 구조는 계속 거부한다.
 helper는 hints.helper_text=current_text도 확인한다. 기존 helper 텍스트와 후속 run/style은 그대로 남긴다.
 새 값은 anchor run의 기존 글자 스타일을 사용한다. helper 앞에 별도 문단/스타일을 만들지 않는다.
 unit을 새로 붙이거나 중복시키지 않는다. 기존 공백과 suffix를 모두 보존한다.
@@ -361,3 +364,43 @@ BUSINESS_NAME 3곳, USER_NAME 4곳, USER_EMAIL, USER_BIRTH_DATE(1999-01-23)를 �
 이는 실제 GMS 또는 DB 검증이 아니다. 한글의 화면 배치/줄넘침/페이지 밀림은 육안 확인해야 한다.
 재전처리는 기존 template ID를 재사용할 수 있으므로 반환된 ID로 Runtime/Writer를 실행한다.
 최신 수동 명령과 SQL은 docs/document-agent-progress.md의 USER Source 보완 항목을 따른다.
+
+## Multi-paragraph empty 확장 (2026-09-20)
+
+TABLE_CELL + empty에서 supported_structure의 기존 p/run/t/namespace 검증을 그대로 적용한다.
+current_text의 exact match와 whitespace-only 검사 후 DOM/Parser 문단 수의 일치를 확인한다.
+첫 문단의 모든 t 내용만 비우고 기존 첫 run을 anchor로 사용한다. 해당 문단의 linesegarray만 제거한다.
+후속 문단의 요소/속성/whitespace/control/캐시는 변경하지 않는다. 첫 문단의 run/t/style도 유지한다.
+TEXT의 LF는 기존 insert_text의 hp:lineBreak를 사용한다. NUMBER/DATE의 기존 형식 정책도 유지한다.
+
+예: 9개 문단의 current_text가 `"\n" * 8 + " "`이면 결과는 `작성값 + "\n" * 8 + " "`이다.
+expected는 mutation 후 XML을 읽어 추정하지 않고 preflight에서 Parser의 기존 후속 문단 텍스트로 계산한다.
+수정 파일을 다시 Parser로 읽어 expected와 정확히 비교한다. 후속 공백 손상도 검증 실패로 처리한다.
+
+nested table/object/ctrl/range marker/지원하지 않는 namespace·node/첫 run 부재는 계속 거부한다.
+non-whitespace 및 stale current_text는 TARGET_CONTENT_MISMATCH다. 위치·metadata·중복 target,
+원본 불변성·ZIP·출력 충돌·atomic publish·재파싱 검증과 helper/unit_suffix/placeholder/inline 정책은 유지한다.
+Parser/Runtime/GMS/DB/Spring은 변경하지 않았다. template/field/key 하드코딩은 없다.
+
+신규 `test_writer_multi_empty.py` 13개: single/2문단/9문단, 원본·후속 XML·run/style 보존,
+multiline와 정확한 expected, whitespace control, nonblank/nested/object/control/marker/namespace/anchor/stale 거부,
+후속 텍스트 손상 시 OUTPUT_VALIDATION_FAILED를 검증한다.
+기존 2문단 거부 테스트는 지원 회귀 테스트로 갱신했다.
+Writer/DATE/정책/inline 및 신규 테스트 합계 119개 통과(기존 106개 + 신규 13개).
+전체 테스트는 로컬 Python 3.12 임시 의존성 환경에서 712개 중 711개 통과, 선택 PostgreSQL 통합 1개 skip.
+실제 DB/GMS/변환 프로그램은 호출하지 않았다. requirements와 공용 설정은 변경하지 않았다.
+배포 Python 3.11/Docker 및 실제 해당 서식의 한글 렌더링 검증은 별도로 필요하다.
+
+수동 확인은 Docker /app에서 실제 사용자 ID를 지정한다. 아래 --generate는 실제 GMS를 호출하므로
+이번 단위 테스트에서는 실행하지 않았다. 원본 해시를 전후 비교하고 매번 새 output 파일명을 사용한다.
+
+```sh
+mkdir -p /data/test/generated
+python -B -m app.agent.documents.writer 9 <user_id> --generate \
+  --output /data/test/generated/draft-multi-empty-001.hwpx
+python -B -m zipfile -t /data/test/generated/draft-multi-empty-001.hwpx
+python -B -m unittest discover -s tests -p 'test_writer_multi_empty.py'
+```
+
+실제 template의 XML도 안전한 구조이고 current_text가 일치한다면 여러 blank 문단만으로 거부되지 않는다.
+문단 보존은 픽셀 단위 레이아웃 보장을 뜻하지 않는다. 긴 TEXT의 높이/줄넘침/페이지 배치는 한글에서 확인한다.

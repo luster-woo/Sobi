@@ -2,25 +2,29 @@ import { isSettled } from '@/features/application/model/statusLabel'
 import type { ApplicationListItem } from '@/features/application/model/types'
 
 export const APPLICATION_FILTER = {
+  ALL: 'ALL',
   PREPARING: 'PREPARING',
   ONGOING: 'ONGOING',
   SETTLED: 'SETTLED',
-  ALL: 'ALL',
 } as const
 
 export type ApplicationFilter = (typeof APPLICATION_FILTER)[keyof typeof APPLICATION_FILTER]
 
 /**
- * 주소의 tab 값을 탭으로 바꾼다. 모르는 값이면 기본 탭이다.
+ * 주소의 tab 값을 탭으로 바꾼다. 모르는 값이면 기본 탭(전체)이다.
  *
- * 탭을 주소에 두는 이유는 다른 화면이 특정 탭을 지목해야 해서다 — 자금 조합으로
- * 신청을 만들면 전부 준비 중이라, 기본 탭(진행 중)으로 보내면 방금 만든 것이
- * 하나도 안 보인다. 새로고침해도 남고 링크로 공유도 된다.
+ * 기본이 전체다. 진행 중을 기본으로 두면 심사 중인 건이 하나도 없는 사람은 신청을
+ * 여러 건 만들어 놓고도 들어오자마자 빈 목록을 본다 — 준비 중 21건에 진행 중 0건인
+ * 상태가 실제로 나온다. 첫 화면은 '내가 만든 게 여기 다 있다' 여야 한다.
+ *
+ * 탭을 주소에 두는 이유는 그대로다. 다른 화면이 특정 탭을 지목해야 해서다 —
+ * 자금 조합으로 신청을 만들면 전부 준비 중이라, 만든 직후에는 준비 중 탭으로
+ * 보낸다. 새로고침해도 남고 링크로 공유도 된다.
  */
 export function toApplicationFilter(value: string | null): ApplicationFilter {
   const found = Object.values(APPLICATION_FILTER).find((filter) => filter === value)
 
-  return found ?? APPLICATION_FILTER.ONGOING
+  return found ?? APPLICATION_FILTER.ALL
 }
 
 /**

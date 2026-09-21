@@ -82,7 +82,10 @@ export interface DashboardLoan {
   minLoanBalance: number
   /** 대출 한도 상한(원) */
   maxLoanBalance: number
-  /** 상환 기간(개월). 월납이라 납입 횟수와 같은 값이다 */
+  /**
+   * 대출 기간(**일**). 개월이 아니다 — 백엔드 `LoanDetailResponse` 가 '대출 기간(일)' 이고
+   * 금융망도 2~365일을 받는다. 매일 한 회차씩 갚아 회차 수와 값이 같을 뿐이다.
+   */
   period: number
   /** 접수 마감일. null 이면 상시 */
   endDate: ISODate | null

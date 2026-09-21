@@ -43,7 +43,7 @@ function LoanCard({
     <ProductCard
       title={loan.accountName}
       organization={loan.bankName}
-      chips={[`납입횟수 ${loan.period}회`]}
+      chips={[`기간 ${loan.period}일`]}
       amount={toAmountRange(loan.minLoanBalance, loan.maxLoanBalance)}
       isBookmarked={shown}
       onToggleBookmark={() =>
@@ -57,9 +57,9 @@ function LoanCard({
 /**
  * 지원 가능한 대출 스트립.
  *
- * 알약에 상환 횟수만 둔다. 금리는 상품을 고르는 기준이지만 카드 넷을 나란히 놓고
- * 비교할 값이고, 여기는 "이 중에 볼 것이 있나" 를 훑는 자리다 — 금리 비교는 목록
- * 화면의 표가 훨씬 잘한다.
+ * 알약에 대출 기간만 둔다. 상세 모달·관심 목록과 같은 '일' 단위를 쓴다. 금리는 상품을
+ * 고르는 기준이지만 카드 넷을 나란히 놓고 비교할 값이고, 여기는 "이 중에 볼 것이 있나"
+ * 를 훑는 자리다 — 금리 비교는 목록 화면의 표가 훨씬 잘한다.
  *
  * 카드를 누르면 목록 화면과 같은 상세 모달이 이 자리에 뜬다. 주소를 바꾸지 않는
  * 이유: 대시보드에서 상품 하나를 확인하는 것은 잠깐 들여다보는 일이고, /loans 로

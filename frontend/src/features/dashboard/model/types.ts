@@ -28,8 +28,8 @@ export const INSURANCE_STATUS_LABEL: Record<InsuranceStatus, string> = {
 /**
  * 자격 판정 요약. 대출 20개 + 지원사업 32개를 한 번에 센 수다.
  *
- * urgent 는 possible 의 부분집합이다 — 신청할 수 있는데 마감이 임박한 건수.
- * possible + impossible = total 이고 urgent 는 그 합에 들어가지 않는다.
+ * possible + needsCheck + impossible + inProgress = total 이 항상 성립해야 한다.
+ * urgent 는 possible 의 부분집합이라 그 합에 들어가지 않는다.
  */
 export interface JudgementSummary {
   /**
@@ -40,8 +40,17 @@ export interface JudgementSummary {
    */
   updatedAt: ISODate | null
   possible: number
+  /**
+   * 판정하지 못한 건수(지원사업 UNKNOWN).
+   *
+   * 예비창업자는 판정 자체가 없어 전부 여기로 온다. 신청은 열려 있지만(`canApply`)
+   * '가능' 으로 세면 안 된다 — 조건을 사람이 확인해야 하는 건수다.
+   */
+  needsCheck: number
   urgent: number
   impossible: number
+  /** 이미 신청해 판정 밖으로 나간 건수(PREPARING~PAID) */
+  inProgress: number
   total: number
 }
 
@@ -87,17 +96,13 @@ export interface DashboardSupportProgram {
   jrsdInsttNm: string
   type: SupportProgramType
   /**
-   * 지원 금액(원).
+   * 지원 금액(원). 공고문에 없으면 null 이고 카드에는 '금액 미정' 이 붙는다.
    *
-   * 목록 타입(SupportProgramListItem)에서는 ETC 에 금액이 없어 판별 유니온이지만
-   * 여기서는 필수다. 카드 아래 금액 줄이 비면 카드 높이가 어긋나 비교할 수가 없어서,
-   * 금액 없는 사업은 스트립에 올리지 않는다. 표를 쓰는 목록 화면은 상관없다.
-   *
-   * ⚠️ 판정 결과에 금액 없는 사업이 섞여 올 때 서버가 걸러 줄지 프론트가 걸러야 할지
-   *    확인 필요.
+   * 금액이 없다고 카드를 버리지 않는다. 버리면 헤더 건수와 카드 수가 어긋나
+   * '31건 신청 가능' 옆에 빈 스트립이 남는다.
    */
-  minBalance: number
-  maxBalance: number
+  minBalance: number | null
+  maxBalance: number | null
   /**
    * 연 이율(%). 지원대출(type LOAN)에만 있고 지원금·기타는 null 이다.
    * null 이면 금리 알약을 그리지 않는다 — '금리 -' 는 정보가 아니다.

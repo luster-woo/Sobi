@@ -31,7 +31,7 @@ function Stat({ label, value }: { label: string; value: number }) {
  * 이미 있다.
  */
 export default function JudgementSummaryPanel({ summary }: JudgementSummaryPanelProps) {
-  const { updatedAt, possible, urgent, impossible, total } = summary
+  const { updatedAt, possible, needsCheck, urgent, impossible, inProgress, total } = summary
 
   return (
     <Panel className="flex flex-col gap-3 px-4.5 py-4">
@@ -49,13 +49,11 @@ export default function JudgementSummaryPanel({ summary }: JudgementSummaryPanel
         </p>
 
         <dl className="flex gap-4.5">
-          {/*
-           * '마감 임박' 은 얼마나 급한지를 안 알려준다. 서버가 7일 기준으로 세어 주므로
-           * 그 숫자를 그대로 문구에 적는다.
-           * 신청 가능 18건 안에 든 수다 — 전체 = 가능 + 불가.
-           */}
+          {/* 마감 임박은 신청 가능 안에 든 수다. 나머지 넷을 더하면 전체가 된다 */}
           <Stat label="일주일 내 마감" value={urgent} />
+          <Stat label="확인 필요" value={needsCheck} />
           <Stat label="신청 불가" value={impossible} />
+          {inProgress > 0 && <Stat label="진행 중" value={inProgress} />}
           <Stat label="전체" value={total} />
         </dl>
       </div>

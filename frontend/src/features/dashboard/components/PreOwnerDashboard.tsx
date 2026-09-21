@@ -30,8 +30,8 @@ export default function PreOwnerDashboard({ dashboard }: PreOwnerDashboardProps)
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-w-0 flex-col gap-3.5">
         <JudgementSummaryPanel summary={judgement} />
-        <LoanStrip loans={loans} />
-        <SupportProgramStrip programs={supportPrograms} />
+        <LoanStrip loans={loans} title="미리 보는 대출" />
+        <SupportProgramStrip programs={supportPrograms} title="미리 보는 정부 지원사업" />
       </div>
 
       <div className="flex flex-col gap-3.5">

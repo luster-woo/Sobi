@@ -10,7 +10,7 @@ import type { BusinessTree, RegionTree } from '@/shared/types/commonCode'
  * 명세의 응답 예시(마포구 서교동 · 한식음식점)를 그대로 옮겼다.
  *
  * 원본 데이터에 매출이 빈 행이 53% 라 그 경우도 눌러볼 수 있어야 한다. 그래서 상암동
- * (11440700)을 매출 전부 null 인 응답으로 따로 뒀다. 화면을 만들 때 두 동을 번갈아
+ * (11440740)을 매출 전부 null 인 응답으로 따로 뒀다. 화면을 만들 때 두 동을 번갈아
  * 열어보면 null 처리가 빠진 자리가 바로 드러난다.
  */
 const 서교동: MarketAnalysis = {
@@ -19,7 +19,7 @@ const 서교동: MarketAnalysis = {
     cityName: '서울특별시',
     districtCode: '11440',
     districtName: '마포구',
-    dongCode: '11440375',
+    dongCode: '11440660',
     dongName: '서교동',
   },
   business: { code: 'CS100001', name: '한식음식점' },
@@ -39,7 +39,7 @@ const 서교동: MarketAnalysis = {
   density: { seoulAvg: 138, districtAvg: 202, dong: 868 },
   neighbors: [
     {
-      dongCode: '11440375',
+      dongCode: '11440660',
       dongName: '서교동',
       storeCount: 868,
       dailyFootTraffic: 191734,
@@ -49,7 +49,7 @@ const 서교동: MarketAnalysis = {
     },
     {
       // 점포가 0 곳이라 나눗셈이 성립하지 않는 동. 서버가 비율을 null 로 준다
-      dongCode: '11440590',
+      dongCode: '11440720',
       dongName: '성산1동',
       storeCount: 0,
       dailyFootTraffic: 31200,
@@ -58,7 +58,7 @@ const 서교동: MarketAnalysis = {
       annualCloseRate: null,
     },
     {
-      dongCode: '11440700',
+      dongCode: '11440740',
       dongName: '상암동',
       storeCount: 326,
       dailyFootTraffic: 59870,
@@ -67,7 +67,7 @@ const 서교동: MarketAnalysis = {
       annualCloseRate: 17.8,
     },
     {
-      dongCode: '11440640',
+      dongCode: '11440565',
       dongName: '공덕동',
       storeCount: 224,
       dailyFootTraffic: 132695,
@@ -76,7 +76,7 @@ const 서교동: MarketAnalysis = {
       annualCloseRate: 11.6,
     },
     {
-      dongCode: '11440400',
+      dongCode: '11440710',
       dongName: '연남동',
       storeCount: 207,
       dailyFootTraffic: 72433,
@@ -85,7 +85,7 @@ const 서교동: MarketAnalysis = {
       annualCloseRate: 15.0,
     },
     {
-      dongCode: '11440390',
+      dongCode: '11440680',
       dongName: '합정동',
       storeCount: 204,
       dailyFootTraffic: 49422,
@@ -94,7 +94,7 @@ const 서교동: MarketAnalysis = {
       annualCloseRate: 12.7,
     },
     {
-      dongCode: '11440610',
+      dongCode: '11440590',
       dongName: '용강동',
       storeCount: 203,
       dailyFootTraffic: 61332,
@@ -103,7 +103,7 @@ const 서교동: MarketAnalysis = {
       annualCloseRate: 16.3,
     },
     {
-      dongCode: '11440510',
+      dongCode: '11440690',
       dongName: '망원1동',
       storeCount: 181,
       dailyFootTraffic: 74134,
@@ -152,7 +152,7 @@ const 서교동: MarketAnalysis = {
 /** 매출이 전부 null 인 경우 (원본의 53%) */
 const 상암동: MarketAnalysis = {
   ...서교동,
-  location: { ...서교동.location, dongCode: '11440700', dongName: '상암동' },
+  location: { ...서교동.location, dongCode: '11440740', dongName: '상암동' },
   summary: {
     ...서교동.summary,
     storeCount: 326,
@@ -175,7 +175,7 @@ const 상암동: MarketAnalysis = {
  */
 const 성산1동: MarketAnalysis = {
   ...서교동,
-  location: { ...서교동.location, dongCode: '11440590', dongName: '성산1동' },
+  location: { ...서교동.location, dongCode: '11440720', dongName: '성산1동' },
   summary: {
     ...서교동.summary,
     storeCount: 0,
@@ -207,9 +207,9 @@ const 성산1동: MarketAnalysis = {
 }
 
 const BY_DONG: Record<string, MarketAnalysis> = {
-  '11440375': 서교동,
-  '11440700': 상암동,
-  '11440590': 성산1동,
+  '11440660': 서교동,
+  '11440740': 상암동,
+  '11440720': 성산1동,
 }
 
 /**
@@ -229,11 +229,11 @@ const REGION_TREE: RegionTree = {
       code: '11440',
       name: '마포구',
       dongs: [
-        { code: '11440375', name: '서교동' },
-        { code: '11440700', name: '상암동' },
-        { code: '11440640', name: '공덕동' },
-        { code: '11440400', name: '연남동' },
-        { code: '11440590', name: '성산1동' },
+        { code: '11440660', name: '서교동' },
+        { code: '11440740', name: '상암동' },
+        { code: '11440565', name: '공덕동' },
+        { code: '11440710', name: '연남동' },
+        { code: '11440720', name: '성산1동' },
       ],
     },
     {

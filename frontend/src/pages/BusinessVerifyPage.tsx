@@ -158,11 +158,15 @@ export function BusinessVerifyPage() {
    *
    *    같은 번호면 unique 제약(500)에 걸려 되돌릴 수는 있지만, 다른 번호는 되돌릴
    *    방법이 없다. 서버가 막아주지 않으므로 화면에서 먼저 막는다.
+   *
+   *    토큰 role 로는 판단할 수 없다. 등록 직후 재발급이 실패하면 role 이
+   *    PREENTREPRENEUR 로 남은 채 이 화면에 다시 올 수 있고, 그게 정확히 두 번째
+   *    등록이 일어나는 경로다 — 서버에 직접 물어본다(`useBusinessSummary`).
    */
-  const { data: registeredBusiness } = useBusinessSummary()
+  const { data: registeredBusiness, isLoading: isCheckingBusiness } = useBusinessSummary()
 
   const handleStartAsOwner = () => {
-    if (verifiedBrn === null) return
+    if (verifiedBrn === null || isCheckingBusiness) return
 
     if (registeredBusiness) {
       showToast('이미 등록된 업체가 있어요. 변경이 필요하면 문의해 주세요.', 'warning')
@@ -296,7 +300,12 @@ export function BusinessVerifyPage() {
           errorMessage={VERIFY_ERROR[errorKind].message}
         />
 
-        <Button disabled={!canStartAsOwner} onClick={handleStartAsOwner} className="mt-3.5 w-full">
+        {/* 등록 여부를 아직 모르는 동안 누르면 가드가 통과해 버린다 */}
+        <Button
+          disabled={!canStartAsOwner || isCheckingBusiness}
+          onClick={handleStartAsOwner}
+          className="mt-3.5 w-full"
+        >
           사업자로 시작하기
         </Button>
 

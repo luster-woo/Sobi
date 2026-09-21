@@ -2,6 +2,7 @@ import DashboardFallback from '@/features/dashboard/components/DashboardFallback
 import OwnerDashboard from '@/features/dashboard/components/OwnerDashboard'
 import PreOwnerDashboard from '@/features/dashboard/components/PreOwnerDashboard'
 import { useDashboard } from '@/features/dashboard/hooks/useDashboard'
+import { ERROR_CODE, getErrorCode } from '@/shared/api/errors'
 
 /**
  * 대시보드는 role 에 따라 화면이 완전히 갈린다. 이 파일은 갈림길만 담당하고
@@ -15,9 +16,27 @@ import { useDashboard } from '@/features/dashboard/hooks/useDashboard'
  * 응답을 가르는데, 인증 직후처럼 토큰의 role 이 아직 낡아 있을 수 있다.
  */
 export function DashboardPage() {
-  const { data, isError, refetch } = useDashboard()
+  const { data, error, isError, refetch } = useDashboard()
 
-  if (!data) return <DashboardFallback isError={isError} onRetry={() => void refetch()} />
+  if (!data) {
+    /*
+     * 금융망 실패(EXTERNAL_001)는 서버가 대시보드 전체를 500 으로 내는 탓이라
+     * 프론트가 살릴 수 없다. 원인이라도 알려준다 — '잠시 후 다시' 만 띄우면
+     * 사용자도 QA 도 무엇이 고장났는지 알 수 없다.
+     */
+    const description =
+      getErrorCode(error) === ERROR_CODE.EXTERNAL_API_FAILED
+        ? '금융 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'
+        : undefined
+
+    return (
+      <DashboardFallback
+        isError={isError}
+        description={description}
+        onRetry={() => void refetch()}
+      />
+    )
+  }
 
   return data.kind === 'owner' ? (
     <OwnerDashboard dashboard={data.data} />

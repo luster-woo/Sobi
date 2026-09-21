@@ -33,7 +33,8 @@ export default function OwnerDashboard({ dashboard }: OwnerDashboardProps) {
   return (
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-w-0 flex-col gap-3.5">
-        <JudgementSummaryPanel summary={judgement} />
+        {/* 판정 조회가 실패하면 패널만 빠진다. 아래 스트립과 오른쪽 열은 그대로 */}
+        {judgement && <JudgementSummaryPanel summary={judgement} />}
         <LoanStrip loans={loans} />
         <SupportProgramStrip programs={supportPrograms} />
       </div>

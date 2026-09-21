@@ -25,10 +25,18 @@ interface BusinessSummaryResponse {
   openDate: ISODate
 }
 
-/** ⚠️ null 이 아니다. 연동 여부는 `linked` 로 판단한다 */
+/**
+ * ⚠️ null 이 아니다. 연동 여부는 `linked` 로 판단한다.
+ *
+ * ⚠️ `linked` 는 이름과 달리 **지원사업 판정 이력이 있는지**다
+ *    (`UserServiceImpl.toMyDataStatus` → `findLastJudgedAt(business.id) != null`).
+ *    연동과 판정이 `MydataServiceImpl.link()` 한 흐름이라 마이데이터 쪽 표시로는
+ *    쓸 수 있지만, **계좌와는 무관하다** — 계좌 요약은 판정과 상관없이 매 요청
+ *    금융망에서 실시간으로 받아온다.
+ */
 interface MyDataStatusResponse {
   linked: boolean
-  /** 마지막 판정 시각. 연동 전이면 null */
+  /** 마지막 판정 시각. 판정한 적이 없으면 null */
   updatedAt: ISODateTime | null
 }
 
@@ -81,10 +89,13 @@ function toProvider(raw: string | null): AuthProvider {
 /**
  * 마이페이지 조회.
  *
- * 응답이 이미 화면에 가까운 모양이라 이름만 맞춘다. 연동 전을 `null` 로 좁히는 것이
+ * 응답이 이미 화면에 가까운 모양이라 이름만 맞춘다. '없음' 을 `null` 로 좁히는 것이
  * 실질적인 변환이다 — 서버는 `myData` · `accountSummary` 를 항상 객체로 주고
- * 연동 전인지는 `linked` 와 0 으로 표현하는데, 화면에서는 '없음' 과 '0원' 을
- * 갈라야 해서 여기서 한 번 정리한다.
+ * 없음을 0 으로 표현하는데, 화면에서는 '없음' 과 '0원' 을 갈라야 한다.
+ *
+ * ⚠️ 계좌 요약을 `myData.linked` 로 가리지 않는다. 그 값은 판정 이력 유무라서,
+ *    판정 전이거나 예비창업자면 서버가 실제로 내려준 잔액·계좌 수가 통째로 버려진다.
+ *    계좌가 있는지는 `accountCount` 가 답한다.
  */
 export async function getMyPage(): Promise<MyPageData> {
   const { data } = await api.get<MyPageResponse>(endpoints.user.mypage)
@@ -98,7 +109,7 @@ export async function getMyPage(): Promise<MyPageData> {
     },
     business: data.business,
     myData: data.myData.linked ? { linkedAt: data.myData.updatedAt } : null,
-    accountSummary: data.myData.linked ? data.accountSummary : null,
+    accountSummary: data.accountSummary.accountCount > 0 ? data.accountSummary : null,
     payoutAccount: data.payoutAccount,
     notification: data.notification,
   }

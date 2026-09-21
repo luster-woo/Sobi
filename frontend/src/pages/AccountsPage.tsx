@@ -125,7 +125,8 @@ export function AccountsPage() {
   const depositAccounts = deposits ?? []
   const loanAccounts = loans ?? []
 
-  if (!accountSummary || !myData) {
+  // 판정(myData)은 보지 않는다. 계좌가 있으면 판정 전이어도 보여줄 것이 있다
+  if (!accountSummary) {
     return (
       <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
         <Breadcrumb parentLabel="마이페이지" parentTo={ROUTES.MYPAGE} current="연동 계좌" />
@@ -151,7 +152,7 @@ export function AccountsPage() {
         aside={
           <span className="flex items-center gap-2.5">
             <span className="text-text-muted text-[11.5px] tabular-nums">
-              마이데이터로 불러온 계좌예요 · {toUpdatedAt(myData.linkedAt)} 갱신
+              마이데이터로 불러온 계좌예요 · {toUpdatedAt(myData?.linkedAt ?? null)} 갱신
               {/* 서버 쿨다운이 남아 있으면 눌러도 429 라 미리 잠근다 */}
               {refresh.remaining && ` · ${refresh.remaining} 갱신 가능`}
             </span>

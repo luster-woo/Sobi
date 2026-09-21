@@ -200,7 +200,11 @@ export interface StoreCondition {
  * 상태를 바꾸면 그 목록만 다시 받으면 되고, 대시보드 전체를 무효화할 이유가 없다.
  */
 export interface OwnerDashboardData {
-  judgement: JudgementSummary
+  /**
+   * 판정 요약. 대출·지원사업 목록 조회로 따로 세는 값이라 그쪽이 실패하면 null 이다.
+   * 그때는 패널만 빼고 나머지를 그린다 — 숫자 하나 때문에 화면을 통째로 버리지 않는다.
+   */
+  judgement: JudgementSummary | null
   loans: StripSummary<DashboardLoan>
   supportPrograms: StripSummary<DashboardSupportProgram>
   /** 대출이 없으면 null — 상환 패널을 그리지 않는다 */

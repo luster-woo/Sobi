@@ -142,10 +142,31 @@ export interface OwnerJudgement {
   unknownProgramCount: number
 }
 
+/**
+ * 판정 조회가 실패했을 때. 대시보드 응답만으로 그릴 수 있는 것을 그린다.
+ *
+ * 건수는 추천 목록 길이로 대신한다 — 판정 기준 전체 건수는 목록 API 만 알고,
+ * 그것을 못 받은 상황이다.
+ */
+function toDegradedOwnerDashboard(raw: OwnerDashboardResponse): OwnerDashboardData {
+  const loans = compact(raw.suggestLoans.map(toLoan))
+  const programs = raw.suggestsupportProgram.map(toSupportProgram)
+
+  return {
+    judgement: null,
+    loans: { possible: loans.length, total: loans.length, items: loans },
+    supportPrograms: { possible: programs.length, total: programs.length, items: programs },
+    repayment: toRepayment(raw.repaymentManagement),
+    snapshot: toSnapshot(raw),
+  }
+}
+
 export function toOwnerDashboard(
   raw: OwnerDashboardResponse,
-  judged: OwnerJudgement,
+  judged: OwnerJudgement | null,
 ): OwnerDashboardData {
+  if (judged === null) return toDegradedOwnerDashboard(raw)
+
   const { loans, eligiblePrograms, ineligibleProgramCount, unknownProgramCount } = judged
   const loanPossible = loans.statusCounts.ELIGIBLE
   const loanImpossible = loans.statusCounts.INELIGIBLE

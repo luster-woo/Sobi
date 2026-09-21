@@ -38,9 +38,10 @@ interface SalesSparklineProps {
 export default function SalesSparkline({ points }: SalesSparklineProps) {
   if (points.length === 0) return null
 
-  const amounts = points.map((point) => point.amount)
-  const max = Math.max(...amounts)
-  const min = Math.min(...amounts)
+  const lowest = points.reduce((a, b) => (b.amount < a.amount ? b : a))
+  const highest = points.reduce((a, b) => (b.amount > a.amount ? b : a))
+  const min = lowest.amount
+  const max = highest.amount
 
   return (
     <div>
@@ -65,10 +66,24 @@ export default function SalesSparkline({ points }: SalesSparklineProps) {
         ))}
       </div>
 
-      {/* 막대에 값을 붙이지 않는 대신 범위를 적는다. 6개 다 적으면 9px 글자가 겹친다 */}
-      <p className="text-text-muted flex justify-between text-[10px] tabular-nums">
-        <span>{toManwon(min).value}만</span>
-        <span>{toManwon(max).value}만</span>
+      {/*
+       * 막대에 값을 붙이지 않는 대신 범위를 적는다. 6개 다 적으면 9px 글자가 겹친다.
+       *
+       * ⚠️ 어느 달인지를 반드시 같이 적고 한 줄로 모은다. 예전에는 숫자만 양 끝에
+       *    붙여서, 그 자리가 첫 달·마지막 달 라벨 바로 위라 그 달의 매출로 읽혔다.
+       *    '최근 월 매출'(마지막 달)과 값이 달라 서버가 틀린 것처럼 보였다.
+       */}
+      <p className="text-text-muted text-center text-[10px] tabular-nums">
+        {lowest.month === highest.month ? (
+          <span>
+            {toMonthLabel(lowest.month)} {toManwon(min).value}만
+          </span>
+        ) : (
+          <span>
+            최저 {toMonthLabel(lowest.month)} {toManwon(min).value}만 · 최고{' '}
+            {toMonthLabel(highest.month)} {toManwon(max).value}만
+          </span>
+        )}
       </p>
     </div>
   )

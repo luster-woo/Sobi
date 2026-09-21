@@ -12,7 +12,7 @@ import PasswordChangeModal from '@/features/mypage/components/PasswordChangeModa
 import SocialLinkModal from '@/features/mypage/components/SocialLinkModal'
 import WithdrawModal from '@/features/mypage/components/WithdrawModal'
 import { useBookmarks } from '@/features/mypage/hooks/useBookmarks'
-import { useMyPage, useToggleNotification } from '@/features/mypage/hooks/useMyPage'
+import { useMyPage } from '@/features/mypage/hooks/useMyPage'
 import { ROUTES } from '@/shared/constants/routes'
 import { AUTH_PROVIDER, isPreOwner } from '@/shared/types'
 import { APPLICATION_STATUS } from '@/shared/types/application'
@@ -21,7 +21,6 @@ import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
 import Panel from '@/shared/ui/Panel'
 import Skeleton from '@/shared/ui/Skeleton'
-import Switch from '@/shared/ui/Switch'
 import { formatMoneyShort } from '@/shared/utils/formatters'
 import { maskBizNo } from '@/shared/utils/mask'
 
@@ -76,7 +75,6 @@ function Field({ term, description }: { term: string; description: string }) {
  */
 export function MyPage() {
   const { data, isLoading, isError } = useMyPage()
-  const toggle = useToggleNotification()
   const refresh = useMydataRefresh()
 
   /*
@@ -119,7 +117,7 @@ export function MyPage() {
     )
   }
 
-  const { profile, business, myData, accountSummary, notification } = data
+  const { profile, business, myData, accountSummary } = data
 
   /*
    * 회원 유형은 **role 로 가른다.** `business` 가 있는지로 가르면 안 된다 —
@@ -294,24 +292,16 @@ export function MyPage() {
         )}
       </div>
 
+      {/*
+       * 알림 설정 패널을 두지 않는다.
+       *
+       * 토글 API(`PATCH /user/notification`)는 있지만 알림을 보내거나 보여주는
+       * 기능이 통째로 없다 — 백엔드에 `/notifications` 매핑이 하나도 없어서
+       * 상단바 벨도 꺼 둔 상태다(`Topbar.tsx` 의 SHOW_NOTIFICATION_BELL).
+       * 켜도 아무 일이 일어나지 않는 스위치라 오해만 만든다.
+       * 알림 도메인이 생기면 되살린다.
+       */}
       <div className="flex flex-col gap-3.5">
-        <Panel className="flex flex-col gap-2.5 px-[15px] py-3">
-          <h3 className="text-text text-body2 font-bold">알림 설정</h3>
-          <div className="flex items-center justify-between gap-2.5">
-            <span className="text-text text-body2">새 공고 알림</span>
-            {/*
-             * 서버가 현재 값을 뒤집는 방식이라 연타를 막아야 한다. 두 번 보내면
-             * 원래대로 돌아온다.
-             */}
-            <Switch
-              label="새 공고 알림"
-              checked={notification}
-              disabled={toggle.isPending}
-              onChange={() => toggle.mutate()}
-            />
-          </div>
-        </Panel>
-
         <Panel className="px-[15px] py-2.5">
           <button
             type="button"

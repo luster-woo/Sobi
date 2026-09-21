@@ -60,9 +60,10 @@ function isSame(item: FavoriteItem, { programId, type }: RemoveFavoriteVariables
  * 캐시 모양이 `FavoriteItem[]` 하나뿐이라 되돌리기도 스냅샷 한 벌로 끝난다 —
  * 상세 모달 쪽 토글을 낙관적으로 만들지 않은 이유(캐시 네 군데)가 여기엔 없다.
  *
- * 대출·지원사업 목록의 아이콘도 같이 낡으므로 끝나면 그쪽도 무효화한다. 관심 목록
- * 자신은 무효화하지 않는다 — 방금 낙관적으로 지운 줄이 refetch 사이에 잠깐 돌아온다.
- * 실패했을 때만 서버 값을 다시 받는다.
+ * 대출·지원사업 목록의 아이콘과 대시보드 리본(`bookmark.ids`)이 같이 낡으므로 끝나면
+ * 그쪽도 무효화한다. `bookmark.all` 로 한 번에 잡지 않는 이유는 그 접두사가 관심 목록
+ * 자신(`bookmark.me`)까지 포함해서다 — 방금 낙관적으로 지운 줄이 refetch 사이에 잠깐
+ * 돌아온다. 관심 목록은 실패했을 때만 서버 값을 다시 받는다.
  */
 export function useRemoveFavorite() {
   const queryClient = useQueryClient()
@@ -104,6 +105,7 @@ export function useRemoveFavorite() {
     },
 
     onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bookmark.ids })
       void queryClient.invalidateQueries({ queryKey: queryKeys.loan.all })
       void queryClient.invalidateQueries({ queryKey: queryKeys.supportProgram.all })
     },

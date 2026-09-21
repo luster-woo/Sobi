@@ -163,10 +163,26 @@ export function BusinessVerifyPage() {
    *    PREENTREPRENEUR 로 남은 채 이 화면에 다시 올 수 있고, 그게 정확히 두 번째
    *    등록이 일어나는 경로다 — 서버에 직접 물어본다(`useBusinessSummary`).
    */
-  const { data: registeredBusiness, isLoading: isCheckingBusiness } = useBusinessSummary()
+  const {
+    data: registeredBusiness,
+    isLoading: isCheckingBusiness,
+    error: businessError,
+  } = useBusinessSummary()
+
+  /*
+   * 404 는 '미등록' 이라는 정상 응답이라 통과시킨다. 이걸 막으면 정작 등록해야 할
+   * 사람이 전부 막힌다. 그 외의 실패(500·타임아웃)는 등록 여부를 모르는 상태라
+   * 막는다 — 모르는 채로 보내면 두 번째 업체가 생겨 계정이 영구 500 이 된다.
+   */
+  const businessUnknown = businessError !== null && getErrorStatus(businessError) !== 404
 
   const handleStartAsOwner = () => {
     if (verifiedBrn === null || isCheckingBusiness) return
+
+    if (businessUnknown) {
+      showToast('등록된 업체가 있는지 확인하지 못했어요. 잠시 후 다시 시도해 주세요.', 'danger')
+      return
+    }
 
     if (registeredBusiness) {
       showToast('이미 등록된 업체가 있어요. 변경이 필요하면 문의해 주세요.', 'warning')
@@ -302,7 +318,7 @@ export function BusinessVerifyPage() {
 
         {/* 등록 여부를 아직 모르는 동안 누르면 가드가 통과해 버린다 */}
         <Button
-          disabled={!canStartAsOwner || isCheckingBusiness}
+          disabled={!canStartAsOwner || isCheckingBusiness || businessUnknown}
           onClick={handleStartAsOwner}
           className="mt-3.5 w-full"
         >

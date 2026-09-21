@@ -29,16 +29,3 @@ export async function changePassword(password: string) {
 export async function withdraw() {
   await api.delete(endpoints.user.withdraw)
 }
-
-/**
- * 새 공고 알림 수신 토글.
- *
- * ⚠️ 본문이 없다. 켤지 끌지를 보내는 것이 아니라 **서버가 현재 값을 뒤집는다.**
- *    그래서 같은 요청을 두 번 보내면 원래대로 돌아온다 — 화면에서 연타를 막아야 한다.
- *
- * 응답으로 바뀐 값이 온다. 프론트가 계산한 값 대신 이쪽을 쓴다.
- */
-export async function toggleNotification() {
-  const { data } = await api.patch<{ notification: boolean }>(endpoints.user.notification)
-  return data.notification
-}

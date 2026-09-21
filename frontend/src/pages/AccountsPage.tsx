@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useNavigate } from 'react-router'
 
 import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
 import { useLoanProducts } from '@/features/loan-repayment/hooks/useRepayment'
@@ -90,6 +91,7 @@ function AccountRow({
  *    (`features/application/api/accounts.ts` 주석 참고).
  */
 export function AccountsPage() {
+  const navigate = useNavigate()
   const { data, isLoading, isError } = useMyPage()
   const refresh = useMydataRefresh()
 
@@ -125,18 +127,37 @@ export function AccountsPage() {
   const depositAccounts = deposits ?? []
   const loanAccounts = loans ?? []
 
-  // 판정(myData)은 보지 않는다. 계좌가 있으면 판정 전이어도 보여줄 것이 있다
+  /*
+   * 판정(myData)은 보지 않는다. 계좌가 있으면 판정 전이어도 보여줄 것이 있다.
+   *
+   * ⚠️ 계좌가 0건인 데는 두 가지 이유가 있다. 아직 연동을 안 했거나, 서버의 금융망
+   *    조회가 실패했거나다 — 후자는 `UserServiceImpl.fetchDepositAccounts` 가 예외를
+   *    삼키고 빈 리스트를 줘서 응답만으로는 구분되지 않는다. 판정 이력이 있는데
+   *    계좌가 0건이면 이미 연동을 마친 사람이므로, 다시 연동하라고 하면 안 된다.
+   */
   if (!accountSummary) {
+    const linked = myData !== null
+
     return (
       <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
         <Breadcrumb parentLabel="마이페이지" parentTo={ROUTES.MYPAGE} current="연동 계좌" />
         <EmptyState
-          title="아직 연동된 계좌가 없어요"
-          description="마이데이터를 연동하면 입출금·대출 계좌를 한곳에서 볼 수 있어요."
+          title={linked ? '계좌 정보를 불러오지 못했어요' : '아직 연동된 계좌가 없어요'}
+          description={
+            linked
+              ? '금융망 조회가 일시적으로 실패했을 수 있어요. 잠시 후 다시 시도해 주세요.'
+              : '마이데이터를 연동하면 입출금·대출 계좌를 한곳에서 볼 수 있어요.'
+          }
           action={
-            <Button onClick={() => window.location.assign(ROUTES.MYDATA_CONSENT)}>
-              마이데이터 연동하기
-            </Button>
+            linked ? (
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                다시 불러오기
+              </Button>
+            ) : (
+              <Button onClick={() => void navigate(ROUTES.MYDATA_CONSENT)}>
+                마이데이터 연동하기
+              </Button>
+            )
           }
         />
       </div>

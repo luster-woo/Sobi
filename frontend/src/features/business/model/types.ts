@@ -28,8 +28,9 @@ export interface BusinessMeResponse {
  * 응답을 그대로 넘기지 않는 이유는 `region` 이 응답에 없어서다. 주소를 자르는 규칙이
  * 컴포넌트마다 흩어지지 않게 api 계층에서 한 번만 변환한다.
  *
- * 창업자(ENTREPRENEUR)만 쓴다. 예비 창업자는 `business_info` 자체가 없어 이 요약을
- * 호출하지 않는다 — 사이드바 카드도 그리지 않는다.
+ * 로그인 상태면 role 과 무관하게 부른다. 예비 창업자는 `business_info` 가 없어 404 를
+ * 받고 사이드바 카드도 안 그려지는데, role 로 끄지 않는 이유는 토큰의 role 이 DB 와
+ * 어긋나는 구간 때문이다 — `useBusinessSummary` 주석 참고.
  */
 export interface BusinessSummary {
   /** 상호명. 예: '맛있는 한상' */

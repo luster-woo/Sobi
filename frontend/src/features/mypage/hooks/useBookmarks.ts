@@ -22,12 +22,9 @@ const STALE_TIME_MS = 30 * 1000
  * 로그인 상태에서만 부른다. 서버가 `@AuthenticationPrincipal` 로 userId 를 받아서
  * 비로그인이면 401 이다.
  *
- * ⚠️ 예비창업자는 500 이 날 수 있다. `BookmarkServiceImpl` 이 신청 이력이 없는 항목의
- *    상태를 판정할 때 `businessReporitory.findByUserId(userId)` 결과를 null 검사 없이
- *    바로 쓰는데, 업체를 등록하지 않은 계정은 여기서 null 이다. 담아둔 것이 하나라도
- *    있으면 터진다 — 백엔드 수정이 필요하고, 그 전까지는 에러 화면으로 떨어진다.
- *    (useInsurances 처럼 role 로 막지 않는 이유: 관심 목록은 예비창업자도 쓰는 기능이라
- *     아예 안 부르면 담아둔 것을 영영 못 본다. 빈 화면보다 재시도할 수 있는 에러가 낫다)
+ * 예비창업자도 부른다. 관심 목록은 업체 등록 전에도 쓰는 기능이라 role 로 막으면
+ * 담아둔 것을 영영 못 본다. 백엔드가 `business == null` 을 분기하므로
+ * (`BookmarkServiceImpl.getBookmarks`) 판정은 전부 UNKNOWN·INELIGIBLE 로 온다.
  */
 export function useBookmarks() {
   const status = useAuthStore((s) => s.status)

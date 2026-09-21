@@ -28,14 +28,15 @@ async function fetchJudgement(): Promise<OwnerJudgement | null> {
       getLoans({}),
       getSupportPrograms({ page: 0, size: MAX_PAGE_SIZE, judgement: SUPPORT_STATUS.ELIGIBLE }),
       getSupportPrograms({ page: 0, size: 1, judgement: SUPPORT_STATUS.INELIGIBLE }),
-      getSupportPrograms({ page: 0, size: 1, judgement: SUPPORT_STATUS.UNKNOWN }),
+      // 확인 필요도 목록째 받는다. 마감 임박은 '신청할 수 있는 것' 기준이라 여기도 센다
+      getSupportPrograms({ page: 0, size: MAX_PAGE_SIZE, judgement: SUPPORT_STATUS.UNKNOWN }),
     ])
 
     return {
       loans,
       eligiblePrograms,
+      unknownPrograms,
       ineligibleProgramCount: ineligiblePrograms.page.totalElements,
-      unknownProgramCount: unknownPrograms.page.totalElements,
     }
   } catch {
     return null

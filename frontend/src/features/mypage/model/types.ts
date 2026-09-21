@@ -90,8 +90,11 @@ export interface MyPageData {
   accountSummary: AccountSummary | null
   /** 대출이 없으면 null */
   payoutAccount: PayoutAccount | null
-  /** 새 공고 알림 수신 여부. `PATCH /user/notification` 로 뒤집는다 */
-  notification: boolean
+  /*
+   * 알림 수신 여부는 담지 않는다. 서버는 값을 주고 `PATCH /user/notification` 토글도
+   * 있지만, 알림을 보내거나 보여주는 기능이 통째로 없어(`/notifications` 매핑 부재)
+   * 화면에 스위치를 둘 수 없다. 알림 도메인이 생기면 필드와 훅을 같이 되살린다.
+   */
 }
 
 /* ---------- 18-1 관심 목록 ---------- */

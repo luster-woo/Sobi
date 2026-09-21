@@ -34,6 +34,11 @@ function invalidateAfterMydata(queryClient: QueryClient) {
     queryKeys.loan.all,
     queryKeys.supportProgram.all,
     queryKeys.insurance.all,
+    /*
+     * '지금 갱신' 버튼이 붙은 두 화면(마이페이지·연동 계좌)이 이 키를 읽는다.
+     * 빠뜨리면 성공 토스트만 뜨고 잔액·갱신 시각은 staleTime 동안 옛 값이다.
+     */
+    queryKeys.user.mypage,
   ]
 
   stale.forEach((queryKey) => void queryClient.invalidateQueries({ queryKey }))

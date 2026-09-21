@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { APPLICATION_FILTER } from '@/features/application/model/filter'
 import FundingAmountForm from '@/features/funding-plan/components/FundingAmountForm'
 import FundingCombinationCard from '@/features/funding-plan/components/FundingCombinationCard'
-import FundingCombinationSummaryCard from '@/features/funding-plan/components/FundingCombinationSummaryCard'
 import FundingComparisonTable from '@/features/funding-plan/components/FundingComparisonTable'
 import { useApplyFundingBatch } from '@/features/funding-plan/hooks/useApplyFundingBatch'
 import { useFundingRecommend } from '@/features/funding-plan/hooks/useFundingRecommend'
@@ -13,7 +12,9 @@ import type { FundingCombination, FundingItem } from '@/features/funding-plan/mo
 import LoanDetailModal from '@/features/loan/components/LoanDetailModal'
 import SupportProgramDetailModal from '@/features/support-program/components/SupportProgramDetailModal'
 import { ROUTES } from '@/shared/constants/routes'
+import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
+import { isPreOwner } from '@/shared/types'
 import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
 import Modal from '@/shared/ui/Modal'
@@ -46,6 +47,7 @@ export function FundingPlanPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const showToast = useUiStore((state) => state.showToast)
+  const preOwner = isPreOwner(useAuthStore((state) => state.user)?.role ?? null)
 
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [openItem, setOpenItem] = useState<FundingItem | null>(null)
@@ -57,7 +59,12 @@ export function FundingPlanPage() {
   const rawAmount = Number(searchParams.get('amount'))
   const amount = Number.isFinite(rawAmount) && rawAmount > 0 ? rawAmount : undefined
 
-  const { data, isLoading, isError } = useFundingRecommend(amount)
+  /*
+   * 예비창업자는 이 화면을 쓸 수 없다. 추천 후보가 업체별 판정 테이블(suggest_loan ·
+   * suggest_support_program)이라 사업자 정보 없이는 고를 상품이 없고, 서버도 첫 줄에서
+   * 404(BUSINESS_004) 를 던진다. 조회를 막고 안내만 띄운다 — 상환 관리와 같은 처리다.
+   */
+  const { data, isLoading, isError } = useFundingRecommend(amount, { enabled: !preOwner })
 
   // 응답이 { targetAmount, recommendedCombinations } 한 덩어리로 온다
   const combinations = data?.recommendedCombinations
@@ -99,6 +106,18 @@ export function FundingPlanPage() {
     <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
       <h1 className="text-h1">자금 조합</h1>
 
+      {/*
+        사이드바에는 메뉴가 그대로 보인다. role 마다 메뉴를 감추면 "내 화면에는 왜 없지"
+        를 알 수 없어서, 들어와서 이유를 읽는 편이 낫다.
+      */}
+      {preOwner ? (
+        <EmptyState
+          title="사업자 등록번호를 입력해야 이용할 수 있어요."
+          description="자금 조합은 업체의 매출·업력을 기준으로 상품을 골라요. 사업자 인증을 마치면 바로 쓸 수 있어요."
+          action={<Button onClick={() => navigate(ROUTES.BUSINESS_VERIFY)}>사업자 인증하기</Button>}
+        />
+      ) : (
+        <>
       <FundingAmountForm amount={amount} onSubmit={handleSubmit} />
 
       {!amount && (
@@ -139,28 +158,18 @@ export function FundingPlanPage() {
         </div>
       )}
 
-      {combinations && combinations.length > 1 && (
-        <div className="grid gap-3.5 sm:grid-cols-2">
-          {combinations.map((combination, index) =>
-            // 대표로 올라간 조합은 위에 이미 크게 나와 있다
-            index === selectedIndex ? null : (
-              <FundingCombinationSummaryCard
-                key={index}
-                combination={combination}
-                order={index + 1}
-                onSelect={() => setSelectedIndex(index)}
-              />
-            ),
-          )}
-        </div>
-      )}
-
+      {/*
+        요약 카드를 두지 않는다. 아래 비교표와 같은 값을 같은 순서로 두 번 말하고 있었다.
+        고르는 것도 표에서 되므로(선택 버튼) 카드가 할 일이 남지 않는다.
+      */}
       {combinations && combinations.length > 1 && (
         <FundingComparisonTable
           combinations={combinations}
           selectedIndex={selectedIndex}
           onSelect={setSelectedIndex}
         />
+      )}
+        </>
       )}
 
       {/* 지원사업은 지원금(GRANT)이든 융자성(LOAN)이든 같은 상세를 쓴다. 출처로만 가른다 */}

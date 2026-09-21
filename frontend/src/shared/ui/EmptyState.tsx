@@ -71,7 +71,7 @@ export default function EmptyState({
 
       <p className={cn('text-text', s.title)}>{title}</p>
       {description && (
-        <p className={cn('text-text-muted max-w-[320px]', s.description)}>{description}</p>
+        <p className={cn('text-text-muted max-w-[320px] break-keep', s.description)}>{description}</p>
       )}
       {action && <div className="mt-3">{action}</div>}
     </div>

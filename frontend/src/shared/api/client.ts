@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 
 import { API_BASE_URL, endpoints, NO_REISSUE_PATHS } from '@/shared/api/endpoints'
+import { getErrorStatus } from '@/shared/api/errors'
 import { clearAuthState } from '@/shared/lib/clearAuthState'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
@@ -168,19 +169,37 @@ api.interceptors.response.use(unwrapEnvelope, async (error: AxiosError) => {
 
   config._retried = true
 
+  let accessToken: string
+
   try {
-    const accessToken = await reissueAccessToken()
-    config.headers.Authorization = `Bearer ${accessToken}`
-    return await api(config)
+    accessToken = await reissueAccessToken()
   } catch (reissueError) {
     /*
-     * 재발급까지 실패하면 세션을 되살릴 방법이 없다. 라우팅은 보호 라우트가 판단한다.
+     * 세션을 지우는 건 **서버가 이 refreshToken 을 거절했을 때뿐**이다.
+     *
+     * 타임아웃(10초)·502·5xx 도 여기로 들어온다. 그것들까지 지우면 서버가 잠깐
+     * 느리거나 와이파이가 끊긴 것만으로 로그인 화면으로 튕긴다 — 토큰은 멀쩡한데.
+     * 재발급 인스턴스에는 에러 인터셉터가 없어 토스트조차 안 떠서 이유도 안 보인다.
+     *
+     * 진짜 만료라면 다음 요청이 401 을 받고 재발급이 다시 401 로 떨어져 그때 정리된다.
      *
      * ⚠️ `clearSession()` 만 부르면 안 된다. react-query 캐시에 이전 사용자의 응답이
      *    gcTime(5분) 동안 남아, 같은 탭에서 다른 계정으로 들어오면 첫 화면에 스친다.
-     *    로그아웃·탈퇴와 같은 정리를 쓴다.
      */
-    clearAuthState()
+    const status = getErrorStatus(reissueError)
+
+    if (status === 401 || status === 403) clearAuthState()
+    else if (axios.isAxiosError(reissueError)) notifyUnrecoverable(reissueError)
+
     return Promise.reject(reissueError)
   }
+
+  /*
+   * 재시도는 try 밖이다. 안에 두면 재발급이 성공한 뒤 이 요청이 500 한 번 나는 것만으로
+   * 세션이 날아갔다 — 토큰 문제가 아닌데 로그아웃되는 가장 흔한 경로였다.
+   * 실패하면 이 인터셉터를 다시 타는데 `_retried` 가 true 라 재발급은 돌지 않고
+   * `notifyUnrecoverable` 만 동작한다.
+   */
+  config.headers.Authorization = `Bearer ${accessToken}`
+  return api(config)
 })

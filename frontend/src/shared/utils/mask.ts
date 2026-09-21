@@ -63,7 +63,13 @@ export function maskEmail(email: string | null | undefined): string {
 
   const id = email.slice(0, at)
   const domain = email.slice(at)
-  const head = id.slice(0, id.length > 3 ? 3 : 1)
+
+  /*
+   * 두 글자 이하는 한 글자도 안 남긴다. 한 글자만 남겨도 아이디의 절반 이상이
+   * 그대로 보여서, 가린 모양만 갖추고 실제로는 가리지 못한다
+   * (`maskAccountNo` 가 4자리 이하를 '-' 로 막는 것과 같은 기준).
+   */
+  const head = id.length <= 2 ? '' : id.slice(0, id.length > 3 ? 3 : 1)
 
   return `${head}****${domain}`
 }

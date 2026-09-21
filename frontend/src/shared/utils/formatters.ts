@@ -84,6 +84,8 @@ export function formatMoneyShort(won: number | null | undefined): string {
  */
 export function formatDeadlineDate(endDate: string | null): string {
   if (!endDate) return '상시 접수'
+  // Number('') 는 0 이라 자른 뒤 isNaN 으로만 막으면 '~ 0. 0' 이 나온다
+  if (!/^\d{4}-\d{2}-\d{2}/.test(endDate)) return '-'
 
   const month = Number(endDate.slice(5, 7))
   const day = Number(endDate.slice(8, 10))

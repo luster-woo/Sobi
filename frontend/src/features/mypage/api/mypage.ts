@@ -111,6 +111,5 @@ export async function getMyPage(): Promise<MyPageData> {
     myData: data.myData.linked ? { linkedAt: data.myData.updatedAt } : null,
     accountSummary: data.accountSummary.accountCount > 0 ? data.accountSummary : null,
     payoutAccount: data.payoutAccount,
-    notification: data.notification,
   }
 }

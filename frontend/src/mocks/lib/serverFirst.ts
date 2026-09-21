@@ -72,7 +72,17 @@ const MAY_HAVE_RUN = new Set([500, 501])
  *    그게 이 목록의 대가다. 그래서 티켓 번호를 같이 적어 둔다.
  */
 const MOCK_ONLY = new Set<string>([
-  // 지금은 비어 있다. 프론트가 부르는 엔드포인트가 전부 백엔드에 있다.
+  /*
+   * 알림. 백엔드에 `NotificationController` 자체가 없다.
+   *
+   * 지금은 `Topbar` 의 SHOW_NOTIFICATION_BELL 이 false 라 요청이 나가지 않지만,
+   * 벨을 되살리는 순간 위 캐치올 때문에 500 + 봉투가 와서 목이 영영 비켜선다.
+   * 도메인이 생기면 이 네 줄을 지운다.
+   */
+  'GET /api/v1/notifications',
+  'GET /api/v1/notifications/unread-count',
+  'PATCH /api/v1/notifications/read-all',
+  'PATCH /api/v1/notifications/:notificationId/read',
 ])
 
 async function callRealServer(request: Request, destructive: boolean): Promise<Response | null> {

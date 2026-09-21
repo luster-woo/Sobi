@@ -29,7 +29,10 @@ export const INSURANCE_STATUS_LABEL: Record<InsuranceStatus, string> = {
  * 자격 판정 요약. 대출 20개 + 지원사업 32개를 한 번에 센 수다.
  *
  * possible + needsCheck + impossible + inProgress = total 이 항상 성립해야 한다.
- * urgent 는 possible 의 부분집합이라 그 합에 들어가지 않는다.
+ *
+ * urgent 는 그 합에 들어가지 않는 별개 수다. '신청할 수 있는 것 중 마감이 임박한 수'
+ * 이고, 신청할 수 있는 것은 possible 과 needsCheck 둘 다다(`canApply`). 예비창업자는
+ * possible 이 0 이고 전부 needsCheck 라, 0건 옆에 urgent 가 붙는 것이 정상이다.
  */
 export interface JudgementSummary {
   /**

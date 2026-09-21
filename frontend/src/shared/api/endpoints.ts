@@ -43,10 +43,11 @@ export const endpoints = {
      */
     me: '/user/me',
     /**
-     * 마이페이지 한 화면 분량. 사업자 정보·마이데이터·계좌·알림 설정을 한 번에 준다.
+     * 마이페이지 한 화면 분량. 사업자 정보·마이데이터·계좌를 한 번에 준다.
      *
-     * ⚠️ **아직 백엔드에 없다.** `UserController` 에 매핑이 없어 목으로만 돈다 —
-     *    `mocks/lib/serverFirst.ts` 의 `MOCK_ONLY` 참고 (S15P21D101-377).
+     * ⚠️ 잔액은 DB 가 아니라 **조회 시점에 금융망에서** 받아온다
+     *    (`UserServiceImpl.fetchDepositAccounts`). 그래서 이 요청만 1~2초 더 걸리고,
+     *    금융망이 실패하면 예외 대신 **전부 0** 이 온다 — 계좌 없음과 구분되지 않는다.
      */
     mypage: '/user/mypage',
     /**

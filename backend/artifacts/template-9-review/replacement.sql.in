@@ -1,0 +1,77 @@
+-- Reviewed HWPX: SHA256 dd44772c3c9932121ce06f228bfa5035ce4c2c38a7063176bd0eb59083837d84
+-- Run backup-template-9.sql first. This replaces field IDs, as the existing persistence service does.
+-- PostgreSQL only. Run the entire file on one connection; any error requires ROLLBACK.
+BEGIN;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '30s';
+
+DO $replace_template9$
+DECLARE
+    target record;
+    field_data jsonb;
+    source_data jsonb;
+    new_field_id bigint;
+    actual_count integer;
+    payload jsonb := $template9_payload$
+__PAYLOAD__
+$template9_payload$::jsonb;
+BEGIN
+    SELECT dt.id, dt.program_document_id, dt.normalized_path,
+           dt.normalized_format, dt.parse_status, pd.type AS document_type
+      INTO target
+      FROM document_template dt
+      JOIN program_document pd ON pd.id = dt.program_document_id
+     WHERE dt.id = 9
+     FOR UPDATE OF dt, pd;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Template 9 or its program_document does not exist';
+    END IF;
+    IF target.program_document_id IS DISTINCT FROM 40
+       OR target.normalized_path IS DISTINCT FROM '/data/document-agent/normalized/40/normalized-dy7clhwk.hwpx'
+       OR target.normalized_format IS DISTINCT FROM 'HWPX'
+       OR target.parse_status IS DISTINCT FROM 'COMPLETED'
+       OR target.document_type IS DISTINCT FROM '작성용' THEN
+        RAISE EXCEPTION 'Template 9 identity, format, status or document type mismatch; no replacement performed';
+    END IF;
+    IF jsonb_array_length(payload) <> 38 THEN
+        RAISE EXCEPTION 'Unexpected replacement field count';
+    END IF;
+
+    -- V19: document_field_source FK ON DELETE CASCADE.
+    DELETE FROM document_field_schema WHERE template_id = 9;
+    FOR field_data IN SELECT value FROM jsonb_array_elements(payload) LOOP
+        INSERT INTO document_field_schema
+            (template_id, field_key, field_label, field_order, field_type, value_type,
+             mapping_status, required, instruction, max_length, location_info)
+        VALUES
+            (9, field_data->>'field_key', field_data->>'field_label',
+             (field_data->>'field_order')::integer, field_data->>'field_type',
+             field_data->>'value_type', field_data->>'mapping_status',
+             (field_data->>'required')::boolean, field_data->>'instruction',
+             (field_data->>'max_length')::integer, field_data->'location_info')
+        RETURNING id INTO new_field_id;
+        FOR source_data IN SELECT value FROM jsonb_array_elements(field_data->'sources') LOOP
+            INSERT INTO document_field_source
+                (field_schema_id, source_type, source_key, required, priority, query_hint, source_params)
+            VALUES
+                (new_field_id, source_data->>'source_type', source_data->>'source_key',
+                 (source_data->>'required')::boolean, (source_data->>'priority')::integer,
+                 source_data->>'query_hint', source_data->'source_params');
+        END LOOP;
+    END LOOP;
+    SELECT count(*) INTO actual_count FROM document_field_schema WHERE template_id = 9;
+    IF actual_count <> 38 THEN
+        RAISE EXCEPTION 'Replacement field count mismatch';
+    END IF;
+    SELECT count(*) INTO actual_count
+      FROM document_field_source s JOIN document_field_schema f ON f.id = s.field_schema_id
+     WHERE f.template_id = 9;
+    IF actual_count <> 9 THEN
+        RAISE EXCEPTION 'Replacement source count mismatch';
+    END IF;
+END
+$replace_template9$;
+COMMIT;
+
+SELECT id, field_order, field_key, field_type, value_type, mapping_status, max_length
+FROM document_field_schema WHERE template_id = 9 ORDER BY field_order;

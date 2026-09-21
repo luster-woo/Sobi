@@ -103,5 +103,9 @@ def build_registry() -> SourceRegistry:
     registry.register(SourceKey.PROGRAM_RAG, SourceDefinition(
         SourceType.RAG, FieldType.GENERATED, rag_placeholder,
     ))
+    from .resolvers import draft_date
+    registry.register(SourceKey.PROGRAM_DRAFT_DATE, SourceDefinition(
+        SourceType.PROGRAM, FieldType.DIRECT, draft_date,
+    ))
     return registry
 

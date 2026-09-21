@@ -50,7 +50,7 @@ class InlineCandidateTests(unittest.TestCase):
         self.extract();before=self.parsed.model_dump();FieldCandidateExtractor().extract(self.parsed);self.assertEqual(before,self.parsed.model_dump())
     def test_real_fixture_twenty(self):
         p=Path(__file__).parent/'fixtures/writer/card_blank.hwpx';cs=FieldCandidateExtractor().extract(HwpxParser().parse(p))
-        self.assertEqual(len(cs),20);self.assertEqual(sum(c.target_location.type=='TABLE_CELL' for c in cs),16)
+        self.assertEqual(len(cs),24);self.assertEqual(sum(c.target_location.type=='TABLE_CELL' for c in cs),16)
 
 class InlineWriterTests(unittest.TestCase):
     def setUp(self):
@@ -143,9 +143,9 @@ class InlineRealE2ETests(unittest.IsolatedAsyncioTestCase):
         result=await DocumentAgentRuntime(repository=SimpleNamespace(load=AsyncMock(return_value=template(*fields))),source_resolver=SourceService(SimpleNamespace(fetch=fetch))).resolve(DocumentRuntimeRequest(template_id=1,user_id=9))
         written=HwpxWriter().write(source_path=fx.source,runtime_result=result,output_path=fx.output)
         self.assertEqual(written.written_count,14)
-        self.assertEqual(written.skipped_count,6)
+        self.assertEqual(written.skipped_count,10)
         self.assertEqual(result.status_counts["LEFT_BLANK"],4)
-        self.assertEqual(result.status_counts["UNSUPPORTED"],2)
+        self.assertEqual(result.status_counts["UNSUPPORTED"],6)
         self.assertTrue(result.ready_for_write)
         self.assertEqual({f.field_key for f in result.fields if f.runtime_status=='LEFT_BLANK'}, {'consent','disagree','consent_2','disagree_2'})
         self.assertTrue(all(f.value is None for f in result.fields if f.runtime_status=='LEFT_BLANK'))

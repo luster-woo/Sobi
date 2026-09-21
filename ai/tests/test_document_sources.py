@@ -301,7 +301,7 @@ class ProviderTests(unittest.IsolatedAsyncioTestCase):
 
     def test_context_fields(self):
         self.assertEqual(set(SourceResolveContext.model_fields),
-                         {"user_id", "support_program_id"})
+                         {"user_id", "support_program_id", "draft_date"})
         with self.assertRaises(ValidationError):
             SourceResolveContext(user_id=1, business_id=2)
 

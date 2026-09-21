@@ -23,6 +23,13 @@ def result(request: SourceResolveRequest, value, **metadata) -> SourceResolveRes
     )
 
 
+async def draft_date(context, request, provider, today):
+    EmptyParams.model_validate(request.source_params)
+    if context.draft_date is None:
+        raise SourceError("DRAFT_DATE_REQUIRED", "초안 요청 기준일이 필요합니다.")
+    return result(request, context.draft_date, timezone="Asia/Seoul")
+
+
 async def direct(context, request, provider, today):
     EmptyParams.model_validate(request.source_params)
     data = await provider.fetch(request.source_type, context)

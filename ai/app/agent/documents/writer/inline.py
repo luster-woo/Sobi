@@ -87,9 +87,25 @@ def preflight_inline(field, documents, parsed):
                 offset += len(node.data)
     if "".join(n.data for n, _, _ in segments) != expected:
         raise Error("TARGET_CONTENT_MISMATCH")
-    if field.value_type != "TEXT":
+    if field.value_type == "DATE":
+        from .hwpx import parse_date
+        import re
+        match = re.fullmatch(r" *(?P<year>[12][0-9]{3})년(?P<month> {2,})월(?P<day> {2,})일 *", expected)
+        hints = info.get("hints", {})
+        part = hints.get("date_part")
+        if (match is None or part not in {"month", "day"}
+                or match.span(part) != (start, end)
+                or type(hints.get("fixed_year")) is not int
+                or hints["fixed_year"] != int(match.group("year"))):
+            raise Error("DATE_PLACEHOLDER_UNSUPPORTED")
+        value = parse_date(field.value)
+        if value.year != hints["fixed_year"]:
+            raise Error("DATE_YEAR_MISMATCH")
+        text = " " + str(getattr(value, part))
+    elif field.value_type == "TEXT":
+        text = format_value(field)
+    else:
         raise Error("VALUE_TYPE_UNSUPPORTED")
-    text = format_value(field)
     if "\n" in text:
         raise Error("INLINE_MULTILINE_UNSUPPORTED")
     return InlineEdit((filename, tuple(path), start, end), p, segments, expected, text)

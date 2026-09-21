@@ -18,11 +18,11 @@ export async function getDashboard(): Promise<Dashboard> {
   const { data } = await api.get<DashboardResponse>(endpoints.dashboard)
   if (!isOwnerResponse(data)) return { kind: 'preOwner', data: toPreOwnerDashboard(data) }
 
-  const [loans, eligiblePrograms, ineligiblePrograms, allPrograms] = await Promise.all([
+  const [loans, eligiblePrograms, ineligiblePrograms, unknownPrograms] = await Promise.all([
     getLoans({}),
     getSupportPrograms({ page: 0, size: MAX_PAGE_SIZE, judgement: SUPPORT_STATUS.ELIGIBLE }),
     getSupportPrograms({ page: 0, size: 1, judgement: SUPPORT_STATUS.INELIGIBLE }),
-    getSupportPrograms({ page: 0, size: 1 }),
+    getSupportPrograms({ page: 0, size: 1, judgement: SUPPORT_STATUS.UNKNOWN }),
   ])
 
   return {
@@ -31,7 +31,7 @@ export async function getDashboard(): Promise<Dashboard> {
       loans,
       eligiblePrograms,
       ineligibleProgramCount: ineligiblePrograms.page.totalElements,
-      programCount: allPrograms.page.totalElements,
+      unknownProgramCount: unknownPrograms.page.totalElements,
     }),
   }
 }

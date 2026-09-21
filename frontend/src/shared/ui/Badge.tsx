@@ -2,7 +2,15 @@ import type { ReactNode } from 'react'
 
 import { cn } from '@/shared/utils/cn'
 
-export type BadgeVariant = 'success' | 'progress' | 'warning' | 'neutral' | 'outline' | 'danger'
+export type BadgeVariant =
+  | 'ready'
+  | 'success'
+  | 'done'
+  | 'progress'
+  | 'warning'
+  | 'neutral'
+  | 'outline'
+  | 'danger'
 
 type Variant = BadgeVariant
 
@@ -10,12 +18,17 @@ interface BadgeProps {
   /**
    * 색은 상태 이름이 아니라 "누가 무엇을 해야 하는가"로 고른다 (index.css 참고).
    *
-   * success  끝났고 결과가 좋다      승인 · 검증 통과 · 가입 완료 · 가능
+   * ready    시작할 수 있다          가능
+   * success  결과가 좋다             승인 · 선정 · 검증 통과 · 가입 완료
+   * done     다 끝났다               실행 완료 · 지급 완료
    * progress 서버가 처리 중이다      심사 중 · 검증 중 · 초안 작성 중
    * warning  사용자가 조치해야 한다   확인 필요 · 마감 임박
-   * danger   실패했거나 리스크가 있다 반려 · 검증 실패 · 가입 필요
+   * danger   실패했거나 리스크가 있다 반려 · 불가 · 검증 실패 · 가입 필요
    * neutral  접수됐고 할 일이 없다    신청 완료
-   * outline  아직 시작하지 않았다     미제출 · 미작성 · 불가 · 가입 제외
+   * outline  아직 시작하지 않았다     미제출 · 미작성 · 가입 제외
+   *
+   * ready · success · done 은 초록이 진해지는 순서다. 셋을 같은 색으로 두면
+   * '신청할 수 있다' 와 '돈을 받았다' 가 구분되지 않는다 — 실제로 그랬다.
    */
   variant?: Variant
   children: ReactNode
@@ -23,7 +36,10 @@ interface BadgeProps {
 }
 
 const variantClass: Record<Variant, string> = {
+  ready: 'bg-success-soft text-success',
   success: 'bg-primary text-text-inverse',
+  // 끝난 상태. 초록 계열에서 빠져야 '아직 진행 중' 과 섞이지 않는다
+  done: 'bg-secondary text-text-inverse',
   progress: 'bg-progress-soft text-progress',
   warning: 'bg-warning-soft text-warning',
   neutral: 'bg-bg-canvas text-text-secondary',

@@ -15,11 +15,12 @@ import type { BadgeVariant } from '@/shared/ui/Badge'
  */
 
 export const APPLICATION_STATUS_VARIANT: Record<ApplicationStatus, BadgeVariant> = {
-  PREPARING: 'outline', // 서류를 채우는 중. 아직 제출 안 함
+  // 서류를 채우는 중. 사용자가 이어서 써야 한다 — 상품 목록의 '작성 중' 과 같은 색이다
+  PREPARING: 'warning',
   SUBMITTED: 'neutral', // 접수됨. 할 일 없음
   REVIEWING: 'progress', // 기관이 심사 중
   APPROVED: 'success',
-  PAID: 'success', // 돈이 오갔다. 승인과 같은 끈난 상태라 같은 색이다
+  PAID: 'done', // 돈이 오갔다. 더 진행될 게 없어서 초록에서 빠진다
   REJECTED: 'danger',
 }
 
@@ -49,13 +50,14 @@ export const INSURANCE_STATUS_VARIANT: Record<InsuranceStatus, BadgeVariant> = {
  * 색은 도메인이 아니라 "지금 누가 무엇을 해야 하는가" 로 정해져서 갈릴 이유가 없다.
  */
 export const PRODUCT_STATUS_VARIANT: Record<SupportStatus, BadgeVariant> = {
-  ELIGIBLE: 'success',
+  // 아직 아무것도 시작하지 않았다. 선정·지급과 같은 진초록을 쓰면 세 상태가 한 색이 된다
+  ELIGIBLE: 'ready',
   // 조건을 확인하지 못했을 뿐 신청은 된다. 막는 INELIGIBLE 과 색을 달리한다
   UNKNOWN: 'warning',
-  INELIGIBLE: 'outline', // 오류가 아니라 자격 미달이라 danger 가 아니다
+  INELIGIBLE: 'danger', // 신청해도 안 되는 상태다. 목록에서 먼저 걸러 보여야 한다
   PREPARING: 'warning', // 사용자가 이어서 작성해야 한다
   SUBMITTED: 'neutral',
   REVIEWING: 'progress',
-  APPROVED: 'success',
-  PAID: 'success', // 돈이 오갔다. 승인과 같이 끝난 상태다
+  APPROVED: 'success', // 선정·승인. 채움 배지는 여기 하나뿐이라 목록에서 바로 띈다
+  PAID: 'done', // 돈이 오갔다. 더 신청할 수도 없다
 }

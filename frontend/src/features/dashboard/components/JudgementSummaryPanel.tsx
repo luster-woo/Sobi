@@ -49,7 +49,10 @@ export default function JudgementSummaryPanel({ summary }: JudgementSummaryPanel
         </p>
 
         <dl className="flex gap-4.5">
-          {/* 마감 임박은 신청 가능 안에 든 수다. 나머지 넷을 더하면 전체가 된다 */}
+          {/*
+           * 마감 임박은 '신청할 수 있는 것' 중 임박한 수라 가능·확인 필요에 걸쳐 있다.
+           * 나머지 넷(가능·확인 필요·불가·진행 중)을 더하면 전체가 된다.
+           */}
           <Stat label="일주일 내 마감" value={urgent} />
           <Stat label="확인 필요" value={needsCheck} />
           <Stat label="신청 불가" value={impossible} />

@@ -13,6 +13,8 @@ function toDueLabel(nextDate: string): string {
   const left = daysUntil(nextDate)
   const date = toShortDate(nextDate)
 
+  // 날짜를 못 읽으면 남은 일수를 지어내지 않는다
+  if (left === null) return '다음 상환일을 확인하지 못했어요'
   if (left < 0) return `상환일 ${date} 지남 · 연체 확인 필요`
   if (left === 0) return `상환일 ${date} · 오늘`
   return `다음 상환일 ${date} · ${left}일 남음`

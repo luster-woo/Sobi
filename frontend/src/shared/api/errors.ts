@@ -118,8 +118,17 @@ export const ERROR_CODE = {
   INVALID_DOCUMENT_PATH: 'DOCUMENT_008',
   DOCUMENT_FILE_READ_FAILED: 'DOCUMENT_009',
 
+  /* 지원사업 */
+  /** 없는 공고. 북마크·신청의 404 와 구분해야 할 때 쓴다 */
+  SUPPORT_PROGRAM_NOT_FOUND: 'SUPPORT_001',
+
+  /* 음성 */
+  SPEECH_TRANSCRIPTION_FAILED: 'STT_001',
+
   /* 외부 연동 */
+  /** 금융망 호출 실패. 대시보드가 통째로 500 이 되는 원인이기도 하다 */
   EXTERNAL_API_FAILED: 'EXTERNAL_001',
+  AI_API_FAILED: 'EXTERNAL_002',
 } as const
 
 export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE]

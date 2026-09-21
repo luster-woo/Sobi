@@ -33,10 +33,17 @@ export default function OwnerDashboard({ dashboard }: OwnerDashboardProps) {
   return (
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-w-0 flex-col gap-3.5">
-        {/* 판정 조회가 실패하면 패널만 빠진다. 아래 스트립과 오른쪽 열은 그대로 */}
+        {/*
+         * 판정 조회가 실패하면 패널만 빠진다. 아래 스트립과 오른쪽 열은 그대로.
+         * 다만 그때 스트립에 담기는 건 판정을 거치지 않은 추천 목록이라
+         * '지원 가능한' 이라고 말할 수 없다 — 제목을 바꿔 넘긴다.
+         */}
         {judgement && <JudgementSummaryPanel summary={judgement} />}
-        <LoanStrip loans={loans} />
-        <SupportProgramStrip programs={supportPrograms} />
+        <LoanStrip loans={loans} title={judgement ? undefined : '추천 대출'} />
+        <SupportProgramStrip
+          programs={supportPrograms}
+          title={judgement ? undefined : '추천 정부 지원사업'}
+        />
       </div>
 
       <div className="flex flex-col gap-3.5">

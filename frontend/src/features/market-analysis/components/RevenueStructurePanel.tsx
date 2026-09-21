@@ -8,9 +8,20 @@ interface RevenueStructurePanelProps {
   revenueStructure: MarketAnalysis['revenueStructure']
 }
 
-/** 성비가 몇 %p 엇갈리는지. 양수면 매출이 남성 쪽으로 더 쏠렸다는 뜻 */
-function getGenderGap(revenueMaleRatio: number, footTrafficMaleRatio: number) {
-  return Math.round((revenueMaleRatio - footTrafficMaleRatio) * 10) / 10
+/**
+ * 매출 성비가 유동인구 성비보다 몇 %p 남성 쪽인지.
+ *
+ * 유동인구와 견준 **쏠림**이다. 둘은 방향이 갈릴 수 있다 
+ * — 매출 남 49.7 / 여 50.3 인데 유동인구가 남 44.8 이면, 
+ * 여성 매출이 더 많으면서 동시에 남성 쪽으로 쏠린 상태다. 
+ * 문구를 절대 비교로 쓰면 틀린다.
+ *
+ * 막대에 적힌 정수끼리 뺀다. 반올림 전 값으로 계산하면 화면에 '남성 50%'·'남성 45%'
+ * 라고 써 놓고 차이는 4.9%p 라고 적히는데, 보이는 숫자로 검산이 안 되면 사용자는
+ * 그 수치를 믿을 근거가 없다. 상권 지표에서 0.1%p 는 의미도 없다.
+ */
+function getGenderGap(revenueMalePercent: number, footTrafficMalePercent: number) {
+  return revenueMalePercent - footTrafficMalePercent
 }
 
 /**
@@ -23,6 +34,20 @@ function toPairPercents(firstRatio: number): [number, number] {
   const first = Math.round(firstRatio)
 
   return [first, 100 - first]
+}
+
+/**
+ * 유동인구 성비를 한 마디로.
+ *
+ * 반반일 때 '여성이 많은데' 라고 하면 안 된다. 50 을 넘지 않는 쪽을 '많다' 로 적는
+ * 조건문은 동률에서 거짓이 된다 — 이 패널이 이미 그런 식으로 틀렸던 자리다.
+ */
+function describeFootTraffic(malePercent: number, femalePercent: number): string {
+  if (malePercent === femalePercent) return '유동인구 성비는 반반인데'
+
+  return malePercent > femalePercent
+    ? `유동인구는 남성이 많은데(${malePercent}%)`
+    : `유동인구는 여성이 많은데(${femalePercent}%)`
 }
 
 /**
@@ -77,8 +102,12 @@ export default function RevenueStructurePanel({
   const footTrafficMaleRatio = summary.footTrafficGender.maleRatio
   const hasFootTrafficGender =
     footTrafficMaleRatio !== null && summary.footTrafficGender.femaleRatio !== null
+  /* 막대에 적히는 정수. 문장도 같은 값으로 말해야 검산이 된다 */
+  const [footTrafficMalePercent, footTrafficFemalePercent] =
+    footTrafficMaleRatio === null ? [null, null] : toPairPercents(footTrafficMaleRatio)
+
   const genderGap =
-    footTrafficMaleRatio === null ? null : getGenderGap(maleRatio, footTrafficMaleRatio)
+    footTrafficMalePercent === null ? null : getGenderGap(malePercent, footTrafficMalePercent)
 
   return (
     <Panel
@@ -132,15 +161,27 @@ export default function RevenueStructurePanel({
 
         <p className="text-text-secondary text-[11.5px] leading-relaxed">
           주말 매출 비중이 {weekendPercent}% 예요.
-          {/* 유동인구 성비와 매출 성비가 3%p 이상 엇갈릴 때만 짚어준다. 그 아래는 오차로 본다 */}
-          {genderGap !== null && footTrafficMaleRatio !== null && Math.abs(genderGap) >= 3 && (
-            <>
-              {' '}
-              유동인구는 {footTrafficMaleRatio > 50 ? '남성' : '여성'}이 많은데 매출은{' '}
-              {genderGap > 0 ? '남성' : '여성'}에서 더 나옵니다 ({Math.abs(genderGap).toFixed(1)}%p
-              차이). 객단가나 방문 목적이 성별로 갈린다는 신호예요.
-            </>
-          )}{' '}
+          {/*
+            유동인구 성비와 매출 성비가 3%p 이상 엇갈릴 때만 짚어준다. 그 아래는 오차로 본다.
+
+            원인을 단정하지 않는다. 우리가 아는 것은 '비중이 다르다' 까지다. 유동인구는
+            그 업종의 손님이 아니라 상권을 오간 사람 전부라(seoul_commercial_data 의
+            total_population), 남성 비중이 높은 것이 객단가 때문인지 그냥 더 자주 와서인지
+            이 데이터로는 못 가린다. 결제자와 소비자가 다른 경우(회식·가족·법인카드)도
+            섞여 있다.
+          */}
+          {genderGap !== null &&
+            footTrafficMalePercent !== null &&
+            footTrafficFemalePercent !== null &&
+            Math.abs(genderGap) >= 3 && (
+              <>
+                {' '}
+                {describeFootTraffic(footTrafficMalePercent, footTrafficFemalePercent)}, 매출에서{' '}
+                {genderGap > 0 ? '남성' : '여성'}이 차지하는 몫은 인구 비중보다{' '}
+                {Math.abs(genderGap)}%p 큽니다. {genderGap > 0 ? '남성' : '여성'} 손님이 더 자주
+                오거나 한 번에 더 많이 쓴다는 뜻일 수 있어요.
+              </>
+            )}{' '}
           {coverageRatio !== null &&
             `성별이 확인된 매출은 전체의 ${Math.round(coverageRatio)}% 입니다.`}
         </p>

@@ -1,0 +1,29 @@
+{
+  "source_sha256": "dd44772c3c9932121ce06f228bfa5035ce4c2c38a7063176bd0eb59083837d84",
+  "candidates": 39,
+  "persistence": {
+    "template_id": 9,
+    "field_count": 38,
+    "source_count": 9,
+    "ignored_count": 1
+  },
+  "field_types": {
+    "DIRECT": 8,
+    "USER_INPUT": 28,
+    "GENERATED": 1,
+    "COMPUTED": 1
+  },
+  "mapping_statuses": {
+    "RESOLVED": 35,
+    "UNSUPPORTED": 3
+  },
+  "writer_written": 7,
+  "writer_skipped": 31,
+  "original_unchanged": true,
+  "unchanged_cells_verified": 209,
+  "target_paragraph_counts_preserved": true,
+  "gms_called": false,
+  "database_called": false,
+  "postgresql_executed": false,
+  "phone_runtime_status": "LEFT_BLANK"
+}

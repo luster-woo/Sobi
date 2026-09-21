@@ -15,6 +15,7 @@ class SourceResolveContext(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     user_id: PositiveId | None = None
     support_program_id: PositiveId | None = None
+    draft_date: date | None = None
 
 
 class SourceResolveRequest(BaseModel):

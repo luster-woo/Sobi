@@ -247,3 +247,11 @@ Analyzer는 location을 생성하지 않는다. 기존 _join의 중복 field_key
 `업 체 명`, `대표자`, `업체명`, `성  명`이다. 서명 suffix 자체는 후보가 아니다.
 신규 탐지 테스트 14개, Writer 테스트 13개, 실제 fixture E2E 1개를 추가했다.
 전체 588개 중 587개 통과, PostgreSQL 선택 통합 1개 skip.
+
+## 단일 라벨 / 고정 연도 날짜 inline 추가
+`inline.py`는 괄호 포함 단일 라벨도 `label: 공백 (고정 접미문)` 형태이면 추출한다.
+문단 전체가 `2026년     월     일` 형태이면 월/일을 독립 PARAGRAPH_INLINE 후보로 만든다.
+DATE 후보 hints에는 date_part(month/day), fixed_year가 들어간다. 이미 기입된 날짜/탭/제어/일반 문장은 제외한다.
+기존 Parser는 변경하지 않는다. 후보 추가로 candidate_id가 달라질 수 있다.
+Writer는 DATE 월/일 범위와 인쇄 연도를 검증하며 다른 연도는 DATE_YEAR_MISMATCH로 거부한다.
+Schema 매핑 시 현재 날짜가 맞는 업무 위치인지 별도 판단해야 하며, 날짜 빈칸이라는 이유만으로 생년월일 등에 초안 날짜를 연결하지 않는다.

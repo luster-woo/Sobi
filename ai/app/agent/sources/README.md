@@ -218,3 +218,9 @@ FakeProvider와 가짜 비동기 DB 연결을 사용한다. KoE5/GMS/DB 서버�
 - 기존 팀원 파일 수정이 필요하지 않았으므로 승인 대기로 보류한 변경은 없다.
   main.py 라우터 등록, 공용 설정/모델 수정, RAG 수정은 이번 작업에 포함하지 않는다.
 
+
+## PROGRAM_DRAFT_DATE
+PROGRAM / DIRECT / DATE / EmptyParams. 공고 일정이 아니라 초안 생성 요청의 한국 시간 날짜다.
+Runtime은 요청 시작 시 UTC+09:00 날짜를 한 번 계산해 SourceResolveContext.draft_date에 전달한다.
+Resolver는 DB를 조회하지 않으며 draft_date가 없으면 DRAFT_DATE_REQUIRED로 거부한다.
+공고 시작일, 생년월일, 과거 사건 일자에는 매핑하지 않는다. SourceType/DB migration 변경 없음.

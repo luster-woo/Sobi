@@ -1,0 +1,18 @@
+{
+  "original_sha256": "dd44772c3c9932121ce06f228bfa5035ce4c2c38a7063176bd0eb59083837d84",
+  "total_candidates": 54,
+  "existing_candidates_unchanged": true,
+  "added": {
+    "name": 5,
+    "month": 5,
+    "day": 5
+  },
+  "total_stored_fields": 53,
+  "writer_written": 22,
+  "writer_skipped": 31,
+  "date": "2026-09-21",
+  "clock_calls": 1,
+  "original_unchanged": true,
+  "real_db_called": false,
+  "real_gms_called": false
+}

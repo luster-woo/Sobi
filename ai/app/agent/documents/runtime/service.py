@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from pydantic import ValidationError
 
 from ...sources.enums import SourceKey, SourceType, FieldType
@@ -25,6 +27,7 @@ class DocumentAgentRuntime:
         self.generated = GeneratedFieldResolver(source_resolver, gms_client=gms_client)
 
     async def resolve(self, request: DocumentRuntimeRequest) -> DocumentRuntimeResult:
+        draft_date = datetime.now(timezone(timedelta(hours=9))).date()
         try:
             request = DocumentRuntimeRequest.model_validate(request.model_dump(mode="json"))
         except (ValidationError, AttributeError, ValueError):
@@ -45,7 +48,7 @@ class DocumentAgentRuntime:
         known = {field.field_key: field for field in template.fields}
         if len(known) != len(template.fields):
             raise DocumentRuntimeError("DUPLICATE_FIELD_KEY")
-        context = SourceResolveContext(user_id=request.user_id, support_program_id=template.support_program_id)
+        context = SourceResolveContext(user_id=request.user_id, support_program_id=template.support_program_id, draft_date=draft_date)
         results = []
         for field in sorted(template.fields, key=lambda item: item.field_order):
             field.sources.sort(key=lambda source: (source.priority, source.id))

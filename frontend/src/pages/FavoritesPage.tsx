@@ -1,12 +1,11 @@
 import { useState } from 'react'
 
 import LoanDetailModal from '@/features/loan/components/LoanDetailModal'
-import Breadcrumb from '@/features/mypage/components/Breadcrumb'
+import PageHeading from '@/features/mypage/components/PageHeading'
 import { useBookmarks, useRemoveFavorite } from '@/features/mypage/hooks/useBookmarks'
 import { FAVORITE_KIND, type FavoriteItem, type FavoriteKind } from '@/features/mypage/model/types'
 import SupportProgramDetailModal from '@/features/support-program/components/SupportProgramDetailModal'
 import { LOAN_STATUS_LABEL, SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
-import { ROUTES } from '@/shared/constants/routes'
 import BookmarkIcon from '@/shared/ui/BookmarkIcon'
 import EmptyState from '@/shared/ui/EmptyState'
 import Panel from '@/shared/ui/Panel'
@@ -135,7 +134,7 @@ export function FavoritesPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
-      <Breadcrumb parentLabel="마이페이지" parentTo={ROUTES.MYPAGE} current="관심 목록" />
+      <PageHeading title="관심 목록" />
 
       {/*
        * shared 의 FilterChip 을 쓰지 않는다. 그쪽은 켜고 끄는 토글이라 선택되면 X 가

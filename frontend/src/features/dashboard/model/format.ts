@@ -8,8 +8,11 @@ const TEN_THOUSAND = 10_000
  * 상한만 보여주지 않는 이유: '최대 1억' 만 있으면 1,000만 원이 필요한 사람이 이 상품이
  * 자기 것인지 알 수 없다. 하한이 있어야 후보에서 걸러낼 수 있다.
  */
-export function toAmountRange(min: number, max: number): string {
-  return `${formatMoneyShort(min)} ~ ${formatMoneyShort(max)}`
+export function toAmountRange(min: number | null, max: number | null): string {
+  if (min !== null && max !== null) return `${formatMoneyShort(min)} ~ ${formatMoneyShort(max)}`
+  if (max !== null) return `최대 ${formatMoneyShort(max)}`
+  if (min !== null) return `최소 ${formatMoneyShort(min)}`
+  return '금액 미정'
 }
 
 /**

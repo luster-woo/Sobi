@@ -41,9 +41,7 @@ function toLoan(raw: LoanItemResponse): DashboardLoan | null {
   }
 }
 
-function toSupportProgram(raw: SupportItemResponse): DashboardSupportProgram | null {
-  if (raw.min_balance === null || raw.max_balance === null) return null
-
+function toSupportProgram(raw: SupportItemResponse): DashboardSupportProgram {
   return {
     supportProgramId: raw.supportProgramId,
     pblancNm: raw.pblancNm,
@@ -72,6 +70,11 @@ function isImminent(endDate: string | null): boolean {
   if (!endDate) return false
   const left = daysUntil(endDate)
   return left >= 0 && left <= IMMINENT_DAYS
+}
+
+/** 예비창업자 응답은 마감분까지 섞여 온다(백엔드가 findAllOpen 을 안 쓴다) */
+function isOpen(endDate: string | null): boolean {
+  return endDate === null || daysUntil(endDate) >= 0
 }
 
 function toSalesChangeRate(sales: SalesResponse[]): number | null {
@@ -111,47 +114,54 @@ function toSnapshot(raw: OwnerDashboardResponse): BusinessSnapshot {
   }
 }
 
-function toJudgedSupportProgram(raw: SupportProgramListItem): DashboardSupportProgram | null {
-  if (raw.type === 'ETC' || raw.minBalance === undefined || raw.maxBalance === undefined) return null
-
+function toJudgedSupportProgram(raw: SupportProgramListItem): DashboardSupportProgram {
   return {
     supportProgramId: raw.supportProgramId,
     pblancNm: raw.pblancNm,
     jrsdInsttNm: raw.jrsdInsttNm,
     type: raw.type,
-    minBalance: raw.minBalance,
-    maxBalance: raw.maxBalance,
+    minBalance: raw.type === 'ETC' ? null : (raw.minBalance ?? null),
+    maxBalance: raw.type === 'ETC' ? null : (raw.maxBalance ?? null),
     interestRate: raw.type === 'LOAN' ? (raw.interestRate ?? null) : null,
     endDate: raw.endDate,
   }
 }
 
 /**
- * 대시보드 응답의 지원사업 요약은 판정 status 를 보지 않고 추천 행 전체를 센다.
- * 판정은 전 사업에 행을 남기므로 가능 = 전체, 불가 = 0 이 된다. 목록 API 의 판정 필터로 다시 센다.
+ * 대시보드 응답의 지원사업 요약(`supportProgramSummary`)은 판정 status 를 보지 않고
+ * 추천 행 전체를 센다. 목록 API 의 판정 필터로 다시 세는 이유다.
+ *
+ * 세 판정값이 공고 전체를 정확히 나눈다 — 백엔드 `matches()` 가 신청 상태를 빼고
+ * `judgement` 만 보고, 판정 행이 없으면 UNKNOWN 이다. 그래서 전체를 따로 묻지 않고
+ * 셋을 더한다.
  */
 export interface OwnerJudgement {
   loans: LoanListData
   eligiblePrograms: SupportProgramListData
   ineligibleProgramCount: number
-  programCount: number
+  unknownProgramCount: number
 }
 
 export function toOwnerDashboard(
   raw: OwnerDashboardResponse,
   judged: OwnerJudgement,
 ): OwnerDashboardData {
-  const { loans, eligiblePrograms, ineligibleProgramCount, programCount } = judged
+  const { loans, eligiblePrograms, ineligibleProgramCount, unknownProgramCount } = judged
   const loanPossible = loans.statusCounts.ELIGIBLE
+  const loanImpossible = loans.statusCounts.INELIGIBLE
   const programPossible = eligiblePrograms.page.totalElements
+  const programTotal = programPossible + ineligibleProgramCount + unknownProgramCount
 
   return {
     judgement: {
       updatedAt: null,
       possible: loanPossible + programPossible,
+      needsCheck: unknownProgramCount,
       urgent: eligiblePrograms.programs.filter((program) => isImminent(program.endDate)).length,
-      impossible: loans.statusCounts.INELIGIBLE + ineligibleProgramCount,
-      total: loans.totalCount + programCount,
+      impossible: loanImpossible + ineligibleProgramCount,
+      // 대출만 신청 상태로 빠진다. 공고는 판정값이 그대로 남아 위 셋에 들어간다
+      inProgress: loans.totalCount - loanPossible - loanImpossible,
+      total: loans.totalCount + programTotal,
     },
     loans: {
       possible: loanPossible,
@@ -160,27 +170,33 @@ export function toOwnerDashboard(
     },
     supportPrograms: {
       possible: programPossible,
-      total: programCount,
-      items: compact(eligiblePrograms.programs.map(toJudgedSupportProgram)),
+      total: programTotal,
+      items: eligiblePrograms.programs.map(toJudgedSupportProgram),
     },
     repayment: toRepayment(raw.repaymentManagement),
     snapshot: toSnapshot(raw),
   }
 }
 
+/**
+ * 예비창업자는 판정 결과가 없다. 백엔드가 업종·지역만으로 고른 목록을 그대로 주고
+ * 자격을 보지 않으므로, 전부 '확인 필요' 지 '신청 가능' 이 아니다.
+ */
 export function toPreOwnerDashboard(raw: PreOwnerDashboardResponse): PreOwnerDashboardData {
+  const openPrograms = raw.supportProgram.filter((program) => isOpen(program.end_date))
   const loanCount = raw.Loans.length
-  const supportCount = raw.supportProgram.length
-  const possible = loanCount + supportCount
+  const total = loanCount + openPrograms.length
 
   return {
     condition: { industryMinorId: null, province: '', district: '', dong: '' },
     judgement: {
       updatedAt: null,
-      possible,
-      urgent: raw.supportProgram.filter((program) => isImminent(program.end_date)).length,
+      possible: 0,
+      needsCheck: total,
+      urgent: openPrograms.filter((program) => isImminent(program.end_date)).length,
       impossible: 0,
-      total: possible,
+      inProgress: 0,
+      total,
     },
     loans: {
       possible: loanCount,
@@ -188,9 +204,9 @@ export function toPreOwnerDashboard(raw: PreOwnerDashboardResponse): PreOwnerDas
       items: compact(raw.Loans.map(toLoan)),
     },
     supportPrograms: {
-      possible: supportCount,
-      total: supportCount,
-      items: compact(raw.supportProgram.map(toSupportProgram)),
+      possible: openPrograms.length,
+      total: openPrograms.length,
+      items: openPrograms.map(toSupportProgram),
     },
     insurances: raw.insurances.map(toInsurance),
   }

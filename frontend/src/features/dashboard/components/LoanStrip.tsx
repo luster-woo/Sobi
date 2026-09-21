@@ -14,6 +14,8 @@ import ProductCard from '@/shared/ui/ProductCard'
 
 interface LoanStripProps {
   loans: StripSummary<DashboardLoan>
+  /** 판정이 없는 예비창업자 화면은 '지원 가능한' 이라고 말할 수 없다 */
+  title?: string
 }
 
 /**
@@ -63,7 +65,7 @@ function LoanCard({
  * 이유: 대시보드에서 상품 하나를 확인하는 것은 잠깐 들여다보는 일이고, /loans 로
  * 옮겨 가면 닫았을 때 대시보드가 아니라 목록에 서 있게 된다.
  */
-export default function LoanStrip({ loans }: LoanStripProps) {
+export default function LoanStrip({ loans, title = '지원 가능한 대출' }: LoanStripProps) {
   const [openLoanId, setOpenLoanId] = useState<number | null>(null)
 
   /*
@@ -84,7 +86,7 @@ export default function LoanStrip({ loans }: LoanStripProps) {
   return (
     <>
       <CardStrip
-        title="지원 가능한 대출"
+        title={title}
         count={loans.possible}
         footer={
           <NavButton to={ROUTES.LOANS} variant="outline" size="sm" className="w-full">

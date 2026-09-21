@@ -14,6 +14,8 @@ import ProductCard from '@/shared/ui/ProductCard'
 
 interface SupportProgramStripProps {
   programs: StripSummary<DashboardSupportProgram>
+  /** 판정이 없는 예비창업자 화면은 '지원 가능한' 이라고 말할 수 없다 */
+  title?: string
 }
 
 /** 마감일 + (지원대출이면) 금리. 금리가 없는 지원금에 '금리 -' 를 붙이지 않는다 */
@@ -64,7 +66,10 @@ function SupportProgramCard({
  * 날짜를 'D-19' 가 아니라 '~9.29' 로 적는다. 남은 날짜는 지금 급한지를 알려주지만
  * 달력에 적으려면 다시 계산해야 한다.
  */
-export default function SupportProgramStrip({ programs }: SupportProgramStripProps) {
+export default function SupportProgramStrip({
+  programs,
+  title = '지원 가능한 정부 지원사업',
+}: SupportProgramStripProps) {
   const [openProgramId, setOpenProgramId] = useState<number | null>(null)
 
   // 대시보드 응답에 북마크 여부가 없어서 관심 목록으로 대조한다 (`useBookmarkedIds`)
@@ -82,7 +87,7 @@ export default function SupportProgramStrip({ programs }: SupportProgramStripPro
   return (
     <>
       <CardStrip
-        title="지원 가능한 정부 지원사업"
+        title={title}
         count={programs.possible}
         footer={
           <NavButton to={ROUTES.SUPPORT_PROGRAMS} variant="outline" size="sm" className="w-full">

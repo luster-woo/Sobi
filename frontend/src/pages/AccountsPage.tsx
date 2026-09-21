@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
 import { useLoanProducts } from '@/features/loan-repayment/hooks/useRepayment'
 import { useMydataRefresh } from '@/features/mydata/hooks/useMydata'
-import Breadcrumb from '@/features/mypage/components/Breadcrumb'
+import PageHeading from '@/features/mypage/components/PageHeading'
 import { useMyPage } from '@/features/mypage/hooks/useMyPage'
 import { ROUTES } from '@/shared/constants/routes'
 import { isPreOwner } from '@/shared/types'
@@ -140,7 +140,7 @@ export function AccountsPage() {
 
     return (
       <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
-        <Breadcrumb parentLabel="마이페이지" parentTo={ROUTES.MYPAGE} current="연동 계좌" />
+        <PageHeading title="연동 계좌" />
         <EmptyState
           title={linked ? '계좌 정보를 불러오지 못했어요' : '아직 연동된 계좌가 없어요'}
           description={
@@ -166,10 +166,8 @@ export function AccountsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
-      <Breadcrumb
-        parentLabel="마이페이지"
-        parentTo={ROUTES.MYPAGE}
-        current="연동 계좌"
+      <PageHeading
+        title="연동 계좌"
         aside={
           <span className="flex items-center gap-2.5">
             <span className="text-text-muted text-[11.5px] tabular-nums">

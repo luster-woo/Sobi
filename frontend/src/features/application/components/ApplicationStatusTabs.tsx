@@ -10,10 +10,10 @@ interface ApplicationStatusTabsProps {
 }
 
 const TABS: ReadonlyArray<{ value: ApplicationFilter; label: string }> = [
+  { value: 'ALL', label: '전체' },
   { value: 'PREPARING', label: '준비 중' },
   { value: 'ONGOING', label: '진행 중' },
   { value: 'SETTLED', label: '완료' },
-  { value: 'ALL', label: '전체' },
 ]
 
 /**

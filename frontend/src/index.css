@@ -78,6 +78,21 @@
   --color-warning: #b45309;
   --color-warning-soft: #faeedd;
   /* 리디자인의 --urgent / --urgent-soft 와 값이 같습니다 */
+  /*
+   * 지도 히트맵 5단. primary 한 색의 농도만 바꾼다.
+   *
+   * 지표마다 색상을 바꾸면 범례를 네 벌 설명해야 하고, 초록·빨강을 섞으면 폐업률에서
+   * '진한 게 좋은 건가 나쁜 건가' 를 매번 다시 확인하게 된다. 크기는 농도가 말하고
+   * 좋고 나쁨은 글자가 말한다.
+   *
+   * 4단부터 흰 글자를 받칠 만큼 어둡다 (heatTextClass 의 경계가 여기서 나온다).
+   */
+  --color-heat-1: #e3efec;
+  --color-heat-2: #bcd8cf;
+  --color-heat-3: #86bcaa;
+  --color-heat-4: #4a9a84;
+  --color-heat-5: #0a6e5c;
+
   --color-danger: #b42318;
   --color-danger-hover: #9a1e15;
   --color-danger-soft: #f6e3e1;

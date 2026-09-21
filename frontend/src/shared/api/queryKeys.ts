@@ -83,6 +83,8 @@ export const queryKeys = {
     /** 업종·지역 목록. 정적 데이터라 파라미터가 없다 */
     businesses: ['market', 'businesses'] as const,
     regions: ['market', 'regions'] as const,
+    /** 행정동 경계. public 의 정적 파일이라 배포 전에는 바뀌지 않는다 */
+    boundaries: ['market', 'boundaries'] as const,
   },
 
   /**

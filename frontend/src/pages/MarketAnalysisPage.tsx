@@ -5,6 +5,7 @@ import BusinessMixPanel from '@/features/market-analysis/components/BusinessMixP
 import DensityPanel from '@/features/market-analysis/components/DensityPanel'
 import MarketConditionModal from '@/features/market-analysis/components/MarketConditionModal'
 import MarketSummaryTiles from '@/features/market-analysis/components/MarketSummaryTiles'
+import NeighborMapPanel from '@/features/market-analysis/components/NeighborMapPanel'
 import NeighborTable from '@/features/market-analysis/components/NeighborTable'
 import RevenueEstimatePanel from '@/features/market-analysis/components/RevenueEstimatePanel'
 import RevenueStructurePanel from '@/features/market-analysis/components/RevenueStructurePanel'
@@ -185,6 +186,27 @@ export function MarketAnalysisPage() {
                   storeChurn={data.storeChurn}
                 />
 
+                {/*
+                  요약 타일 다음이 매출 구조다. 타일이 '얼마나 파는가' 까지 말했으니
+                  '누가 언제 사 가는가' 로 이어진다. 지도·밀집도는 그 다음 질문
+                  ('그래서 이 자리가 어떤가')이라 아래로 내렸다.
+                */}
+                <RevenueStructurePanel
+                  summary={data.summary}
+                  revenueStructure={data.revenueStructure}
+                />
+
+                <NeighborMapPanel
+                  location={data.location}
+                  neighbors={data.neighbors}
+                  onSelectDong={(dongCode) =>
+                    navigate({
+                      pathname: ROUTES.MARKET_ANALYSIS,
+                      search: new URLSearchParams({ dongCode, businessCode: businessCode ?? '' }).toString(),
+                    })
+                  }
+                />
+
                 <DensityPanel
                   location={data.location}
                   density={data.density}
@@ -192,11 +214,6 @@ export function MarketAnalysisPage() {
                 />
 
                 <NeighborTable location={data.location} neighbors={data.neighbors} />
-
-                <RevenueStructurePanel
-                  summary={data.summary}
-                  revenueStructure={data.revenueStructure}
-                />
               </div>
 
               <div className="flex flex-col gap-3.5">

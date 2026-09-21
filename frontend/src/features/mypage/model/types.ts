@@ -38,18 +38,26 @@ export interface MyBusinessInfo {
   openDate: ISODate
 }
 
-/** 마이데이터 연동 상태. 연동한 적이 없으면 null */
+/**
+ * 마이데이터 연동 상태. 판정한 적이 없으면 null.
+ *
+ * 서버가 연동 여부를 따로 들고 있지 않아 판정 이력으로 갈음한다 — 연동과 판정이
+ * `MydataServiceImpl.link()` 한 흐름이라 실무상 같다. 계좌 유무와는 상관없다.
+ */
 export interface MyDataStatus {
   /** 마지막 판정 시각. 서버가 수집 시각 대신 이걸 준다 — 둘이 한 흐름이라 거의 같다 */
   linkedAt: ISODateTime | null
 }
 
 /**
- * 계좌 요약. 마이데이터 연동 전이면 null 이다.
+ * 계좌 요약. 계좌가 한 건도 없으면 null 이다.
+ *
+ * 판정·마이데이터 연동 여부와 무관하다 — 서버가 매 요청 금융망에서 실시간으로
+ * 받아오므로, 판정 전이어도 계좌가 있으면 값이 온다.
  *
  * ⚠️ 금융망 실시간 조회라 **실패해도 0 으로 온다.** 서버가 예외를 삼키고 화면을
- *    띄우는 쪽을 택했다(`UserServiceImpl.fetchDepositAccounts`). 그래서 0원과
- *    '못 불러옴' 이 구분되지 않는다.
+ *    띄우는 쪽을 택했다(`UserServiceImpl.fetchDepositAccounts`). 그래서 계좌가
+ *    없는 것과 '못 불러옴' 이 구분되지 않고, 둘 다 여기서 null 이 된다.
  */
 export interface AccountSummary {
   /** 입출금 합계(원) */

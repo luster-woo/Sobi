@@ -63,6 +63,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       GMS_API_KEY: ${GMS_API_KEY}
+      DOCUMENT_AGENT_DRAFT_API_ENABLED: "true"
+      DOCUMENT_AGENT_GENERATED_ROOT: /data/document-agent/generated
     volumes:
       - aimodels:/models
       - /home/ubuntu/app/documents/original:/data/document-agent/original

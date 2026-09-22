@@ -233,7 +233,7 @@ export function SignUpPage() {
 
   return (
     <div className="border-border bg-surface w-full max-w-[424px] rounded-md border px-7 pt-6 pb-6">
-      <h1 className="font-heading text-text mb-5 text-[20px] font-bold">회원가입</h1>
+      <h1 className="text-h2 mb-5 tracking-[-0.02em]">회원가입</h1>
 
       <form onSubmit={handleSubmit} noValidate>
         {/*

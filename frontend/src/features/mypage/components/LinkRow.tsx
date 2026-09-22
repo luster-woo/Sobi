@@ -45,7 +45,7 @@ export default function LinkRow({ label, value, to, className }: LinkRowProps) {
   )
 
   const base =
-    'border-border-subtle flex items-center gap-3 border-b px-[15px] py-2.5 last:border-b-0'
+    'border-border-subtle flex items-center gap-3 border-b px-card py-2.5 last:border-b-0'
 
   if (to) {
     return (

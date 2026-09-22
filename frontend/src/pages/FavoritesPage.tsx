@@ -1,13 +1,14 @@
 import { useState } from 'react'
 
 import LoanDetailModal from '@/features/loan/components/LoanDetailModal'
-import PageHeading from '@/features/mypage/components/PageHeading'
 import { useBookmarks, useRemoveFavorite } from '@/features/mypage/hooks/useBookmarks'
 import { FAVORITE_KIND, type FavoriteItem, type FavoriteKind } from '@/features/mypage/model/types'
 import SupportProgramDetailModal from '@/features/support-program/components/SupportProgramDetailModal'
 import { LOAN_STATUS_LABEL, SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
 import BookmarkIcon from '@/shared/ui/BookmarkIcon'
+import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
+import PageHeading from '@/shared/ui/PageHeading'
 import Panel from '@/shared/ui/Panel'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
 import Skeleton from '@/shared/ui/Skeleton'
@@ -106,7 +107,7 @@ const SKELETON_ROWS = 4
 export function FavoritesPage() {
   const [filter, setFilter] = useState<Filter>('ALL')
 
-  const { data, isLoading, isError } = useBookmarks()
+  const { data, isLoading, isError, refetch } = useBookmarks()
 
   /*
    * 낙관적으로 지운다 — 누른 줄이 곧바로 사라진다. 실패하면 되돌아오고 토스트가 뜬다.
@@ -176,7 +177,7 @@ export function FavoritesPage() {
               <div
                 key={index}
                 style={{ gridTemplateColumns: GRID_TEMPLATE }}
-                className="border-border-subtle grid items-center gap-3 border-b px-[15px] py-2.5 last:border-b-0"
+                className="border-border-subtle px-card grid items-center gap-3 border-b py-2.5 last:border-b-0"
               >
                 <Skeleton variant="text" width="58%" height={16} />
                 <Skeleton variant="text" height={16} />
@@ -192,6 +193,11 @@ export function FavoritesPage() {
           <EmptyState
             title="관심 목록을 불러오지 못했어요"
             description="잠시 후 다시 시도해주세요."
+            action={
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                다시 시도
+              </Button>
+            }
           />
         </Panel>
       ) : shown.length === 0 ? (
@@ -223,7 +229,7 @@ export function FavoritesPage() {
                  */
                 style={{ gridTemplateColumns: GRID_TEMPLATE }}
                 className={cn(
-                  'border-border-subtle grid items-center gap-3 border-b px-[15px] py-2.5 last:border-b-0',
+                  'border-border-subtle px-card grid items-center gap-3 border-b py-2.5 last:border-b-0',
                   // 자격이 안 되는 줄은 눌러도 신청할 수 없다. 흐리게 두어 먼저 걸러 보게 한다
                   impossible && 'bg-surface-muted',
                 )}
@@ -241,7 +247,7 @@ export function FavoritesPage() {
                   >
                     {item.title}
                   </b>
-                  <span className="text-text-muted block truncate text-[11px]">
+                  <span className="text-text-muted text-caption block truncate">
                     {toSubtitle(item)}
                   </span>
                 </button>
@@ -251,7 +257,7 @@ export function FavoritesPage() {
                  * 같아야 세로로 비교된다 (12.5px · tabular-nums · 오른쪽 정렬)
                  */}
                 {[primary, secondary].map((cell) => (
-                  <span key={cell.label} className="text-right text-[12.5px] tabular-nums">
+                  <span key={cell.label} className="text-caption text-right tabular-nums">
                     <i className="text-text-muted block text-[10px] tracking-wide not-italic">
                       {cell.label}
                     </i>

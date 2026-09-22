@@ -51,7 +51,7 @@ export default function SeoulRankPanel({ business, summary, seoulRank }: SeoulRa
         <div className="relative">
           {/* 눈금 위 라벨. 눈금과 같은 자리에 두려고 절대 배치한다 */}
           <span
-            className="text-text absolute -top-5 -translate-x-1/2 text-[11.5px] font-bold whitespace-nowrap tabular-nums"
+            className="text-text text-caption absolute -top-5 -translate-x-1/2 font-bold whitespace-nowrap tabular-nums"
             style={{ left: `${labelPercent}%` }}
           >
             상위 {Math.round(topPercent)}%
@@ -65,14 +65,14 @@ export default function SeoulRankPanel({ business, summary, seoulRank }: SeoulRa
           />
         </div>
 
-        <div className="text-text-muted mt-1.5 flex justify-between text-[11px]">
+        <div className="text-text-muted text-caption mt-1.5 flex justify-between">
           <span>하위</span>
           <span>중위</span>
           <span>상위</span>
         </div>
       </div>
 
-      <p className="text-text-secondary text-[11.5px] leading-relaxed">
+      <p className="text-text-secondary text-caption leading-relaxed">
         점포당 월 매출 {formatWonText(summary.revenuePerStoreMonthly)}은 서울시 {business.name}{' '}
         행정동 가운데 상위 {seoulRank.topPercent}% 수준이에요. 서울 중위값은{' '}
         {formatWonText(seoulRank.seoulMedian)}입니다.

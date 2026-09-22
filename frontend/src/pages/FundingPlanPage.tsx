@@ -18,6 +18,7 @@ import { isPreOwner } from '@/shared/types'
 import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
 import Modal from '@/shared/ui/Modal'
+import PageHeading from '@/shared/ui/PageHeading'
 import Skeleton from '@/shared/ui/Skeleton'
 import { formatMoneyShort } from '@/shared/utils/formatters'
 
@@ -103,8 +104,8 @@ export function FundingPlanPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
-      <h1 className="text-h1">자금 조합</h1>
+    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
+      <PageHeading title="자금 조합" />
 
       {/*
         사이드바에는 메뉴가 그대로 보인다. role 마다 메뉴를 감추면 "내 화면에는 왜 없지"
@@ -118,57 +119,60 @@ export function FundingPlanPage() {
         />
       ) : (
         <>
-      <FundingAmountForm amount={amount} onSubmit={handleSubmit} />
+          <FundingAmountForm amount={amount} onSubmit={handleSubmit} />
 
-      {!amount && (
-        <EmptyState
-          title="필요한 금액을 알려주세요"
-          description="그 금액을 채우는 가장 유리한 상품 조합을 찾아드려요. 무상 지원금을 먼저 채워 이자를 줄입니다."
-        />
-      )}
+          {!amount && (
+            <EmptyState
+              title="필요한 금액을 알려주세요"
+              description="그 금액을 채우는 가장 유리한 상품 조합을 찾아드려요. 무상 지원금을 먼저 채워 이자를 줄입니다."
+            />
+          )}
 
-      {isLoading && <Skeleton height={220} className="rounded-md" />}
+          {isLoading && <Skeleton height={220} className="rounded-md" />}
 
-      {isError && (
-        <EmptyState title="조합을 찾지 못했어요" description="금액을 바꿔서 다시 시도해보세요." />
-      )}
+          {isError && (
+            <EmptyState
+              title="조합을 찾지 못했어요"
+              description="금액을 바꿔서 다시 시도해보세요."
+            />
+          )}
 
-      {combinations && combinations.length === 0 && (
-        <EmptyState
-          title="이 금액을 채울 조합이 없어요"
-          description="금액을 낮추거나, 자격 판정 정보를 갱신하면 더 많은 상품이 잡힙니다."
-        />
-      )}
+          {combinations && combinations.length === 0 && (
+            <EmptyState
+              title="이 금액을 채울 조합이 없어요"
+              description="금액을 낮추거나, 자격 판정 정보를 갱신하면 더 많은 상품이 잡힙니다."
+            />
+          )}
 
-      {selected && data && (
-        /*
-         * key 가 있어야 애니메이션이 다시 돈다. 없으면 React 가 같은 DOM 을 재사용해서
-         * 내용만 바뀌고 애니메이션은 처음 한 번만 돈다.
-         */
-        <div key={selectedIndex} className="animate-fade-slide-in">
-          <FundingCombinationCard
-            combination={selected}
-            order={selectedIndex + 1}
-            // 주소의 금액이 아니라 서버가 실제로 계산에 쓴 금액을 넘긴다
-            targetAmount={data.targetAmount}
-            onOpenItem={setOpenItem}
-            onApply={() => setApplyTarget(selected)}
-            isApplying={applyBatch.isPending}
-          />
-        </div>
-      )}
+          {selected && data && (
+            /*
+             * key 가 있어야 애니메이션이 다시 돈다. 없으면 React 가 같은 DOM 을 재사용해서
+             * 내용만 바뀌고 애니메이션은 처음 한 번만 돈다.
+             */
+            <div key={selectedIndex} className="animate-fade-slide-in">
+              <FundingCombinationCard
+                combination={selected}
+                order={selectedIndex + 1}
+                // 주소의 금액이 아니라 서버가 실제로 계산에 쓴 금액을 넘긴다
+                targetAmount={data.targetAmount}
+                onOpenItem={setOpenItem}
+                onApply={() => setApplyTarget(selected)}
+                isApplying={applyBatch.isPending}
+              />
+            </div>
+          )}
 
-      {/*
+          {/*
         요약 카드를 두지 않는다. 아래 비교표와 같은 값을 같은 순서로 두 번 말하고 있었다.
         고르는 것도 표에서 되므로(선택 버튼) 카드가 할 일이 남지 않는다.
       */}
-      {combinations && combinations.length > 1 && (
-        <FundingComparisonTable
-          combinations={combinations}
-          selectedIndex={selectedIndex}
-          onSelect={setSelectedIndex}
-        />
-      )}
+          {combinations && combinations.length > 1 && (
+            <FundingComparisonTable
+              combinations={combinations}
+              selectedIndex={selectedIndex}
+              onSelect={setSelectedIndex}
+            />
+          )}
         </>
       )}
 
@@ -217,8 +221,8 @@ export function FundingPlanPage() {
       >
         <div className="text-body2 text-text-secondary flex flex-col gap-2 break-keep">
           <p>
-            상품마다 신청 건이 하나씩 만들어져요. 아직 접수되는 건 아니고, 서류를 올린 뒤
-            상품별로 신청해야 합니다.
+            상품마다 신청 건이 하나씩 만들어져요. 아직 접수되는 건 아니고, 서류를 올린 뒤 상품별로
+            신청해야 합니다.
           </p>
           {/* 한 번에 여러 건이 생기니 어디서 이어서 하면 되는지 먼저 알려준다 */}
           <p>만들어진 신청은 신청 현황의 '준비 중' 탭에 모입니다.</p>

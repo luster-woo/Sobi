@@ -11,8 +11,19 @@ interface FilterBarProps {
   /** 걸려 있는 필터 수. 1 이상이면 초기화 버튼이 나온다 */
   activeCount?: number
   onReset?: () => void
+  /**
+   * card — 목록과 떨어진 카드 (기본)
+   * inline — 표 프레임 안에 얹히는 줄. 검색창과 표 사이에 들어간다
+   */
+  variant?: 'card' | 'inline'
   className?: string
 }
+
+const variantClass = {
+  card: 'border-border bg-surface px-card gap-3 rounded-md border py-3.5 items-end',
+  // px-4 는 같은 프레임 안의 검색창·건수 줄과 맞춘 값이다 (px-card 15px 이 아니다)
+  inline: 'border-border-subtle items-center gap-2 border-b px-4 py-3',
+} as const
 
 /**
  * 목록 화면 필터 영역의 레이아웃.
@@ -30,20 +41,23 @@ export default function FilterBar({
   sort,
   activeCount = 0,
   onReset,
+  variant = 'card',
   className,
 }: FilterBarProps) {
   return (
     <div
       role="group"
       aria-label="목록 필터"
-      className={cn(
-        'border-border bg-surface p-card flex flex-wrap items-end gap-3 rounded-md border',
-        className,
-      )}
+      className={cn('flex flex-wrap', variantClass[variant], className)}
     >
       {children}
 
-      <div className="ml-auto flex items-end gap-2">
+      <div
+        className={cn(
+          'ml-auto flex shrink-0 gap-2',
+          variant === 'card' ? 'items-end' : 'items-center',
+        )}
+      >
         {activeCount > 0 && onReset && (
           <Button variant="outline" size="sm" onClick={onReset}>
             필터 초기화 ({activeCount})

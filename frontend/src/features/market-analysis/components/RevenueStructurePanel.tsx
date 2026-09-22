@@ -11,9 +11,9 @@ interface RevenueStructurePanelProps {
 /**
  * 매출 성비가 유동인구 성비보다 몇 %p 남성 쪽인지.
  *
- * 유동인구와 견준 **쏠림**이다. 둘은 방향이 갈릴 수 있다 
- * — 매출 남 49.7 / 여 50.3 인데 유동인구가 남 44.8 이면, 
- * 여성 매출이 더 많으면서 동시에 남성 쪽으로 쏠린 상태다. 
+ * 유동인구와 견준 **쏠림**이다. 둘은 방향이 갈릴 수 있다
+ * — 매출 남 49.7 / 여 50.3 인데 유동인구가 남 44.8 이면,
+ * 여성 매출이 더 많으면서 동시에 남성 쪽으로 쏠린 상태다.
  * 문구를 절대 비교로 쓰면 틀린다.
  *
  * 막대에 적힌 정수끼리 뺀다. 반올림 전 값으로 계산하면 화면에 '남성 50%'·'남성 45%'
@@ -86,7 +86,12 @@ export default function RevenueStructurePanel({
   const { weekdayRatio, weekendRatio } = byDayType
   const { maleRatio, femaleRatio, coverageRatio } = byGender
 
-  if (weekdayRatio === null || weekendRatio === null || maleRatio === null || femaleRatio === null) {
+  if (
+    weekdayRatio === null ||
+    weekendRatio === null ||
+    maleRatio === null ||
+    femaleRatio === null
+  ) {
     return null
   }
 
@@ -113,16 +118,16 @@ export default function RevenueStructurePanel({
     <Panel
       title="매출 구조 — 요일과 성별"
       headerRight={
-        <span className="text-text-muted text-[11.5px] tabular-nums">
+        <span className="text-text-muted text-caption tabular-nums">
           상권 전체 {formatBigWonText(total)}
         </span>
       }
     >
-      <div className="flex flex-col gap-3.5 px-[15px] py-3.5">
+      <div className="px-card flex flex-col gap-3.5 py-3.5">
         {/* 세 지표가 나란히 선다. 좁아지면 두 칸 → 한 칸으로 접힌다 */}
         <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           <div className="flex flex-col gap-2">
-            <p className="text-text-secondary text-[11.5px]">주중 · 주말 매출</p>
+            <p className="text-text-secondary text-caption">주중 · 주말 매출</p>
 
             <StackedBar
               segments={[
@@ -131,14 +136,14 @@ export default function RevenueStructurePanel({
               ]}
             />
 
-            <p className="text-text-secondary flex gap-4 text-[11.5px] tabular-nums">
+            <p className="text-text-secondary text-caption flex gap-4 tabular-nums">
               <span>주중 월 {formatBigWonText(byDayType.weekdayRevenueMonthly)}</span>
               <span>주말 월 {formatBigWonText(byDayType.weekendRevenueMonthly)}</span>
             </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <p className="text-text-secondary text-[11.5px]">성별 매출 구성</p>
+            <p className="text-text-secondary text-caption">성별 매출 구성</p>
 
             <StackedBar
               segments={[
@@ -147,7 +152,7 @@ export default function RevenueStructurePanel({
               ]}
             />
 
-            <p className="text-text-secondary flex gap-4 text-[11.5px] tabular-nums">
+            <p className="text-text-secondary text-caption flex gap-4 tabular-nums">
               <span>남성 월 {formatBigWonText(byGender.maleRevenueMonthly)}</span>
               <span>여성 월 {formatBigWonText(byGender.femaleRevenueMonthly)}</span>
             </p>
@@ -159,7 +164,7 @@ export default function RevenueStructurePanel({
           )}
         </div>
 
-        <p className="text-text-secondary text-[11.5px] leading-relaxed">
+        <p className="text-text-secondary text-caption leading-relaxed">
           주말 매출 비중이 {weekendPercent}% 예요.
           {/*
             유동인구 성비와 매출 성비가 3%p 이상 엇갈릴 때만 짚어준다. 그 아래는 오차로 본다.
@@ -201,7 +206,7 @@ function FootTrafficGenderBar({ maleRatio }: { maleRatio: number }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-text-secondary text-[11.5px]">유동인구 성비</p>
+      <p className="text-text-secondary text-caption">유동인구 성비</p>
 
       <StackedBar
         segments={[
@@ -210,7 +215,7 @@ function FootTrafficGenderBar({ maleRatio }: { maleRatio: number }) {
         ]}
       />
 
-      <p className="text-text-secondary text-[11.5px]">상권을 오간 사람 기준이에요</p>
+      <p className="text-text-secondary text-caption">상권을 오간 사람 기준이에요</p>
     </div>
   )
 }

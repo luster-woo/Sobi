@@ -39,7 +39,7 @@ interface TableProps<T> {
   bordered?: boolean
   /**
    * 행 높이를 관심 목록(FavoritesPage)과 같게 한다 — 셀 여백이 `px-4 py-3` 대신
-   * `px-[15px] py-2.5` 가 된다.
+   * `px-card py-2.5` 가 된다.
    *
    * 기본값으로 만들지 않은 이유: 상권 비교표·상환 기록표는 지금 밀도가 맞고, 공용
    * 컴포넌트에서 기본을 바꾸면 손대지 않은 화면의 줄 높이가 같이 움직인다.
@@ -83,7 +83,7 @@ export default function Table<T>({
 }: TableProps<T>) {
   const isClickable = Boolean(onRowClick)
   // 헤더와 본문이 같은 값을 써야 열이 어긋나지 않는다
-  const cellPadding = dense ? 'px-[15px] py-2.5' : 'px-4 py-3'
+  const cellPadding = dense ? 'px-card py-2.5' : 'px-4 py-3'
 
   const handleKeyDown = (row: T) => (event: KeyboardEvent<HTMLTableRowElement>) => {
     if (!onRowClick) return

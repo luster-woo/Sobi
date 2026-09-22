@@ -61,9 +61,7 @@ export function MyDataCollectPage() {
   if (failed) {
     return (
       <div className="flex w-full max-w-[460px] flex-col items-center gap-5 pt-6">
-        <h1 className="font-heading text-text text-[21px] font-bold tracking-[-0.02em]">
-          금융 데이터를 가져오지 못했어요
-        </h1>
+        <h1 className="text-h2 tracking-[-0.02em]">금융 데이터를 가져오지 못했어요</h1>
 
         <p className="text-body2 text-text-muted max-w-[42ch] text-center leading-[1.7]">
           연동에 실패했습니다. 다시 시도하거나, 나중에 마이페이지에서 연동할 수 있어요.
@@ -89,9 +87,7 @@ export function MyDataCollectPage() {
     <div className="flex w-full max-w-[460px] flex-col items-center gap-5 pt-6">
       <Spinner size={44} label="금융 데이터를 가져오는 중" />
 
-      <h1 className="font-heading text-text text-[21px] font-bold tracking-[-0.02em]">
-        금융 데이터를 안전하게 가져오는 중이에요
-      </h1>
+      <h1 className="text-h2 tracking-[-0.02em]">금융 데이터를 안전하게 가져오는 중이에요</h1>
 
       <p className="text-body2 text-text-muted max-w-[42ch] text-center leading-[1.7]">
         가져온 정보는 자격 판정에만 쓰이고, 계좌 비밀번호는 저장하지 않아요. 연동은 마이페이지에서

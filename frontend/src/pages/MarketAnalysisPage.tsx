@@ -76,7 +76,7 @@ export function MarketAnalysisPage() {
     if (!params) setConditionOpen(true)
   }
 
-  const { data, isLoading, isError, error, isPlaceholderData } = useMarketAnalysis(
+  const { data, isLoading, isError, error, isPlaceholderData, refetch } = useMarketAnalysis(
     params && { ...params, compareLimit: COMPARE_LIMIT, mixLimit: MIX_LIMIT },
   )
 
@@ -102,7 +102,7 @@ export function MarketAnalysisPage() {
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
         {/*
           조건이 없을 때 모달 뒤에 깔리는 배경. 모달을 닫으면 화면을 떠나므로 이 상태로
           머무를 일은 없고, 오버레이 뒤가 텅 비어 보이지 않게 두는 것이다.
@@ -135,6 +135,11 @@ export function MarketAnalysisPage() {
                 ? '선택한 지역의 상권 데이터가 없어요. 다른 행정동을 골라주세요.'
                 : '잠시 후 다시 시도해주세요.'
             }
+            action={
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                다시 시도
+              </Button>
+            }
           />
         ) : (
           data && (
@@ -151,11 +156,11 @@ export function MarketAnalysisPage() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-text text-[15px] font-bold">
+                  <p className="text-text text-body1 font-bold">
                     {data.location.cityName} {data.location.districtName} {data.location.dongName} ·{' '}
                     {data.business.name}
                   </p>
-                  <p className="text-text-muted mt-1 text-[11.5px]">
+                  <p className="text-text-muted text-caption mt-1">
                     행정동 기준 · {formatDataQuarter(data.meta.dataQuarter)}
                   </p>
                 </div>

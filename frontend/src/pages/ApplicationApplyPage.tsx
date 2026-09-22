@@ -137,14 +137,12 @@ export function ApplicationApplyPage() {
       { applicationDocumentId, file },
       {
         /*
-         * 작성 서류는 검증을 타지 않아 올리는 즉시 끝난다. 제출 서류만 AI 검증이 뒤에서 돌고, 
+         * 작성 서류는 검증을 타지 않아 올리는 즉시 끝난다. 제출 서류만 AI 검증이 뒤에서 돌고,
          * 그 결과는 상세 폴링으로 받는다.
          */
         onSuccess: (result) =>
           showToast(
-            result.validationStatus === 'PASSED'
-              ? '올렸어요.'
-              : '올렸어요. 검증이 시작됩니다.',
+            result.validationStatus === 'PASSED' ? '올렸어요.' : '올렸어요. 검증이 시작됩니다.',
           ),
         onError: (error) => showToast(uploadErrorMessage(error), 'danger'),
       },
@@ -287,28 +285,28 @@ export function ApplicationApplyPage() {
           {documents.length > 0 && <ApplicationChecklist documents={documents} />}
 
           {documents.length > 0 && (
-          <Panel title="업로드 제한">
-            <dl className="text-body2 flex flex-col gap-2 px-[15px] py-4">
-              {/* 제출 서류는 AI 가 OCR 로 읽어야 해서 형식이 좁다 */}
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary shrink-0">제출 서류</dt>
-                <dd className="text-text text-right">{SUBMIT_ACCEPT_LABEL}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary shrink-0">작성 서류</dt>
-                <dd className="text-text text-right">{WRITE_ACCEPT_LABEL}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary">용량</dt>
-                <dd className="text-text">파일당 {UPLOAD_MAX_SIZE_MB}MB 이하</dd>
-              </div>
-            </dl>
-          </Panel>
+            <Panel title="업로드 제한">
+              <dl className="text-body2 px-card flex flex-col gap-2 py-4">
+                {/* 제출 서류는 AI 가 OCR 로 읽어야 해서 형식이 좁다 */}
+                <div className="flex justify-between gap-4">
+                  <dt className="text-text-secondary shrink-0">제출 서류</dt>
+                  <dd className="text-text text-right">{SUBMIT_ACCEPT_LABEL}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-text-secondary shrink-0">작성 서류</dt>
+                  <dd className="text-text text-right">{WRITE_ACCEPT_LABEL}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-text-secondary">용량</dt>
+                  <dd className="text-text">파일당 {UPLOAD_MAX_SIZE_MB}MB 이하</dd>
+                </div>
+              </dl>
+            </Panel>
           )}
 
           {selectedAccount && (
             <Panel title="승인되면 출금 계좌로">
-              <div className="px-[15px] py-4">
+              <div className="px-card py-4">
                 <p className="text-body1 text-text font-semibold">
                   {selectedAccount.bankName} {maskAccountNo(selectedAccount.accountNo)}
                 </p>

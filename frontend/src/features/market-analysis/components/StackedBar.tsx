@@ -49,12 +49,12 @@ export default function StackedBar({ segments, className }: StackedBarProps) {
     <div className={cn('flex h-8 overflow-hidden rounded-md', className)}>
       <div
         style={{ width: `${firstPercent}%` }}
-        className="bg-primary text-text-inverse flex items-center justify-center text-[12px] font-medium whitespace-nowrap"
+        className="bg-primary text-text-inverse text-caption flex items-center justify-center font-medium whitespace-nowrap"
       >
         {first.label}
       </div>
 
-      <div className="bg-bg-canvas text-text-secondary flex flex-1 items-center justify-center text-[12px] font-medium whitespace-nowrap">
+      <div className="bg-bg-canvas text-text-secondary text-caption flex flex-1 items-center justify-center font-medium whitespace-nowrap">
         {second.label}
       </div>
     </div>

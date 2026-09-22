@@ -26,8 +26,8 @@ export default function Panel({ title, headerRight, children, className }: Panel
   return (
     <div className={cn('border-border bg-surface rounded-md border', className)}>
       {title && (
-        <div className="border-border-subtle flex items-baseline justify-between gap-3 border-b px-[15px] py-3">
-          <h3 className="text-text text-[13.5px] font-bold">{title}</h3>
+        <div className="border-border-subtle px-card flex items-baseline justify-between gap-3 border-b py-3">
+          <h3 className="text-text text-body2 font-bold">{title}</h3>
           {headerRight}
         </div>
       )}

@@ -32,7 +32,7 @@ export default function ApplicationChecklist({ documents }: ApplicationChecklist
         {documents.map((doc, index) => (
           <li
             key={doc.applicationDocumentId}
-            className="flex items-center gap-3 px-[15px] py-3 first:pt-4 last:pb-4"
+            className="px-card flex items-center gap-3 py-3 first:pt-4 last:pb-4"
           >
             <span
               className={cn(

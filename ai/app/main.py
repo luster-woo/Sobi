@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from app.core import db
 from app.ocr import engine as ocr_engine
 from app.ocr.router import router as ocr_router
+from app.rag import search
 from app.rag.embedding import koe5
 from app.rag.router import router as rag_router
 from app.agent.documents.preprocessing_batch.router import router as preprocessing_batch_router

@@ -89,6 +89,7 @@ export default function ApplicationDocumentList({
                 key={doc.applicationDocumentId}
                 name={doc.documentName ?? '이름 없는 서류'}
                 status={toSubmitUiStatus(doc.validationStatus)}
+                fileName={doc.originalFilename}
                 description={describeDocument(doc)}
                 accept={uploadAccept(doc.documentType)}
                 maxSizeMb={UPLOAD_MAX_SIZE_MB}

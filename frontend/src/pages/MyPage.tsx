@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import { useApplications } from '@/features/application/hooks/useApplication'
 import { buildAuthorizeUrl, isGoogleOAuthConfigured } from '@/features/auth/model/googleOAuth'
 import { useLoanProducts } from '@/features/loan-repayment/hooks/useRepayment'
+import RefreshResultModal from '@/features/mydata/components/RefreshResultModal'
 import { useMydataRefresh } from '@/features/mydata/hooks/useMydata'
 import LinkRow from '@/features/mypage/components/LinkRow'
 import PanelHead from '@/features/mypage/components/PanelHead'
@@ -314,6 +315,8 @@ export function MyPage() {
       </div>
 
       <PasswordChangeModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+
+      <RefreshResultModal result={refresh.result} onClose={refresh.closeResult} />
 
       <SocialLinkModal
         open={socialLinkOpen}

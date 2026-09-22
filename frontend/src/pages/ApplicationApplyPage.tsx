@@ -4,6 +4,8 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import ApplicationChecklist from '@/features/application/components/ApplicationChecklist'
 import ApplicationDocumentList from '@/features/application/components/ApplicationDocumentList'
 import ApplicationSubmitForm from '@/features/application/components/ApplicationSubmitForm'
+import DraftWritingModal from '@/features/application/components/DraftWritingModal'
+import OcrScanModal from '@/features/application/components/OcrScanModal'
 import {
   useApplicationDetail,
   useCancelApplication,
@@ -12,6 +14,7 @@ import {
   useUploadDocument,
   useWriteDraft,
 } from '@/features/application/hooks/useApplication'
+import { useLocalPreviews } from '@/features/application/hooks/useLocalPreviews'
 import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
 import { submitApplicationErrorMessage } from '@/features/application/model/applicationError'
 import { downloadErrorMessage } from '@/features/application/model/downloadError'
@@ -23,7 +26,6 @@ import {
 } from '@/features/application/model/upload'
 import { uploadErrorMessage } from '@/features/application/model/uploadError'
 import { ROUTES } from '@/shared/constants/routes'
-import { useEstimatedProgress } from '@/shared/hooks/useEstimatedProgress'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import { APPLICATION_STATUS_LABEL } from '@/shared/types/application'
 import Badge from '@/shared/ui/Badge'
@@ -57,6 +59,7 @@ export function ApplicationApplyPage() {
   const { data: detail, isLoading, isError } = useApplicationDetail(applicationId)
   const { data: accounts } = usePayoutAccounts()
   const upload = useUploadDocument(applicationId)
+  const { previews, setPreview } = useLocalPreviews()
   const draft = useWriteDraft()
   const downloadOriginal = useDownloadProgramDocument()
   const submit = useSubmitApplication(applicationId)
@@ -140,10 +143,12 @@ export function ApplicationApplyPage() {
          * 작성 서류는 검증을 타지 않아 올리는 즉시 끝난다. 제출 서류만 AI 검증이 뒤에서 돌고,
          * 그 결과는 상세 폴링으로 받는다.
          */
-        onSuccess: (result) =>
+        onSuccess: (result) => {
+          setPreview(applicationDocumentId, file)
           showToast(
             result.validationStatus === 'PASSED' ? '올렸어요.' : '올렸어요. 검증이 시작됩니다.',
-          ),
+          )
+        },
         onError: (error) => showToast(uploadErrorMessage(error), 'danger'),
       },
     )
@@ -242,6 +247,7 @@ export function ApplicationApplyPage() {
               draftingDocumentId={draft.isPending ? (draft.variables ?? null) : null}
               onDownloadOriginal={handleDownloadOriginal}
               readOnly={!isEditable}
+              previews={previews}
             />
 
             {isEditable ? (
@@ -442,53 +448,15 @@ export function ApplicationApplyPage() {
         초안 진행 모달. 닫을 수 없다 — 창을 닫아도 요청은 계속 돌고, 다 만든 파일을
         받을 자리가 사라진다. AI 가 한 번 도는 비용이 그대로 버려진다.
       */}
-      <DraftProgressModal open={draft.isPending} />
+      <DraftWritingModal
+        status={draft.status}
+        documentName={
+          documents.find((doc) => doc.programDocumentId === draft.variables)?.documentName ??
+          '신청 서류'
+        }
+      />
+
+      <OcrScanModal documents={documents} previews={previews} />
     </div>
-  )
-}
-
-/** 예상 소요. 서버 read timeout 이 300초라 그 절반쯤을 보통으로 잡는다 */
-const DRAFT_EXPECTED_MS = 150_000
-
-/**
- * 초안 만드는 중 화면.
- *
- * 진행률은 **추정값이다.** 서버가 응답 하나만 주고 그 사이 어디까지 했는지 알려주지
- * 않는다 — 마이데이터 연동과 같은 상황이라 같은 훅을 쓴다. 응답 전에는 95% 에서
- * 멈추고, 도착하면 100 까지 채운다.
- *
- * 링이 아니라 막대를 쓰는 이유는 5분이 링으로 버티기에 너무 길어서다. 링은 3초나
- * 5분이나 똑같이 보여서 사용자가 멈춘 줄 안다. 막대는 느려도 움직이는 것이 보인다.
- */
-function DraftProgressModal({ open }: { open: boolean }) {
-  const { percent } = useEstimatedProgress({
-    defs: [],
-    expectedMs: DRAFT_EXPECTED_MS,
-    minMs: 400,
-    settled: !open,
-  })
-
-  return (
-    <Modal open={open} onClose={() => {}} title="초안을 만들고 있어요">
-      <div className="flex flex-col gap-3">
-        <div className="bg-bg-canvas h-2 overflow-hidden rounded-full">
-          <div
-            role="progressbar"
-            aria-valuenow={Math.round(percent)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="초안 생성 진행률"
-            className="bg-primary h-full rounded-full transition-[width] duration-200 ease-out"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-
-        <p className="text-body2 text-text-secondary break-keep">
-          사업자 정보와 마이데이터를 읽어 서식을 채우고 있어요.{' '}
-          <b className="text-text">최대 5분 가량 소요될 수 있습니다.</b> 창을 닫지 말고 기다려
-          주세요.
-        </p>
-      </div>
-    </Modal>
   )
 }

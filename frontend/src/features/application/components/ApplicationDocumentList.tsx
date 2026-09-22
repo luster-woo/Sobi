@@ -1,11 +1,14 @@
+import OcrScanPreview from '@/features/application/components/OcrScanPreview'
+import type { LocalPreview } from '@/features/application/hooks/useLocalPreviews'
 import { splitByType } from '@/features/application/model/documents'
 import {
   describeDocument,
   toSubmitUiStatus,
   toWriteUiStatus,
 } from '@/features/application/model/documentStatus'
+import { failedCheckOf, ocrChecksFor } from '@/features/application/model/ocrChecks'
 import type { ApplicationDocument } from '@/features/application/model/types'
-import { UPLOAD_MAX_SIZE_MB,uploadAccept } from '@/features/application/model/upload'
+import { UPLOAD_MAX_SIZE_MB, uploadAccept } from '@/features/application/model/upload'
 import DocumentUploadItem from '@/shared/ui/DocumentUploadItem'
 import DocumentWriteItem from '@/shared/ui/DocumentWriteItem'
 
@@ -32,6 +35,23 @@ interface ApplicationDocumentListProps {
    * 내려받기는 남긴다 — 뭐를 냈는지 다시 볼 수 있어야 한다.
    */
   readOnly?: boolean
+  /** 이번 화면에서 올린 파일 미리보기. 서류 id 로 찾는다 */
+  previews: Map<number, LocalPreview>
+}
+
+function renderOcr(doc: ApplicationDocument, preview: LocalPreview | undefined) {
+  const status = toSubmitUiStatus(doc.validationStatus)
+  if (status === 'EMPTY') return undefined
+
+  return (
+    <OcrScanPreview
+      status={status}
+      checks={ocrChecksFor(doc.documentName ?? '')}
+      failedCheck={failedCheckOf(doc.validationMessage)}
+      preview={preview}
+      originalFilename={doc.originalFilename}
+    />
+  )
 }
 
 /**
@@ -58,8 +78,8 @@ function NoDocuments() {
     <div className="border-border bg-surface-alt rounded-md border border-dashed px-5 py-6 text-center">
       <p className="text-body1 text-text font-semibold">올릴 서류가 없어요</p>
       <p className="text-body2 text-text-secondary mt-1.5 break-keep">
-        이 공고는 등록된 제출 서류가 없어서 바로 신청할 수 있어요. 접수 뒤에 기관에서 따로
-        서류를 요청할 수 있으니 공고문을 한 번 확인해 주세요.
+        이 공고는 등록된 제출 서류가 없어서 바로 신청할 수 있어요. 접수 뒤에 기관에서 따로 서류를
+        요청할 수 있으니 공고문을 한 번 확인해 주세요.
       </p>
     </div>
   )
@@ -73,6 +93,7 @@ export default function ApplicationDocumentList({
   draftingDocumentId,
   onDownloadOriginal,
   readOnly = false,
+  previews,
 }: ApplicationDocumentListProps) {
   const { submit, write } = splitByType(documents)
 
@@ -90,6 +111,7 @@ export default function ApplicationDocumentList({
                 name={doc.documentName ?? '이름 없는 서류'}
                 status={toSubmitUiStatus(doc.validationStatus)}
                 description={describeDocument(doc)}
+                detail={renderOcr(doc, previews.get(doc.applicationDocumentId))}
                 accept={uploadAccept(doc.documentType)}
                 maxSizeMb={UPLOAD_MAX_SIZE_MB}
                 readOnly={readOnly}
@@ -109,41 +131,43 @@ export default function ApplicationDocumentList({
               const { programDocumentId } = doc
 
               return (
-              <DocumentWriteItem
-                key={doc.applicationDocumentId}
-                name={doc.documentName ?? '이름 없는 서류'}
-                status={toWriteUiStatus(doc)}
-                description={describeDocument(doc)}
-                accept={uploadAccept(doc.documentType)}
-                maxSizeMb={UPLOAD_MAX_SIZE_MB}
-                /*
-                 * 두 버튼 다 programDocumentId 로 부른다. 대출 신청의 서류는 이 값이
-                 * 없어서 버튼이 아예 안 생긴다 — 대출에는 작성 서류도 서식 파일도 없다.
-                 *
-                 * `== null` 이 일부러 느슨하다. 서버가 이 필드를 늦게 넣어서 배포가
-                 * 밀리면 값이 null 이 아니라 아예 안 온다. `=== null` 로 막으면 undefined
-                 * 가 통과해 주소에 그대로 박히고(/program-documents/undefined/download)
-                 * 500 이 난다 — 실제로 그렇게 터졌다.
-                 *
-                 * 읽기 전용이면 초안만 막는다. 빈 서식은 제출한 뒤에도 받을 수 있어야
-                 * 무엇을 냈는지 다시 볼 수 있다.
-                 */
-                onDownloadOriginal={
-                  programDocumentId == null
-                    ? undefined
-                    : () => onDownloadOriginal(programDocumentId)
-                }
-                onWriteDraft={
-                  readOnly || programDocumentId == null
-                    ? undefined
-                    : () => onWriteDraft(programDocumentId)
-                }
-                isDraftPending={programDocumentId != null && draftingDocumentId === programDocumentId}
-                onSelectFile={
-                  readOnly ? undefined : (file) => onUpload(doc.applicationDocumentId, file)
-                }
-                onFileError={onFileError}
-              />
+                <DocumentWriteItem
+                  key={doc.applicationDocumentId}
+                  name={doc.documentName ?? '이름 없는 서류'}
+                  status={toWriteUiStatus(doc)}
+                  description={describeDocument(doc)}
+                  accept={uploadAccept(doc.documentType)}
+                  maxSizeMb={UPLOAD_MAX_SIZE_MB}
+                  /*
+                   * 두 버튼 다 programDocumentId 로 부른다. 대출 신청의 서류는 이 값이
+                   * 없어서 버튼이 아예 안 생긴다 — 대출에는 작성 서류도 서식 파일도 없다.
+                   *
+                   * `== null` 이 일부러 느슨하다. 서버가 이 필드를 늦게 넣어서 배포가
+                   * 밀리면 값이 null 이 아니라 아예 안 온다. `=== null` 로 막으면 undefined
+                   * 가 통과해 주소에 그대로 박히고(/program-documents/undefined/download)
+                   * 500 이 난다 — 실제로 그렇게 터졌다.
+                   *
+                   * 읽기 전용이면 초안만 막는다. 빈 서식은 제출한 뒤에도 받을 수 있어야
+                   * 무엇을 냈는지 다시 볼 수 있다.
+                   */
+                  onDownloadOriginal={
+                    programDocumentId == null
+                      ? undefined
+                      : () => onDownloadOriginal(programDocumentId)
+                  }
+                  onWriteDraft={
+                    readOnly || programDocumentId == null
+                      ? undefined
+                      : () => onWriteDraft(programDocumentId)
+                  }
+                  isDraftPending={
+                    programDocumentId != null && draftingDocumentId === programDocumentId
+                  }
+                  onSelectFile={
+                    readOnly ? undefined : (file) => onUpload(doc.applicationDocumentId, file)
+                  }
+                  onFileError={onFileError}
+                />
               )
             })}
           </div>

@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-import { DEFAULT_ERROR_MESSAGE,ERROR_CODE } from '@/shared/api/errors'
+import { DEFAULT_ERROR_MESSAGE, ERROR_CODE } from '@/shared/api/errors'
 import type { ApiResponse } from '@/shared/types'
 
 /**
@@ -27,7 +27,8 @@ const CODE_MESSAGE: Record<string, string> = {
   [ERROR_CODE.DOCUMENT_AGENT_REQUEST_FAILED]:
     '문서 작성 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.',
   [ERROR_CODE.DOCUMENT_FILE_NOT_FOUND]: '등록된 서식 파일이 없어요. 담당 기관에 문의해 주세요.',
-  [ERROR_CODE.INVALID_DOCUMENT_PATH]: '서식 파일 경로가 올바르지 않아요. 담당 기관에 문의해 주세요.',
+  [ERROR_CODE.INVALID_DOCUMENT_PATH]:
+    '서식 파일 경로가 올바르지 않아요. 담당 기관에 문의해 주세요.',
   [ERROR_CODE.DOCUMENT_FILE_READ_FAILED]: '서식 파일을 읽지 못했어요. 잠시 후 다시 시도해 주세요.',
 }
 

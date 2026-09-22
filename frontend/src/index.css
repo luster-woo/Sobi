@@ -286,7 +286,44 @@
   }
 }
 
+/*
+ * OCR 이 서류를 읽는 중. 빛줄기가 위아래로 오가며 훑는다(alternate).
+ * 줄 가운데 선이 위·아래 가장자리에 닿도록 자기 높이의 절반만큼 빼서 움직인다.
+ */
+@keyframes ocr-scan {
+  from {
+    transform: translateY(-50%);
+  }
+  to {
+    transform: translateY(calc(var(--scan-distance, 100px) - 50%));
+  }
+}
+
+/* 검증 통과 도장. 크게 찍혔다가 제자리에 눌린다 */
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: rotate(-14deg) scale(1.8);
+  }
+  60% {
+    opacity: 1;
+    transform: rotate(-14deg) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-14deg) scale(1);
+  }
+}
+
 @layer utilities {
+  .animate-ocr-scan {
+    animation: ocr-scan 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+  }
+
+  .animate-stamp-in {
+    animation: stamp-in 450ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   /* 상권 분석은 한 화면에 막대가 여러 줄이라 짧게 끊는다 */
   .animate-grow-bar {
     transform-origin: left center;
@@ -325,7 +362,9 @@
     .animate-reveal-bar,
     .animate-slide-marker,
     .animate-pulse-ring,
-    .animate-fade-slide-in {
+    .animate-fade-slide-in,
+    .animate-ocr-scan,
+    .animate-stamp-in {
       animation: none;
     }
   }

@@ -11,7 +11,7 @@ import type {
   SubmitApplicationBody,
   ValidationStatus,
 } from '@/features/application/model/types'
-import { UPLOAD_MAX_SIZE_MB,uploadAccept } from '@/features/application/model/upload'
+import { UPLOAD_MAX_SIZE_MB, uploadAccept } from '@/features/application/model/upload'
 import { findLoanProductSummary } from '@/mocks/handlers/loan'
 import { findSupportProductSummary, isSupportProgramClosed } from '@/mocks/handlers/support'
 import { ERROR_CODE } from '@/shared/api/errors'
@@ -52,8 +52,6 @@ interface MockDocument {
    * 검증 실패 → 다시 업로드 흐름을 화면에서 확인해야 해서 하나는 실패로 둔다.
    */
   failsFirstAttempt: boolean
-  /** 통과했을 때 OCR 이 확인했다고 보여줄 내용 */
-  passedDetail: string | null
   /**
    * 시연용으로 상태를 고정한다. 시드 신청 건에만 쓴다 —
    * 화면을 열자마자 검증 중·검증 실패가 어떻게 보이는지 봐야 하는데,
@@ -97,12 +95,7 @@ interface MockApplication {
 /** 서류 서식. 신청을 만들 때 이걸 복제해서 행을 미리 깔아 둔다 */
 type DocumentTemplate = Pick<
   MockDocument,
-  | 'docName'
-  | 'issuer'
-  | 'documentType'
-  | 'failsFirstAttempt'
-  | 'passedDetail'
-  | 'programDocumentId'
+  'docName' | 'issuer' | 'documentType' | 'failsFirstAttempt' | 'programDocumentId'
 >
 
 /**
@@ -118,7 +111,6 @@ const LOAN_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
     issuer: '홈택스',
     documentType: 'SUBMIT',
     failsFirstAttempt: false,
-    passedDetail: '발급일 2026. 09. 02 · 업종 일치 · 직인 확인',
     programDocumentId: null,
   },
   {
@@ -126,7 +118,6 @@ const LOAN_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
     issuer: '홈택스',
     documentType: 'SUBMIT',
     failsFirstAttempt: false,
-    passedDetail: '발급일 2026. 08. 20 · 직인 확인 · 필수 필드 완료',
     programDocumentId: null,
   },
   {
@@ -134,7 +125,6 @@ const LOAN_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
     issuer: '홈택스·정부24',
     documentType: 'SUBMIT',
     failsFirstAttempt: true,
-    passedDetail: '발급일 2026. 09. 10 · 체납 없음',
     programDocumentId: null,
   },
   {
@@ -142,7 +132,6 @@ const LOAN_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
     issuer: '홈택스',
     documentType: 'SUBMIT',
     failsFirstAttempt: false,
-    passedDetail: '발급일 2026. 07. 31 · 직인 확인 · 필수 필드 완료',
     programDocumentId: null,
   },
 ]
@@ -159,7 +148,6 @@ const SUPPORT_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
     issuer: '홈택스',
     documentType: 'SUBMIT',
     failsFirstAttempt: false,
-    passedDetail: '발급일 2026. 09. 02 · 업종 일치 · 직인 확인',
     programDocumentId: 101,
   },
   {
@@ -167,7 +155,6 @@ const SUPPORT_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
     issuer: '홈택스·정부24',
     documentType: 'SUBMIT',
     failsFirstAttempt: true,
-    passedDetail: '발급일 2026. 09. 10 · 체납 없음',
     programDocumentId: 102,
   },
   {
@@ -175,7 +162,6 @@ const SUPPORT_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
     issuer: '위택스',
     documentType: 'SUBMIT',
     failsFirstAttempt: false,
-    passedDetail: '발급일 2026. 09. 08 · 체납 없음',
     programDocumentId: 103,
   },
   {
@@ -183,7 +169,6 @@ const SUPPORT_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
     issuer: '화면에서 작성',
     documentType: 'WRITE',
     failsFirstAttempt: false,
-    passedDetail: null,
     programDocumentId: 104,
   },
   {
@@ -191,7 +176,6 @@ const SUPPORT_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
     issuer: '서식 내려받아 서명',
     documentType: 'WRITE',
     failsFirstAttempt: false,
-    passedDetail: null,
     programDocumentId: 105,
   },
 ]
@@ -460,7 +444,7 @@ function toDocumentResponse(doc: MockDocument): ApplicationDocument {
     documentName: doc.docName,
     documentType: doc.documentType,
     validationStatus,
-    validationMessage: verifyMessage(validationStatus, doc),
+    validationMessage: verifyMessage(validationStatus),
     originalFilename: doc.originalFilename,
     /*
      * WRITING 을 만들지 않는다. 서버가 이 값을 갱신하지 않기 때문이다 — 초안 생성이
@@ -471,17 +455,14 @@ function toDocumentResponse(doc: MockDocument): ApplicationDocument {
   }
 }
 
-function verifyMessage(status: ValidationStatus, doc: MockDocument): string | null {
-  switch (status) {
-    case 'VALIDATING':
-      return '서명 / 도장 / 발급 유효기간 / 필수 필드를 확인하고 있어요'
-    case 'FAILED':
-      return '인감 도장이 확인되지 않아요. 날인 후 다시 올려주세요.'
-    case 'PASSED':
-      return doc.passedDetail
-    default:
-      return null
-  }
+/**
+ * 실서버는 실패일 때만 문구를 저장한다(DocumentValidationProcessor). 문구는 AI 의
+ * 항목별 고정 문구라(ai/app/ocr/rules.py MESSAGES) 화면이 이걸로 걸린 항목을 짚는다.
+ */
+function verifyMessage(status: ValidationStatus): string | null {
+  return status === 'FAILED'
+    ? '유효기간이 지난 서류입니다 (2026-06-30). 새로 발급받아 올려주세요.'
+    : null
 }
 
 /**
@@ -580,15 +561,18 @@ function toListItem(app: MockApplication): ApplicationListItem {
  * 서버도 FundingService 가 ApplicationService.create() 를 그대로 부른다.
  */
 type CreateResult =
-  | { ok: true; applicationId: number }
-  | { ok: false; code: string; message: string }
+  { ok: true; applicationId: number } | { ok: false; code: string; message: string }
 
 /** 새 신청을 막는 상태. 반려(REJECTED)는 다시 신청할 수 있어서 빠진다 */
 const BLOCKING_STATUSES: ApplicationStatus[] = ['SUBMITTED', 'REVIEWING', 'APPROVED', 'PAID']
 
 function createMockApplication(type: string | null, programId: number): CreateResult {
   if (!type || !programId) {
-    return { ok: false, code: ERROR_CODE.APPLICATION_TYPE_INVALID, message: '유효하지 않은 요청입니다.' }
+    return {
+      ok: false,
+      code: ERROR_CODE.APPLICATION_TYPE_INVALID,
+      message: '유효하지 않은 요청입니다.',
+    }
   }
 
   const isLoan = type === 'LOAN'
@@ -793,9 +777,7 @@ export const applicationHandlers = [
      *    거기 맞추면 화면이 보내지 않는 값을 목이 요구하게 되어 제출을 눌러볼 수 없다.
      *    백엔드가 그 분기를 걷어내면 양쪽이 맞는다.
      */
-    const range = app.loan
-      ? { min: app.loan.minLoanBalance, max: app.loan.maxLoanBalance }
-      : null
+    const range = app.loan ? { min: app.loan.minLoanBalance, max: app.loan.maxLoanBalance } : null
 
     if (range) {
       const amount = body.amount
@@ -834,7 +816,7 @@ export const applicationHandlers = [
     )
   }),
 
-    /**
+  /**
    * 신청 서류 업로드 (첫 업로드·재업로드 공통).
    *
    * 서버가 @RequestParam 으로 받는다. JSON part 가 따로 없고 값이 FormData 필드로

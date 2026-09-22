@@ -6,7 +6,8 @@ uvicorn[standard]==0.53.0
 pydantic==2.13.5
 python-multipart==0.0.32  # FastAPI 파일 업로드(Form·UploadFile). /ocr/verify
 
-# 임베딩
+# 임베딩 / 검색
+rank-bm25==0.2.2  # 어휘 검색. 직접 구현과 동률이라 표준 구현을 쓴다
 sentence-transformers==6.0.1
 transformers==5.17.0
 numpy==2.3.5  # paddlex 3.7.x 가 numpy<2.4 를 요구한다. RAG 쪽(sentence-transformers·transformers)은 2.4 를 요구하지 않음

@@ -34,6 +34,11 @@ class SearchRequest(BaseModel):
 class SearchTextRequest(BaseModel):
     query: str = Field(min_length=1, max_length=200)
     top_k: int = Field(default=20, ge=1, le=100)
+    # 어휘 검색(BM25) + Jev 재정렬. 둘은 한 쌍이라 같이 켠다.
+    # 어휘가 후보를 넓히고 재정렬이 잡음을 버린다. 하나만 켜면 손해다.
+    # 근거는 docs/06_search_quality.md.
+    hybrid: bool = True
+    rerank: bool = True
 
 @router.post("/embed", response_model=EmbedResponse)
 async def embed(req: EmbedRequest):
@@ -66,8 +71,15 @@ async def search(req: SearchRequest):
 
 @router.post("/search-text")
 async def search_text(req: SearchTextRequest):
-    """질의 문장으로 공고를 찾는다. LLM을 부르지 않아 1초 미만이다."""
-    programs = await rag_search.search_by_text(query=req.query, top_k=req.top_k)
+    """질의 문장으로 공고를 찾는다.
+
+    기본 경로(hybrid)는 벡터 + 어휘 검색이고 LLM 을 부르지 않아 1초 미만이다.
+    rerank=true 를 주면 후보마다 Jev 를 부르므로 1초를 넘는다. 측정상 이득이
+    없어 기본은 꺼져 있다.
+    """
+    programs = await rag_search.search_by_text(
+        query=req.query, top_k=req.top_k,
+        hybrid=req.hybrid, rerank=req.rerank)
     return {"programs": programs}
 
 @router.post("/recommend")

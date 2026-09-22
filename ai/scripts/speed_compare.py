@@ -26,6 +26,8 @@ import time
 if sys.platform == "win32":
     # psycopg 는 ProactorEventLoop 에서 동작하지 않는다. run_dev.py 와 같은 조치.
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    # 파일로 리다이렉트하면 콘솔 인코딩(cp949)을 쓴다. 한글이 깨진다.
+    sys.stdout.reconfigure(encoding="utf-8")
 
 from app.core import db
 from app.rag import jev, llm_judge, recommend, search

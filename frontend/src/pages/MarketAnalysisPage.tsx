@@ -19,6 +19,7 @@ import Button from '@/shared/ui/Button'
 import ColumnResizer from '@/shared/ui/ColumnResizer'
 import EmptyState from '@/shared/ui/EmptyState'
 import Skeleton from '@/shared/ui/Skeleton'
+import { cn } from '@/shared/utils/cn'
 
 /** 표에 넣을 주변 상권 행 수와 업종 구성 항목 수. 화면에 노출하지 않는 고정값이다 */
 const COMPARE_LIMIT = 7
@@ -75,7 +76,7 @@ export function MarketAnalysisPage() {
     if (!params) setConditionOpen(true)
   }
 
-  const { data, isLoading, isError, error } = useMarketAnalysis(
+  const { data, isLoading, isError, error, isPlaceholderData } = useMarketAnalysis(
     params && { ...params, compareLimit: COMPARE_LIMIT, mixLimit: MIX_LIMIT },
   )
 
@@ -120,7 +121,12 @@ export function MarketAnalysisPage() {
           </>
         )}
 
-        {isError && (
+        {/*
+          오류일 때는 결과를 그리지 않는다. 이전 결과를 남겨 두는 설정이라
+          (useMarketAnalysis 의 keepPreviousData) 둘을 나란히 두면 '불러오지 못했어요'
+          아래에 직전 상권의 지표가 그대로 서 있게 된다.
+        */}
+        {isError ? (
           <EmptyState
             title="상권 정보를 불러오지 못했어요"
             // 존재하지 않는 행정동(MARKET_001)과 그 외 오류를 구분해 보여준다
@@ -130,107 +136,120 @@ export function MarketAnalysisPage() {
                 : '잠시 후 다시 시도해주세요.'
             }
           />
-        )}
+        ) : (
+          data && (
+            /*
+              바뀌는 중에는 살짝 흐려진다. 이전 결과를 남겨 두니 화면이 그대로여서,
+              표시가 없으면 눌렀는데 아무 일도 안 일어난 것처럼 보인다.
+              transition 을 걸어 응답이 빠를 때는 거의 드러나지 않게 했다.
+            */
+            <div
+              className={cn(
+                'flex flex-col gap-3.5 transition-opacity duration-200 motion-reduce:transition-none',
+                isPlaceholderData && 'opacity-55',
+              )}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-text text-[15px] font-bold">
+                    {data.location.cityName} {data.location.districtName} {data.location.dongName} ·{' '}
+                    {data.business.name}
+                  </p>
+                  <p className="text-text-muted mt-1 text-[11.5px]">
+                    행정동 기준 · {formatDataQuarter(data.meta.dataQuarter)}
+                  </p>
+                </div>
 
-        {data && (
-          <>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-text text-[15px] font-bold">
-                  {data.location.cityName} {data.location.districtName} {data.location.dongName} ·{' '}
-                  {data.business.name}
-                </p>
-                <p className="text-text-muted mt-1 text-[11.5px]">
-                  행정동 기준 · {formatDataQuarter(data.meta.dataQuarter)}
-                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setConditionOpen(true)}
+                >
+                  조건 재설정
+                </Button>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => setConditionOpen(true)}
-              >
-                조건 재설정
-              </Button>
-            </div>
-
-            {/*
+              {/*
               시안의 .body — 본문과 보조 열. lg 아래에서는 한 줄로 쌓인다.
 
               너비를 style 로 바로 주지 않고 CSS 변수를 거치는 이유는 lg 아래 때문이다.
               인라인 스타일은 미디어쿼리를 타지 않아서, grid-template-columns 를 직접
               넣으면 한 줄로 쌓여야 할 좁은 화면에서도 두 열이 그대로 남는다.
             */}
-            <div
-              className="relative grid gap-3.5 lg:grid-cols-[minmax(0,1fr)_var(--aside-width)]"
-              style={{ '--aside-width': `${asideWidth}px` } as CSSProperties}
-            >
-              {/* 한 줄로 쌓이는 화면에는 경계가 없어서 손잡이도 없앤다 */}
-              <ColumnResizer
-                width={asideWidth}
-                onChange={setAsideWidth}
-                min={ASIDE_WIDTH_MIN}
-                max={ASIDE_WIDTH_MAX}
-                gap={COLUMN_GAP}
-                anchor="right"
-                label="보조 열 너비"
-                className="max-lg:hidden"
-              />
-
-              {/* min-w-0 이 없으면 6열 비교표가 보조 열을 밀어낸다 */}
-              <div className="flex min-w-0 flex-col gap-3.5">
-                <MarketSummaryTiles
-                  location={data.location}
-                  summary={data.summary}
-                  storeChurn={data.storeChurn}
+              <div
+                className="relative grid gap-3.5 lg:grid-cols-[minmax(0,1fr)_var(--aside-width)]"
+                style={{ '--aside-width': `${asideWidth}px` } as CSSProperties}
+              >
+                {/* 한 줄로 쌓이는 화면에는 경계가 없어서 손잡이도 없앤다 */}
+                <ColumnResizer
+                  width={asideWidth}
+                  onChange={setAsideWidth}
+                  min={ASIDE_WIDTH_MIN}
+                  max={ASIDE_WIDTH_MAX}
+                  gap={COLUMN_GAP}
+                  anchor="right"
+                  label="보조 열 너비"
+                  className="max-lg:hidden"
                 />
 
-                {/*
+                {/* min-w-0 이 없으면 6열 비교표가 보조 열을 밀어낸다 */}
+                <div className="flex min-w-0 flex-col gap-3.5">
+                  <MarketSummaryTiles
+                    location={data.location}
+                    summary={data.summary}
+                    storeChurn={data.storeChurn}
+                  />
+
+                  {/*
                   요약 타일 다음이 매출 구조다. 타일이 '얼마나 파는가' 까지 말했으니
                   '누가 언제 사 가는가' 로 이어진다. 지도·밀집도는 그 다음 질문
                   ('그래서 이 자리가 어떤가')이라 아래로 내렸다.
                 */}
-                <RevenueStructurePanel
-                  summary={data.summary}
-                  revenueStructure={data.revenueStructure}
-                />
+                  <RevenueStructurePanel
+                    summary={data.summary}
+                    revenueStructure={data.revenueStructure}
+                  />
 
-                <NeighborMapPanel
-                  location={data.location}
-                  neighbors={data.neighbors}
-                  onSelectDong={(dongCode) =>
-                    navigate({
-                      pathname: ROUTES.MARKET_ANALYSIS,
-                      search: new URLSearchParams({ dongCode, businessCode: businessCode ?? '' }).toString(),
-                    })
-                  }
-                />
+                  <NeighborMapPanel
+                    location={data.location}
+                    neighbors={data.neighbors}
+                    onSelectDong={(dongCode) =>
+                      navigate({
+                        pathname: ROUTES.MARKET_ANALYSIS,
+                        search: new URLSearchParams({
+                          dongCode,
+                          businessCode: businessCode ?? '',
+                        }).toString(),
+                      })
+                    }
+                  />
 
-                <DensityPanel
-                  location={data.location}
-                  density={data.density}
-                  neighbors={data.neighbors}
-                />
+                  <DensityPanel
+                    location={data.location}
+                    density={data.density}
+                    neighbors={data.neighbors}
+                  />
 
-                <NeighborTable location={data.location} neighbors={data.neighbors} />
-              </div>
+                  <NeighborTable location={data.location} neighbors={data.neighbors} />
+                </div>
 
-              <div className="flex flex-col gap-3.5">
-                <BusinessMixPanel business={data.business} businessMix={data.businessMix} />
+                <div className="flex flex-col gap-3.5">
+                  <BusinessMixPanel business={data.business} businessMix={data.businessMix} />
 
-                <RevenueEstimatePanel summary={data.summary} seoulRank={data.seoulRank} />
+                  <RevenueEstimatePanel summary={data.summary} seoulRank={data.seoulRank} />
 
-                <SeoulRankPanel
-                  business={data.business}
-                  summary={data.summary}
-                  seoulRank={data.seoulRank}
-                />
+                  <SeoulRankPanel
+                    business={data.business}
+                    summary={data.summary}
+                    seoulRank={data.seoulRank}
+                  />
 
-                <StoreChurnPanel business={data.business} storeChurn={data.storeChurn} />
+                  <StoreChurnPanel business={data.business} storeChurn={data.storeChurn} />
+                </div>
               </div>
             </div>
-          </>
+          )
         )}
       </div>
 

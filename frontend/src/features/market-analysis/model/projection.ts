@@ -25,6 +25,15 @@ export interface ProjectedDong {
   /** 이름표를 놓을 자리 */
   labelX: number
   labelY: number
+  /**
+   * 투영 뒤 이 동이 차지하는 가로·세로 크기.
+   *
+   * 이름표를 넣을 자리가 되는지 판단하는 데 쓴다. 자치구에 따라 동 하나가 화면에서
+   * 20px 도 안 되는 경우가 있는데, 거기에 이름과 값을 밀어 넣으면 옆 동 글자와
+   * 뒤엉켜 무엇 하나도 읽히지 않는다.
+   */
+  width: number
+  height: number
 }
 
 export interface Projection {
@@ -33,9 +42,16 @@ export interface Projection {
   dongs: ProjectedDong[]
 }
 
-/** 지도 그림의 기준 크기. 실제 표시 크기는 CSS 가 정하고 여기서는 비율만 잡는다 */
-const VIEW_WIDTH = 560
-const VIEW_HEIGHT = 380
+/**
+ * 지도 그림의 기준 크기. 실제 표시 크기는 CSS 가 정하고 여기서는 비율만 잡는다.
+ *
+ * 확대·축소가 viewBox 를 직접 옮기므로 화면 쪽도 같은 값을 알아야 한다. 두 곳에
+ * 따로 적으면 한쪽만 고쳤을 때 지도가 어긋난 채로 잘린다.
+ */
+export const MAP_WIDTH = 560
+export const MAP_HEIGHT = 380
+const VIEW_WIDTH = MAP_WIDTH
+const VIEW_HEIGHT = MAP_HEIGHT
 /**
  * 테두리선과 이름표가 잘리지 않게 두는 여백.
  *
@@ -143,12 +159,32 @@ export function projectDongs(
 
     const [labelX, labelY] = place(centroidOf(mainRing(feature)))
 
+    /* 이름표 자리를 재려면 이 동만의 경계가 필요하다. 전체 bbox 로는 알 수 없다 */
+    let left = Infinity
+    let right = -Infinity
+    let top = Infinity
+    let bottom = -Infinity
+
+    for (const polygon of toPolygons(feature)) {
+      for (const ring of polygon) {
+        for (const point of ring) {
+          const [x, y] = place(point)
+          if (x < left) left = x
+          if (x > right) right = x
+          if (y < top) top = y
+          if (y > bottom) bottom = y
+        }
+      }
+    }
+
     return {
       dongCode: feature.properties.dongCode,
       dongName: feature.properties.dongName,
       path,
       labelX: round(labelX),
       labelY: round(labelY),
+      width: round(right - left),
+      height: round(bottom - top),
     }
   })
 

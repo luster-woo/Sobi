@@ -168,3 +168,16 @@ export function StoreIcon(props: IconProps) {
     </svg>
   )
 }
+
+/** 원래 배율로 — 네 귀퉁이에서 가운데로 모이는 화살표. 지도 확대를 되돌릴 때 쓴다 */
+export function ZoomResetIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M9 3H5a2 2 0 0 0-2 2v4" />
+      <path d="M15 3h4a2 2 0 0 1 2 2v4" />
+      <path d="M9 21H5a2 2 0 0 1-2-2v-4" />
+      <path d="M15 21h4a2 2 0 0 0 2-2v-4" />
+      <path d="m8 8 3 3M16 8l-3 3M8 16l3-3M16 16l-3-3" />
+    </svg>
+  )
+}

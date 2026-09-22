@@ -57,7 +57,6 @@ public class ApplicationServiceImpl implements ApplicationService {
     private static final String APPROVED_DECISION = "승인";            // 금융망 심사 결과
     private static final String COMMON_ACCOUNT_TYPE = "COMMON";       // 수시입출금 계좌
     private static final String LOAN_ACCOUNT_TYPE = "LOAN";           // 대출 계좌
-    private static final String NON_MONETARY_SUPPORT_TYPE = "기타";    // 돈이 오가지 않는 지원사업
     private static final String REJECT_REASON_CREDIT_RATING = "금융망 심사 거절 (신용등급 기준 미달)";
 
     private final ApplicationRepository applicationRepository;
@@ -188,7 +187,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     /**
      * [신청하기]. 
      * 대출: 조건 재판정 → 금융망 심사(2.7.5) → 승인 시 가입(2.7.7) → 대출 계좌 저장 → PAID
-     * 지원사업: 금융망 호출 없이 바로 PAID (지원 형태가 '기타'면 금액·계좌 없이)
+     * 지원사업: 금융망 호출 없이 금액·계좌 없이 바로 PAID
      */
     @Override
     @Transactional
@@ -210,7 +209,7 @@ public class ApplicationServiceImpl implements ApplicationService {
             return submitLoan(userId, user, application, request);
         }
         if (application.getSupportProgram() != null) {
-            return submitSupport(userId, user, application, request);
+            return submitSupport(application);
         }
         // 상품·사업이 삭제된 신청(ON DELETE SET NULL)은 제출할 수 없다
         throw new BusinessException(ErrorCode.APPLICATION_SUBMIT_NOT_ALLOWED);
@@ -271,29 +270,16 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     // 지원 사업 신청
-    private ApplicationSubmitResponse submitSupport(
-            Long userId,
-            User user,
-            Application application,
-            ApplicationSubmitRequest request
-    ) {
+    private ApplicationSubmitResponse submitSupport(Application application) {
 
         SupportProgram program = application.getSupportProgram();
 
         // 작성 중에 마감됐을 수 있으므로 제출 시점에도 모집 기간을 확인한다
         validateApplicationPeriod(program);
 
-        // 지원 형태가 '기타'면 돈이 오가지 않아 금액·계좌를 받지 않는다
-        if (NON_MONETARY_SUPPORT_TYPE.equals(program.getType())) {
-            application.pay(null, null, LocalDateTime.now(KOREA_ZONE));
-            return ApplicationSubmitResponse.of(application, null);
-        }
-
-        Long amount = requireAmount(request, program.getMinBalance(), program.getMaxBalance());
-        Account account = findMyDepositAccount(userId, request.getAccountId());
-
-        // 지원사업은 금융망 상품이 아니라 심사 없이 바로 지급 처리
-        application.pay(amount, account, LocalDateTime.now(KOREA_ZONE));
+        // 지원사업은 지원 형태(지원금·대출·기타)와 상관없이 우리가 돈을 옮기지 않아 금액·계좌를 받지 않는다
+        // 금융망 상품이 아니라 심사 없이 바로 지급 처리
+        application.pay(null, null, LocalDateTime.now(KOREA_ZONE));
 
         return ApplicationSubmitResponse.of(application, null);
     }
@@ -310,7 +296,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
     }
 
-    // 상품의 최소·최대 금액 범위 검사 (지원사업은 값이 없을 수 있다)
+    // 상품의 최소·최대 금액 범위 검사
     private Long requireAmount(ApplicationSubmitRequest request, Long minBalance, Long maxBalance) {
 
         Long amount = request.getAmount();

@@ -2,6 +2,8 @@ package com.sobi.global.external.ai.client;
 
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.global.external.ai.clientDto.RagExplainRequest;
+import com.sobi.global.external.ai.clientDto.RagExplainResponse;
 import com.sobi.global.external.ai.clientDto.RagRecommendRequest;
 import com.sobi.global.external.ai.clientDto.RagRecommendResponse;
 import com.sobi.global.external.ai.clientDto.RagSearchTextRequest;
@@ -77,6 +79,37 @@ public class RagClient {
         } catch (RestClientException e) {
             log.error("AI 검색 호출 실패", e);
             throw new BusinessException(ErrorCode.AI_API_ERROR);
+        }
+    }
+
+    /**
+     * 판정 사유를 문장으로 설명한다. GMS 를 부르므로 2~3초 걸린다.
+     *
+     * <p><b>이 메서드만 예외를 던지지 않고 null 을 돌려준다.</b> 설명은 부가
+     * 정보다. 추천과 검색은 없으면 화면에 보여줄 것이 없지만, 설명은 없어도
+     * 기존 reason(템플릿 문장)으로 공고 상세가 온전히 뜬다. 여기서 예외를
+     * 올리면 부가 정보 하나 때문에 화면 전체가 죽는다.
+     *
+     * <p>호출한 쪽은 null 을 받으면 기존 reason 을 그대로 쓰면 된다.
+     */
+    public String explain(RagExplainRequest request) {
+        try {
+            RagExplainResponse response = restClient.post()
+                    .uri("/rag/explain")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(RagExplainResponse.class);
+
+            if (response == null || response.getExplanation() == null) {
+                log.warn("AI 설명 생성 실패 - programId: {}", request.getProgramId());
+                return null;
+            }
+            return response.getExplanation();
+
+        } catch (RestClientException e) {
+            log.error("AI 설명 호출 실패 - programId: {}", request.getProgramId(), e);
+            return null;
         }
     }
 }

@@ -204,6 +204,92 @@ GROUP BY sp.id, sp.pblanc_nm
 """
 
 
+# 문서 앞에서 무조건 가져올 청크 수. 유사도와 무관하게 싣는다.
+#
+# **유사도로는 사업 내용이 안 뽑힌다.** 프로필 벡터는 업종·매출액·근로자수로
+# 만들어지는데, 공고 끝에 붙는 중소기업기본법 별표가 정확히 그 세 항목으로만
+# 이뤄져 있다. 그래서 붙임 표가 상위를 쓸어간다. 실측(scripts/chunk_overlap.py):
+#
+#   122273 "찾아가는 1:1 디지털 교육"
+#     #0~#24  고유 — 사업 개요·지원 내용·제출 서류·선정 평가
+#     #25~#40 공용 — 별표3 + 지원제외업종 표 (다른 공고 26건과 동일)
+#     상위 12청크: 전부 #20 이후 → **사업 내용을 한 글자도 읽지 않는다**
+#
+# 공고 문서는 개요가 맨 앞에 온다. 그래서 앞 N개를 조건 없이 싣는다.
+#
+# **처음 켰을 때는 효과가 없어 0으로 껐다가, 프롬프트를 고치고 다시 켰다.**
+# 앞 청크를 넣으니 입력에 사업 내용이 들어오기는 했는데(122273 입력 4,421 →
+# 5,591토큰, 비용 +25%) 출력은 그대로 요건 나열이었다. 병목이 청크가 아니라
+# 프롬프트였다 — 설명에 사업 내용을 묻지 않으니 들어와도 쓰지 않는다.
+#
+# 지금은 프롬프트가 마지막 문장에서 사업 내용을 원문 그대로 인용하게 한다.
+# 그래서 이 청크가 필요해졌다. **둘 중 하나만 바꾸면 효과가 없다.**
+#
+# 남아 있는 근본 원인은 따로다. 공고 간 중복 문단이 청크의 17.8%(911/5,119)를
+# 차지하고 판정 입력도 같이 오염시킨다(scripts/chunk_overlap.py). 적재 단계에서
+# 걸러야 하는데 임계값 재측정이 따라온다.
+LEAD_CHUNKS = 2
+
+# 설명에 실을 청크 수. 판정(CHUNKS_PER_PROGRAM)과 따로 둔다.
+#
+# 비용이 여기 걸려 있다. 건당 11.9크레딧 중 **97%가 입력**이고, 그 입력의
+# 대부분이 청크다(예: 고용보험료 공고 4,643토큰 중 약 3,900).
+#
+# **판정보다 적게 보면 원칙을 깎는 것이다.** 판정을 가른 근거가 9번 청크에
+# 있었다면 설명은 그것을 말하지 못한다. 다만 유사도 순으로 자르므로 중요한
+# 것부터 남고, 지금 프롬프트는 근거를 하나만 말하게 하므로 손실이 작을 수 있다.
+#
+# 골든셋 6쌍 × 2회로 3·6·12 를 재봤다.
+#
+#   청크  건당 크레딧   판정과 어긋난 설명
+#     3       6.1            0
+#     6       8.0            0
+#    12      11.9            0
+#
+# 품질 차이는 보이지 않았고 비용은 절반이 된다. 그래서 3 으로 둔다.
+#
+# **다만 근거가 약하다.** 6쌍 중 3쌍은 공고 자체가 4청크 이하라 개수를 줄여도
+# 입력이 그대로다 — 실제로 비교된 것은 3쌍뿐이다. 그 3쌍에서 본 문장 차이도
+# 실행 간 흔들림과 구분되지 않았다(같은 입력을 두 번 돌려도 문장이 달라진다.
+# temperature=0 이어도 그렇다). 평가셋이 생기면 다시 재야 하는 값이다.
+EXPLAIN_CHUNKS = 3
+
+# 공고 하나만 다시 꺼낸다. 설명 생성(app/rag/explain.py)이 쓴다.
+#
+# **판정이 본 청크를 빠뜨리지 않아야 한다.** 판정이 못 본 대목만으로 설명하면
+# 둘이 어긋난다. 그래서 정렬 기준(프로필 벡터)과 개수(CHUNKS_PER_PROGRAM)를
+# PASSED_SQL 과 똑같이 맞추고, 거기에 앞 청크를 **더한다.** 더 보는 것은
+# 어긋남을 만들지 않는다. 선택이 결정론적이라 저장할 필요가 없다 — 오히려
+# 저장하면 프로필이 바뀌었을 때 옛 청크로 설명하게 된다.
+ONE_PROGRAM_SQL = f"""
+WITH ranked AS (
+    SELECT c.content,
+           c.chunk_index,
+           c.embedding <=> %(vec)s::vector AS distance,
+           ROW_NUMBER() OVER (
+               ORDER BY c.embedding <=> %(vec)s::vector
+           ) AS rn
+    FROM program_chunk c
+    WHERE c.support_program_id = %(pid)s
+)
+SELECT sp.id AS program_id,
+       sp.pblanc_id,
+       sp.pblanc_nm,
+       sp.type,
+       cond.llm_conditions,
+       -- 거리는 판정이 고른 것만으로 잰다. 앞 청크는 유사도와 무관하게
+       -- 실은 것이라 여기 섞이면 공고가 실제보다 멀어 보인다.
+       MIN(r.distance) FILTER (WHERE r.rn <= %(n)s) AS best_distance,
+       array_agg(r.content ORDER BY r.chunk_index) AS chunks
+FROM support_program sp
+LEFT JOIN program_condition cond ON cond.support_program_id = sp.id
+JOIN ranked r ON r.rn <= %(n)s
+             OR r.chunk_index < %(lead)s
+WHERE sp.id = %(pid)s
+GROUP BY sp.id, sp.pblanc_id, sp.pblanc_nm, sp.type, cond.llm_conditions
+"""
+
+
 @dataclass
 class ProgramHit:
     program_id: int
@@ -350,6 +436,58 @@ async def search(
         hits=hits,
         rejected=rejected,
     )
+
+
+async def hit_for_program(
+    program_id: int,
+    *,
+    region: str,
+    address: str,
+    business_code: str,
+    employee_count: int,
+    open_date: date | None = None,
+    annual_revenue: int | None = None,
+    is_prestartup: bool = False,
+) -> tuple[ProgramHit | None, str, bool]:
+    """공고 하나를 프로필 기준으로 다시 꺼낸다. (공고, 업종명, 융자제외여부).
+
+    search() 와 같은 프로필 문장을 임베딩하므로 판정 때와 같은 청크가 나온다.
+    공고가 없거나 청크가 없으면 첫 값이 None 이다.
+    """
+    industry_name, std_excluded = await lookup_industry(business_code)
+    query_text = profile.to_query(
+        region=region,
+        address=address,
+        business_name=industry_name,
+        business_code=business_code,
+        employee_count=employee_count,
+        open_date=open_date,
+        annual_revenue=annual_revenue,
+        is_prestartup=is_prestartup,
+    )
+    vector = await asyncio.to_thread(koe5.embed_query, query_text)
+
+    async with db.acquire() as conn:
+        # 개수를 SQL 문자열이 아니라 파라미터로 넘긴다. 스윕할 때 모듈 값만
+        # 갈아끼우면 되고, SQL 을 다시 만들 필요가 없다.
+        cur = await conn.execute(ONE_PROGRAM_SQL, {
+            "vec": vector, "pid": program_id,
+            "n": EXPLAIN_CHUNKS, "lead": LEAD_CHUNKS,
+        })
+        row = await cur.fetchone()
+
+    if row is None:
+        return None, industry_name, std_excluded
+    return ProgramHit(
+        program_id=row["program_id"],
+        pblanc_id=row["pblanc_id"],
+        title=row["pblanc_nm"],
+        type=row["type"],
+        best_distance=row["best_distance"],
+        chunks=row["chunks"],
+        llm_conditions=row["llm_conditions"],
+    ), industry_name, std_excluded
+
 
 async def search_by_text(*, query: str, top_k: int = 20,
                          rerank: bool = False,

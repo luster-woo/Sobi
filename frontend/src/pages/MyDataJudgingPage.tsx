@@ -2,13 +2,13 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
 import JobProgressPanel from '@/features/mydata/components/JobProgressPanel'
-import MatchResultPanel from '@/features/mydata/components/MatchResultPanel'
 import { useMydataLinkResult } from '@/features/mydata/hooks/useMydata'
 import type { MydataLinkResult } from '@/features/mydata/model/types'
 import { ROUTES } from '@/shared/constants/routes'
 import { useEstimatedProgress } from '@/shared/hooks/useEstimatedProgress'
 import Button from '@/shared/ui/Button'
 import Spinner from '@/shared/ui/Spinner'
+import { cn } from '@/shared/utils/cn'
 import type { JobStepDef } from '@/shared/utils/estimatedProgress'
 
 /**
@@ -63,14 +63,6 @@ function MatchResult({ result, onNext }: { result: MydataLinkResult; onNext: () 
         마이데이터로 확인한 매출·업력·부채비율·신용등급을 지원사업 요건과 대조했어요
       </p>
 
-      <MatchResultPanel result={result} />
-
-      {result.unknownCount > 0 && (
-        <p className="text-caption text-text-muted text-center">
-          확인 필요는 공고문에 직접 확인해야 하는 조건이 있는 지원사업이에요. 신청은 할 수 있어요.
-        </p>
-      )}
-
       <Button className="w-full" onClick={onNext}>
         대시보드로 가기
       </Button>
@@ -101,6 +93,7 @@ export function MyDataJudgingPage() {
     settled: true,
   })
 
+  const showResult = done && result !== undefined
   const goDashboard = () => navigate(ROUTES.DASHBOARD, { replace: true })
 
   useEffect(() => {
@@ -111,8 +104,17 @@ export function MyDataJudgingPage() {
   }, [done, result, navigate])
 
   return (
-    <div className="flex w-full max-w-[460px] flex-col items-center gap-5 pt-6">
-      {done && result ? (
+    /*
+     * 결과는 내용이 짧아 위에 붙으면 화면이 비어 보인다. 화면 한가운데에 둔다(my-auto —
+     * 부모 main 이 남은 높이를 채우는 flex-col 이다). 진행 중에는 예전처럼 위에서 시작한다.
+     */
+    <div
+      className={cn(
+        'flex w-full max-w-[460px] flex-col items-center gap-5 text-center',
+        showResult ? 'my-auto pb-12' : 'pt-6',
+      )}
+    >
+      {showResult ? (
         <MatchResult result={result} onNext={goDashboard} />
       ) : (
         <>

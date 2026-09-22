@@ -8,8 +8,11 @@ import com.sobi.business.repository.BusinessReporitory;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
 import com.sobi.global.external.ai.client.RagClient;
+import com.sobi.global.external.ai.clientDto.RagExplainRequest;
 import com.sobi.global.external.ai.clientDto.RagSearchTextRequest;
 import com.sobi.global.external.ai.clientDto.RagSearchTextResponse;
+import com.sobi.mydata.dto.MydataSnapshot;
+import com.sobi.mydata.store.MydataStore;
 import com.sobi.support.dto.*;
 import com.sobi.support.entity.JudgementStatus;
 import com.sobi.support.entity.SuggestSupportProgram;
@@ -49,6 +52,8 @@ public class SupportServiceImpl implements SupportService {
     private final ApplicationRepository applicationRepository;
     private final BusinessReporitory businessRepository;
     private final RagClient ragClient;
+    // 설명 생성에 넘길 프로필을 추천과 같은 경로로 얻는다
+    private final MydataStore mydataStore;
 
     @Override
     @Transactional(readOnly = true)
@@ -108,6 +113,59 @@ public class SupportServiceImpl implements SupportService {
                 status.isFromApplication() ? latestApplication.getId() : null,
                 bookmarkRepository.existsByUser_IdAndSupportProgram_Id(userId, supportProgramId)
         );
+    }
+
+    /**
+     * 판정 사유 설명. 없으면 AI 에 만들게 하고 저장한다.
+     *
+     * <p><b>readOnly 가 아니다.</b> 생성한 설명을 판정 행에 붙여야 하기 때문이다.
+     * 더티 체킹으로 커밋 시점에 UPDATE 가 나간다.
+     *
+     * <p>순서에 이유가 있다. 판정 행을 먼저 찾고, 없으면 거기서 끝낸다.
+     * 예비창업자와 연동 전 사용자는 판정 자체가 없어 설명할 대상이 없고,
+     * 행이 있다는 것은 연동을 마쳤다는 뜻이라 그때만 프로필을 읽으면 된다.
+     *
+     * <p>프로필은 {@code MydataStore.read()} 를 그대로 쓴다. 추천이 쓴 것과
+     * 같은 경로여야 AI 가 판정 때와 같은 근거 청크를 고른다. 가벼운 조회를
+     * 따로 만들면 매출 합산 같은 계산이 갈라져 조용히 틀리게 된다.
+     */
+    @Override
+    @Transactional
+    public String getExplanation(Long userId, Long supportProgramId) {
+
+        BusinessInfo business = businessRepository.findByUserId(userId);
+        if (business == null) {
+            return null;
+        }
+
+        SuggestSupportProgram judgement = suggestSupportProgramRepository
+                .findByBusinessIdAndSupportProgram_Id(business.getId(), supportProgramId);
+        if (judgement == null) {
+            return null;
+        }
+        if (judgement.getExplanation() != null) {
+            return judgement.getExplanation();
+        }
+
+        MydataSnapshot snapshot = mydataStore.read(userId);
+        String explanation = ragClient.explain(RagExplainRequest.builder()
+                .programId(supportProgramId)
+                // enum 이름이 아니라 dbValue 를 쓴다. AI 계약이 소문자다
+                .status(judgement.getStatus().getDbValue())
+                .region(snapshot.getRegion())
+                .address(snapshot.getAddress())
+                .businessCode(snapshot.getBusinessCode())
+                .employeeCount(snapshot.getEmployeeCount())
+                .openDate(snapshot.getOpenDate())
+                .annualRevenue(snapshot.getAnnualRevenue())
+                .birthDate(snapshot.getBirthDate())
+                .build());
+
+        // 실패하면 저장하지 않는다. 다음 조회에서 다시 시도한다.
+        if (explanation != null) {
+            judgement.applyExplanation(explanation);
+        }
+        return explanation;
     }
 
     /**

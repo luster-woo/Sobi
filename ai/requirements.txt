@@ -12,6 +12,7 @@ transformers==5.17.0
 numpy==2.3.5  # paddlex 3.7.x 가 numpy<2.4 를 요구한다. RAG 쪽(sentence-transformers·transformers)은 2.4 를 요구하지 않음
 
 # LLM / 설정
+typesafe-sdk==0.7.1  # Jev 판정. app/rag/jev.py 가 최상단에서 import 하므로 없으면 기동 실패
 openai==3.13.0
 python-dotenv==1.2.3
 httpx==0.28.1

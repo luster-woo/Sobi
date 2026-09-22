@@ -26,9 +26,10 @@ class SearchRequest(BaseModel):
     address: str
     business_code: str
     employee_count: int
-    open_date: date
+    open_date: date | None = None      # 예비창업자는 개업일이 없다
     annual_revenue: int | None = None
     birth_date: date | None = None
+    is_prestartup: bool = False
 
 class SearchTextRequest(BaseModel):
     query: str = Field(min_length=1, max_length=200)

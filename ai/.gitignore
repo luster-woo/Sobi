@@ -11,6 +11,11 @@ data/parsed_hwp/
 data/parsed_hwpx/
 data/parse_test/
 
+# 검색 평가 중간 산출물. 스크립트로 재생성된다
+data/eval/programs.tsv
+data/eval/body_terms.md
+data/eval/term_*.txt
+
 # 판정 평가 원자료. 스크립트로 재생성된다 (Jev 약 $0.15)
 data/eval/judge_pack*.json
 data/eval/jev_runs/

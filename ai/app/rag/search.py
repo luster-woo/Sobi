@@ -16,7 +16,10 @@ from app.rag.embedding import koe5
 
 logger = logging.getLogger(__name__)
 
-CHUNKS_PER_PROGRAM = 2  # 디버그용. 판정에는 llm_conditions만 쓴다
+# 4·6·8·12·18 을 각 3회 재서 고른 값. 12가 정점이고 양쪽으로 떨어진다.
+# 8 아래로 내리면 위험 오판이 6배, 18 로 올리면 무관한 조각이 사실 판단을
+# 흐린다. 토큰을 아끼려고 줄이지 말 것. 근거는 docs/07_jev_judgement.md.
+CHUNKS_PER_PROGRAM = 12
 
 # 정형 필터. 원칙: 공고 값이 NULL이면 통과. 확실한 탈락만 SQL이 담당한다.
 FILTER_SQL = """
@@ -29,8 +32,8 @@ FILTER_SQL = """
              OR cond.target_scale = '무관'
              OR cond.target_scale = '중소기업'
              OR (cond.target_scale = '소상공인' AND %(employee_count)s < 5))
-        AND (cond.max_revenue IS NULL OR %(revenue)s IS NULL
-             OR %(revenue)s <= cond.max_revenue)
+        AND (cond.max_revenue IS NULL OR %(revenue)s::bigint IS NULL
+             OR %(revenue)s::bigint <= cond.max_revenue)
         AND (cond.min_biz_months IS NULL OR %(months)s >= cond.min_biz_months)
         AND (cond.max_biz_months IS NULL OR %(months)s <= cond.max_biz_months)
       )
@@ -42,6 +45,7 @@ PASSED_SQL = f"""
 WITH ranked AS (
     SELECT c.support_program_id,
            c.content,
+           c.chunk_index,
            c.embedding <=> %(vec)s::vector AS distance,
            ROW_NUMBER() OVER (
                PARTITION BY c.support_program_id
@@ -55,7 +59,9 @@ SELECT sp.id AS program_id,
        sp.type,
        cond.llm_conditions,
        MIN(r.distance) AS best_distance,
-       array_agg(r.content ORDER BY r.rn) AS chunks
+       -- 고르는 것은 유사도(rn), 싣는 것은 문서 순서(chunk_index).
+       -- 유사도 순으로 실으면 3페이지 문장이 1페이지 문장보다 앞에 온다.
+       array_agg(r.content ORDER BY r.chunk_index) AS chunks
 FROM support_program sp
 JOIN ranked r ON r.support_program_id = sp.id AND r.rn <= {CHUNKS_PER_PROGRAM}
 LEFT JOIN program_condition cond ON cond.support_program_id = sp.id
@@ -158,7 +164,7 @@ async def lookup_industry(business_code: str) -> tuple[str, bool]:
 
 
 def _reject_reason(row: dict, *, region: str, employee_count: int,
-                   months: int, revenue: int | None) -> str:
+                   months: int, revenue: int | None, is_prestartup: bool = False) -> str:
     """SQL 탈락 사유를 문장으로. LLM을 부르지 않는다."""
     if row["end_date"] and row["end_date"] < date.today():
         return f"접수가 마감되었습니다 ({row['end_date']})"
@@ -173,8 +179,11 @@ def _reject_reason(row: dict, *, region: str, employee_count: int,
         return (f"연매출 {row['max_revenue'] / 100_000_000:.1f}억원 이하여야 합니다 "
                 f"(현재 {revenue / 100_000_000:.1f}억원)")
     if row["min_biz_months"] and months < row["min_biz_months"]:
+        if is_prestartup:
+            return (f"이미 창업한 사업자만 신청할 수 있습니다 "
+                    f"(업력 {row['min_biz_months']}개월 이상 필요)")
         return (f"업력 {row['min_biz_months']}개월 이상이어야 합니다 "
-                f"(현재 {months}개월)")
+                    f"(현재 {months}개월)")
     if row["max_biz_months"] and months > row["max_biz_months"]:
         return (f"업력 {row['max_biz_months']}개월 이하여야 합니다 "
                 f"(현재 {months}개월)")
@@ -187,8 +196,9 @@ async def search(
     address: str,
     business_code: str,
     employee_count: int,
-    open_date: date,
+    open_date: date | None = None,
     annual_revenue: int | None = None,
+    is_prestartup: bool = False,
     with_rejected: bool = False,
 ) -> SearchResult:
     """검색 질의문·업종명·후보 공고를 돌려준다.
@@ -205,11 +215,12 @@ async def search(
         employee_count=employee_count,
         open_date=open_date,
         annual_revenue=annual_revenue,
+        is_prestartup=is_prestartup
     )
     # 임베딩은 CPU 를 오래 잡는다. 이벤트 루프를 막으면 같이 도는
     # /rag/search-text 의 "1초 미만" 전제가 깨진다.
     vector = await asyncio.to_thread(koe5.embed_query, query_text)
-    months = profile.biz_months(open_date)
+    months = 0 if is_prestartup else profile.biz_months(open_date)
     params = {
         "vec": vector,
         "region": region,

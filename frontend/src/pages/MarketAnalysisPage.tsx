@@ -14,6 +14,11 @@ import StoreChurnPanel from '@/features/market-analysis/components/StoreChurnPan
 import { useMarketAnalysis } from '@/features/market-analysis/hooks/useMarketAnalysis'
 import { readConditionFromParams } from '@/features/market-analysis/model/condition'
 import { formatDataQuarter } from '@/features/market-analysis/model/format'
+import {
+  HEAT_METRIC,
+  type HeatMetric,
+  pickTopNeighbors,
+} from '@/features/market-analysis/model/heatMetric'
 import type { MarketAnalysis } from '@/features/market-analysis/model/types'
 import { ERROR_CODE, getErrorCode } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
@@ -25,7 +30,14 @@ import Skeleton from '@/shared/ui/Skeleton'
 import { cn } from '@/shared/utils/cn'
 
 /** 표에 넣을 주변 상권 행 수와 업종 구성 항목 수. 화면에 노출하지 않는 고정값이다 */
-const COMPARE_LIMIT = 7
+/*
+ * 자치구의 행정동을 넉넉히 받는다.
+ *
+ * 서버는 점포 수 내림차순으로만 정렬해 주는데, 화면에서는 유동인구·매출·폐업률로도
+ * 순위를 바꿔야 한다. 그러려면 후보를 충분히 받아 두고 프론트에서 다시 골라야 한다.
+ * 서버 상한이 20 이고, 서울 25개 자치구 중 22개가 행정동 20개 이하다.
+ */
+const COMPARE_LIMIT = 20
 const MIX_LIMIT = 6
 
 /*
@@ -58,6 +70,11 @@ const COLUMN_GAP = 14
 export function MarketAnalysisPage() {
   const [searchParams] = useSearchParams()
   const [asideWidth, setAsideWidth] = useState(ASIDE_WIDTH)
+  /*
+   * 지도에서 고른 지표. 비교표도 같은 기준으로 세워야 해서 페이지가 들고 있는다.
+   * 지도 안에 두면 표가 그 값을 알 방법이 없어 늘 점포 수 순으로만 남는다.
+   */
+  const [metric, setMetric] = useState<HeatMetric>(HEAT_METRIC.STORE)
   const navigate = useNavigate()
   const location = useLocation()
   const dongCode = searchParams.get('dongCode')
@@ -174,6 +191,16 @@ export function MarketAnalysisPage() {
     if (location.key === 'default') navigate(ROUTES.DASHBOARD)
     else navigate(-1)
   }
+
+  /*
+   * 지도와 비교표가 함께 쓰는 대상.
+   *
+   * 고른 지표로 다시 정렬해 상위 일곱 곳을 고른다. 서버가 점포 수 순으로만 주기 때문에
+   * 이 과정을 거치지 않으면 유동인구를 골라도 같은 일곱 곳이 남는다.
+   */
+  const visibleNeighbors = data
+    ? pickTopNeighbors(data.neighbors, metric, data.location.dongCode)
+    : []
 
   return (
     <>
@@ -303,6 +330,8 @@ export function MarketAnalysisPage() {
                   <NeighborMapPanel
                     location={data.location}
                     neighbors={data.neighbors}
+                    metric={metric}
+                    onMetricChange={setMetric}
                     onSelectDong={(dongCode) =>
                       navigate({
                         pathname: ROUTES.MARKET_ANALYSIS,
@@ -320,7 +349,11 @@ export function MarketAnalysisPage() {
                     neighbors={data.neighbors}
                   />
 
-                  <NeighborTable location={data.location} neighbors={data.neighbors} />
+                  <NeighborTable
+                    location={data.location}
+                    neighbors={visibleNeighbors}
+                    metric={metric}
+                  />
                 </div>
 
                 <div className="flex flex-col gap-3.5">

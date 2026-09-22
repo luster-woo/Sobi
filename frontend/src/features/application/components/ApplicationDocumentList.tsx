@@ -110,6 +110,7 @@ export default function ApplicationDocumentList({
                 key={doc.applicationDocumentId}
                 name={doc.documentName ?? '이름 없는 서류'}
                 status={toSubmitUiStatus(doc.validationStatus)}
+                fileName={doc.originalFilename}
                 description={describeDocument(doc)}
                 detail={renderOcr(doc, previews.get(doc.applicationDocumentId))}
                 accept={uploadAccept(doc.documentType)}

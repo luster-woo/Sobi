@@ -1,8 +1,13 @@
-"""골든셋 평가. Recall@k와 LLM 판정 정확도를 잰다.
+"""골든셋 평가. Recall@k와 자격 판정 정확도를 잰다.
 
-    python scripts/eval_golden.py                            # 검색만
-    python scripts/eval_golden.py --llm                      # LLM 검증까지 (GMS 비용 발생)
-    python scripts/eval_golden.py --llm --model gpt-5.4-mini # 판정 모델 지정
+    python scripts/eval_golden.py        # 검색만 (Recall@k)
+    python scripts/eval_golden.py --judge   # 자격 판정 정확도까지
+
+--judge 는 운영 경로(recommend)를 그대로 태운다. 즉 Jev 를 부르고, Jev 가
+죽어 있으면 GMS 폴백을 탄다. 판정만 따로 재려면 scripts/jev_run.py 가 낫다.
+그쪽은 DB 없이 돌고 게이트 스윕까지 붙는다.
+
+--model 은 없앴다. 판정 모델은 app/rag/jev.py 가 정한다.
 """
 
 import argparse
@@ -34,13 +39,15 @@ NOT_FOUND = 9999
 def _user_of(profile: dict) -> dict:
     """골든셋의 user를 날짜 타입으로 변환한다."""
     user = dict(profile["user"])
-    user["open_date"] = date.fromisoformat(user["open_date"])
+    # 예비창업자(P13)는 open_date 가 null 이다. 모르는 값이 아니라 없는 값이다.
+    if user.get("open_date"):
+        user["open_date"] = date.fromisoformat(user["open_date"])
     if user.get("birth_date"):
         user["birth_date"] = date.fromisoformat(user["birth_date"])
     return user
 
 
-async def evaluate(profiles: list[dict], use_llm: bool, model: str | None) -> None:
+async def evaluate(profiles: list[dict], use_llm: bool) -> None:
     await db.open_pool()
 
     recall = {k: [0, 0] for k in KS}          # k → [적중, 전체]
@@ -107,17 +114,21 @@ async def evaluate(profiles: list[dict], use_llm: bool, model: str | None) -> No
             print(f"  {label:>10} {'#' * n} {n}")
 
     if use_llm:
-        await evaluate_llm(profiles, model)
+        await evaluate_llm(profiles)
 
     await db.close_pool()
 
 
-async def evaluate_llm(profiles: list[dict], model: str | None) -> None:
+# 보수적 오판. 판정을 미뤘을 뿐이라 사용자에게 잘못된 결론을 주지 않는다.
+LENIENT = {("eligible", "unknown"), ("ineligible", "unknown")}
+
+
+async def evaluate_llm(profiles: list[dict]) -> None:
     """검색된 공고 중 골든셋에 라벨이 있는 것만 판정 정확도를 본다."""
-    correct = total = 0
+    correct = lenient = total = 0
     confusion: dict[tuple[str, str], int] = {}
-    mistakes: list[str] = []
-    kwargs = {"model": model} if model else {}
+    serious: list[str] = []
+    soft: list[str] = []
 
     for p in profiles:
         print(f"  {p['id']} 판정 중...", flush=True)
@@ -126,44 +137,55 @@ async def evaluate_llm(profiles: list[dict], model: str | None) -> None:
         truth = {e["pblancId"]: "eligible" for e in p["expected"]}
         truth |= {h["pblancId"]: h["label"] for h in p["hard_negatives"]}
 
-        out = await rag_recommend.recommend(**user, include_rejected=False, **kwargs)
+        out = await rag_recommend.recommend(**user, include_rejected=False)
         for r in out["results"]:
             gold = truth.get(r["pblanc_id"])
             if gold is None:
                 continue  # 골든셋에 없는 공고는 정답을 모른다
             total += 1
-            correct += gold == r["status"]
             key = (gold, r["status"])
             confusion[key] = confusion.get(key, 0) + 1
-            if gold != r["status"]:
-                mistakes.append(
-                    f"  {p['id']} {r['pblanc_id'][-6:]} {gold}→{r['status']}\n"
-                    f"      공고: {r['title'][:50]}\n"
-                    f"      사유: {r['reason'][:150]}"
-                )
+            if gold == r["status"]:
+                correct += 1
+                continue
+            detail = (
+                f"  {p['id']} {r['pblanc_id'][-6:]} {gold}→{r['status']}\n"
+                f"      공고: {r['title'][:50]}\n"
+                f"      사유: {r['reason'][:150]}"
+            )
+            if key in LENIENT:
+                lenient += 1
+                soft.append(detail)
+            else:
+                serious.append(detail)
 
     if not total:
         print("\n판정 대상 없음")
         return
 
-    print(f"\nLLM 판정 정확도 {correct}/{total} = {correct / total:.3f}")
+    print(f"\n자격 판정 정확도  엄격 {correct}/{total} = {correct / total:.3f}"
+          f"   완화 {correct + lenient}/{total} = {(correct + lenient) / total:.3f}")
+    print(f"  (완화 = 보수적 오판 {lenient}건을 정답으로 봄)")
     for (gold, pred), n in sorted(confusion.items()):
-        mark = "  " if gold == pred else "X "
+        mark = "  " if gold == pred else ("~ " if (gold, pred) in LENIENT else "X ")
         print(f"  {mark}{gold:>11} → {pred:<11} {n}")
 
-    if mistakes:
-        print("\n오판 상세")
-        print("\n".join(mistakes))
+    if serious:
+        print(f"\n심각 오판 {len(serious)}건")
+        print("\n".join(serious))
+    if soft:
+        print(f"\n보수적 오판 {len(soft)}건")
+        print("\n".join(soft))
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--llm", action="store_true", help="LLM 검증 정확도까지 측정")
-    ap.add_argument("--model", default=None, help="판정 모델 (기본: gms.DEFAULT_MODEL)")
+    ap.add_argument("--judge", "--llm", dest="judge", action="store_true",
+                    help="자격 판정 정확도까지 측정")
     args = ap.parse_args()
 
     golden = json.loads((ROOT / "data/eval/golden_set.json").read_text(encoding="utf-8"))
-    asyncio.run(evaluate(golden["profiles"], args.llm, args.model))
+    asyncio.run(evaluate(golden["profiles"], args.judge))
 
 
 if __name__ == "__main__":

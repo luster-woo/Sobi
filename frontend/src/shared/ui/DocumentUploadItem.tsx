@@ -21,6 +21,14 @@ interface DocumentUploadItemProps {
    */
   description?: ReactNode
   /**
+   * 사용자가 올린 파일 이름. 아직 안 올렸으면 넘기지 않습니다.
+   *
+   * 서류 이름(name)과 따로 받는 이유는 둘이 다른 값이기 때문입니다 — '사업자등록증명원'
+   * 을 올릴 때 파일은 '증명원_최종.pdf' 일 수 있고, 검증이 실패했을 때 사용자가 확인해야
+   * 하는 건 후자입니다.
+   */
+  fileName?: string | null
+  /**
    * 카드 아래쪽에 붙는 영역. 올린 서류의 검증 모습(OCR 미리보기)이 들어간다.
    * 카드가 button 일 수 있어 span 으로만 그려야 한다.
    */
@@ -62,6 +70,7 @@ export default function DocumentUploadItem({
   name,
   status,
   description,
+  fileName,
   detail,
   onSelectFile,
   onFileError,
@@ -79,6 +88,20 @@ export default function DocumentUploadItem({
         <span className={cn('text-body1 text-text block', !isEmpty && 'font-semibold')}>
           {isEmpty ? `＋ ${name} 끌어오거나 클릭해서 업로드` : name}
         </span>
+        {/*
+          파일명을 서류 이름 바로 아래, 설명보다 위에 둡니다. 검증 실패 문구를 읽기 전에
+          '내가 무엇을 올렸나' 부터 확인하게 되는 순서라서입니다.
+        */}
+        {fileName && (
+          /*
+            줄이지 않고 전부 보여줍니다. 배지·버튼과 다른 줄이라 밀어낼 것이 없고,
+            올린 파일이 맞는지 확인하는 게 이 줄의 유일한 목적이라서입니다.
+
+            break-all 은 공백 없는 긴 파일명 때문입니다. 한글·영문 파일명에는 띄어쓰기가
+            없는 경우가 많아, 그대로 두면 한 덩어리가 칸을 넘어 삐져나갑니다.
+          */
+          <span className="text-body2 text-text-secondary mt-1 block break-all">{fileName}</span>
+        )}
         {description && (
           <span className="text-body2 text-text-secondary mt-1 block">{description}</span>
         )}

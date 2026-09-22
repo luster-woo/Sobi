@@ -53,15 +53,18 @@ services:
     environment:
       TZ: Asia/Seoul
       HF_HOME: /models
-      EMBEDDING_MODEL: nlpai-lab/KURE-v1
-      EMBEDDING_DIM: "1024"
-      EMBEDDING_MAX_LENGTH: "1024"
+      # 임베딩 모델은 app/rag/embedding/koe5.py 에 고정돼 있다(nlpai-lab/KoE5).
+      # 예전 EMBEDDING_MODEL/DIM/MAX_LENGTH 는 읽는 코드가 없는 데다 값도 다른
+      # 모델(KURE-v1)을 가리키고 있어서 지웠다. 되살리려면 koe5.py 부터 고칠 것.
       OMP_NUM_THREADS: "4"
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # 자격 판정. 없으면 전 요청이 GMS 폴백으로 돌아 크레딧이 빠르게 마른다.
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY}
+      # Jev 장애 시 폴백 경로에서만 쓴다.
       GMS_API_KEY: ${GMS_API_KEY}
       DOCUMENT_AGENT_DRAFT_API_ENABLED: "true"
       DOCUMENT_AGENT_GENERATED_ROOT: /data/document-agent/generated

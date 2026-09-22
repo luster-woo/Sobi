@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 
 import { cn } from '@/shared/utils/cn'
 
@@ -12,6 +12,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** 스피너 표시 + 클릭 차단 */
   loading?: boolean
   children: ReactNode
+  ref?: Ref<HTMLButtonElement>
 }
 
 const variantClass: Record<Variant, string> = {
@@ -41,10 +42,12 @@ export default function Button({
   type = 'button',
   className,
   children,
+  ref,
   ...rest
 }: ButtonProps) {
   return (
     <button
+      ref={ref}
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}

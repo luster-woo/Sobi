@@ -1,4 +1,4 @@
-import type { SelectHTMLAttributes } from 'react'
+import type { Ref, SelectHTMLAttributes } from 'react'
 import { useId } from 'react'
 
 import { cn } from '@/shared/utils/cn'
@@ -23,6 +23,8 @@ interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'chi
   helperText?: string
   error?: string
   className?: string
+  /** select 요소에 연결됩니다. 검증 실패 시 포커스를 옮길 때 씁니다 */
+  ref?: Ref<HTMLSelectElement>
 }
 
 /**
@@ -41,6 +43,7 @@ export default function Select({
   required,
   id,
   className,
+  ref,
   ...rest
 }: SelectProps) {
   const autoId = useId()
@@ -61,6 +64,7 @@ export default function Select({
 
       <div className="relative">
         <select
+          ref={ref}
           id={selectId}
           disabled={disabled}
           required={required}

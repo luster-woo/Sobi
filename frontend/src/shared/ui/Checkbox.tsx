@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from 'react'
+import type { InputHTMLAttributes, ReactNode, Ref } from 'react'
 import { useId } from 'react'
 
 import { cn } from '@/shared/utils/cn'
@@ -10,6 +10,8 @@ interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'typ
   description?: string
   /** 바깥 래퍼 클래스 */
   className?: string
+  /** input 요소에 연결됩니다. 검증 실패 시 포커스를 옮길 때 씁니다 */
+  ref?: Ref<HTMLInputElement>
 }
 
 export default function Checkbox({
@@ -18,6 +20,7 @@ export default function Checkbox({
   disabled,
   id,
   className,
+  ref,
   ...rest
 }: CheckboxProps) {
   const autoId = useId()
@@ -34,10 +37,13 @@ export default function Checkbox({
       >
         <span className="relative mt-px inline-flex size-[18px] shrink-0">
           <input
+            ref={ref}
             id={inputId}
             type="checkbox"
             disabled={disabled}
-            className="peer cursor-inherit absolute size-full opacity-0"
+            // 포커스 표시는 아래 네모(peer-focus-visible:ring)가 그린다.
+            // 전역 outline 까지 붙으면 표시가 두 겹이 된다
+            className="peer cursor-inherit absolute size-full opacity-0 focus-visible:outline-none"
             {...rest}
           />
           <span

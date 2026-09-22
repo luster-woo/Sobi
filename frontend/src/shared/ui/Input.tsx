@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from 'react'
+import type { InputHTMLAttributes, ReactNode, Ref } from 'react'
 import { useId } from 'react'
 
 import { cn } from '@/shared/utils/cn'
@@ -20,6 +20,8 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'>
   rightSlot?: ReactNode
   /** 바깥 래퍼에 적용할 클래스 (폭 지정용) */
   className?: string
+  /** input 요소에 연결됩니다. 검증 실패 시 포커스를 옮길 때 씁니다 */
+  ref?: Ref<HTMLInputElement>
 }
 
 /**
@@ -37,6 +39,7 @@ export default function Input({
   required,
   id,
   className,
+  ref,
   ...rest
 }: InputProps) {
   const autoId = useId()
@@ -58,6 +61,7 @@ export default function Input({
 
       <div className="relative">
         <input
+          ref={ref}
           id={inputId}
           disabled={disabled}
           required={required}

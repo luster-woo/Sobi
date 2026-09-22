@@ -169,6 +169,22 @@
     @apply bg-bg text-text font-sans;
   }
 
+  /*
+   * 키보드 포커스 표시. :focus-visible 이라 마우스 클릭에는 뜨지 않는다
+   * (텍스트 입력칸은 브라우저 규약상 클릭해도 뜬다).
+   *
+   * base 레이어라 utilities 보다 약하다 — 컴포넌트가 focus-visible:outline-* 로
+   * 따로 지정하면 그쪽이 이긴다.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  [aria-invalid='true']:focus-visible {
+    outline-color: var(--color-danger);
+  }
+
   h1,
   h2,
   h3,

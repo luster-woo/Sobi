@@ -29,13 +29,7 @@ interface TableProps<T> {
   skeletonRows?: number
   /** rows 가 비었을 때 그릴 것. 안 주면 기본 문구가 나간다 */
   empty?: ReactNode
-  /**
-   * 행마다 다른 클래스. 특정 행을 강조할 때 쓴다 (상권 비교표에서 조회한 행정동).
-   *
-   * cn 은 tailwind-merge 가 아니라 뒤에 이어 붙이기만 한다. 기본 클래스와 겹치는
-   * 유틸리티를 넣으면 CSS 에서 나중에 선언된 쪽이 우선되므로, 배경색처럼 겹치는 것을
-   * 넘길 때는 결과를 눈으로 확인해야 한다.
-   */
+  /** 행마다 다른 클래스. 기본 클래스와 겹치면 이쪽이 이긴다 (상권 비교표의 조회한 행정동) */
   rowClassName?: (row: T) => string | undefined
   onRowClick?: (row: T) => void
   /**

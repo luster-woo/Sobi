@@ -114,6 +114,9 @@ export interface MydataRefresh {
   isPending: boolean
   /** 쿨다운이 남아 있으면 '약 6시간 뒤' 같은 문구, 눌러도 되면 null */
   remaining: string | null
+  /** 방금 갱신한 판정 결과. 결과 창을 닫으면 null */
+  result: MydataLinkResult | null
+  closeResult: () => void
 }
 
 /**
@@ -131,15 +134,17 @@ export function useMydataRefresh(): MydataRefresh {
   const userId = useAuthStore((state) => state.user?.userId)
 
   const [availableAt, setAvailableAt] = useState(() => readAvailableAt(userId))
+  const [result, setResult] = useState<MydataLinkResult | null>(null)
 
   const mutation = useMutation({
     mutationFn: refreshMydata,
-    onSuccess: (result) => {
-      queryClient.setQueryData(queryKeys.mydata.link, result)
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.mydata.link, data)
       markJudged(userId)
       setAvailableAt(Date.now() + REFRESH_COOLDOWN_MS)
       invalidateAfterMydata(queryClient)
-      showToast('최신 금융 정보로 갱신했어요.')
+      // 성공 안내는 결과 창이 맡는다. 토스트까지 띄우면 같은 말을 두 번 한다
+      setResult(data)
     },
     onError: (error) => {
       const message = toFailureMessage(error)
@@ -151,5 +156,7 @@ export function useMydataRefresh(): MydataRefresh {
     refresh: () => mutation.mutate(),
     isPending: mutation.isPending,
     remaining: formatRemaining(availableAt),
+    result,
+    closeResult: () => setResult(null),
   }
 }

@@ -8,7 +8,7 @@ import type {
   SubmitApplicationBody,
   SubmitApplicationResult,
   UploadDocumentParams,
-  UploadDocumentResult
+  UploadDocumentResult,
 } from '@/features/application/model/types'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
@@ -108,9 +108,7 @@ export async function writeDraft(programDocumentId: number): Promise<DownloadedF
 }
 
 /** 공고가 배포하는 빈 서식을 받는다. 지원사업 서류에만 있다 */
-export async function downloadProgramDocument(
-  programDocumentId: number,
-): Promise<DownloadedFile> {
+export async function downloadProgramDocument(programDocumentId: number): Promise<DownloadedFile> {
   const response = await api.get(endpoints.programDocument.download(programDocumentId), {
     responseType: 'blob',
   })

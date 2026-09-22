@@ -143,6 +143,9 @@ export const queryKeys = {
     all: ['supportProgram'] as const,
     list: (params: object) => ['supportProgram', 'list', params] as const,
     detail: (supportProgramId: number) => ['supportProgram', 'detail', supportProgramId] as const,
+    /** 판정 사유 설명. 상세와 따로 부르므로 키도 따로 둔다 */
+    explanation: (supportProgramId: number) =>
+      ['supportProgram', 'explanation', supportProgramId] as const,
     /** 자연어 검색 (193). 목록과 엔드포인트·메서드가 달라 키도 나눈다 */
     search: (params: object) => ['supportProgram', 'search', params] as const,
   },

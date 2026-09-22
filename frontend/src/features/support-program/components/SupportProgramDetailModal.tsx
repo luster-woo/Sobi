@@ -5,6 +5,7 @@ import { useCreateApplication } from '@/features/application/hooks/useApplicatio
 import { startApplicationErrorMessage } from '@/features/application/model/applicationError'
 import { APPLICATION_SOURCE } from '@/features/application/model/types'
 import { useSupportProgramDetail } from '@/features/support-program/hooks/useSupportProgramDetail'
+import { useSupportProgramExplanation } from '@/features/support-program/hooks/useSupportProgramExplanation'
 import { balanceRangeText } from '@/features/support-program/model/amount'
 import { toNoticeLines } from '@/features/support-program/model/noticeText'
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
@@ -21,6 +22,7 @@ import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
 import Skeleton from '@/shared/ui/Skeleton'
+import Spinner from '@/shared/ui/Spinner'
 import { cn } from '@/shared/utils/cn'
 
 /**
@@ -79,6 +81,15 @@ export default function SupportProgramDetailModal({
   onClose,
 }: SupportProgramDetailModalProps) {
   const { data, isLoading, isError } = useSupportProgramDetail(supportProgramId)
+  /*
+   * 설명은 상세와 따로 부른다. 처음 만들 때 서버가 AI 로 2~3초를 쓰기 때문에,
+   * 한 번에 받으면 공고를 누르는 순간 모달 전체가 멈춘다.
+   *
+   * 실패해도 화면은 멀쩡하다. 그때는 아래에서 reason 이 그대로 나간다.
+   */
+  const { data: explanationData, isLoading: explanationLoading } =
+    useSupportProgramExplanation(supportProgramId)
+  const explanation = explanationData?.explanation ?? null
   const navigate = useNavigate()
   const showToast = useUiStore((state) => state.showToast)
 
@@ -200,11 +211,39 @@ export default function SupportProgramDetailModal({
             reason 은 마이데이터를 연동하지 않았으면 null 이고, 조건이 다 맞는 경우에도
             따로 설명할 게 없어 오지 않는다. 두 목록은 판정이 없으면 빈 배열이다.
           */}
-          {(data.reason || data.checkItems.length > 0 || data.benefits.length > 0) && (
+          {(data.reason ||
+            explanation ||
+            explanationLoading ||
+            data.checkItems.length > 0 ||
+            data.benefits.length > 0) && (
             <div className="border-border-subtle mt-4 flex flex-col gap-3 border-t pt-4">
-              {data.reason && (
+              {/*
+                설명이 오면 그것만 보여준다. reason 은 "필수 요건을 충족합니다" 같은
+                템플릿이라, 같은 말을 두 번 하는 꼴이 된다.
+
+                설명은 상세보다 늦게 온다(처음 만들 때 서버가 2~3초). 그동안
+                **기다리는 중이라는 것을 눈에 보이게** 한다 — 안 그러면 템플릿
+                문장이 갑자기 다른 문장으로 바뀌어 사용자가 놀란다.
+                reason 은 그 아래 남겨둔다. 판정 근거가 빈 화면이 되지 않게.
+              */}
+              {explanationLoading ? (
+                <div
+                  className="flex flex-col items-center gap-3 py-6"
+                  aria-live="polite"
+                  aria-busy="true"
+                >
+                  <Spinner size={40} decorative />
+                  <p className="text-body1 text-text-secondary font-medium">
+                    이유를 정리하고 있어요
+                  </p>
+                  {/* 왜 기다리는지 한 줄. 없으면 그냥 느린 화면으로 보인다 */}
+                  <p className="text-body2 text-text-muted">공고 원문을 읽는 중이에요</p>
+                </div>
+              ) : explanation ? (
+                <p className="text-body2 text-text-secondary break-keep">{explanation}</p>
+              ) : data.reason ? (
                 <p className="text-body2 text-text-secondary break-keep">{data.reason}</p>
-              )}
+              ) : null}
 
               {data.checkItems.length > 0 && (
                 <div className="bg-warning-soft rounded-sm px-3.5 py-3">

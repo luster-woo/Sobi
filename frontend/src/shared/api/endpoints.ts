@@ -196,6 +196,13 @@ export const endpoints = {
     /** 지원사업 목록. 필터·정렬·페이징은 쿼리 파라미터로 붙인다 */
     list: '/support',
     detail: (supportProgramId: number) => `/support/${supportProgramId}`,
+    /**
+     * 판정 사유 설명. 상세와 일부러 나뉘어 있다.
+     *
+     * 처음 만들 때 AI 가 2~3초를 쓴다. 상세에 합치면 공고를 누르는 순간
+     * 화면이 멈추므로 따로 부르고 늦게 채운다. 두 번째부터는 서버가 캐시한다.
+     */
+    explanation: (supportProgramId: number) => `/support/${supportProgramId}/explanation`,
     /** 자연어 검색. GET 이 아니라 POST 다 (193) */
     search: '/support/search',
   },

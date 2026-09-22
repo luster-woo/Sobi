@@ -45,7 +45,18 @@ function clamp(value: number, min: number, max: number): number {
  * 스크롤된다.
  */
 export function useMapZoom({ width, height }: UseMapZoomOptions) {
-  const svgRef = useRef<SVGSVGElement>(null)
+  /*
+   * SVG 를 ref 가 아니라 state 로 받는다.
+   *
+   * useRef 로 받으면 리스너가 영원히 안 붙는다. 이 패널은 경계 파일을 받는 동안
+   * 스켈레톤만 그리는데, 그때 SVG 가 없어 effect 가 ref.current === null 을 보고
+   * 그냥 돌아간다. 뒤늦게 SVG 가 생겨도 ref 는 값이 바뀌어도 리렌더를 일으키지 않아
+   * effect 가 다시 돌 계기가 없다.
+   *
+   * 콜백 ref 로 받으면 DOM 이 붙는 순간 state 가 바뀌고, 그때 effect 가 다시 돌아
+   * 리스너를 건다.
+   */
+  const [svg, setSvg] = useState<SVGSVGElement | null>(null)
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: MIN_ZOOM })
 
   /** 확대한 만큼 볼 수 있는 범위가 줄어든다. 그 밖으로 나가지 않게 가둔다 */
@@ -59,8 +70,7 @@ export function useMapZoom({ width, height }: UseMapZoomOptions) {
   )
 
   useEffect(() => {
-    const element = svgRef.current
-    if (!element) return
+    if (!svg) return
 
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault()
@@ -75,7 +85,7 @@ export function useMapZoom({ width, height }: UseMapZoomOptions) {
       if (nextZoom === zoom) return
 
       /* 커서가 가리키던 지점이 확대 뒤에도 같은 자리에 있도록 시작점을 옮긴다 */
-      const rect = element.getBoundingClientRect()
+      const rect = svg.getBoundingClientRect()
       const pointerX = x + ((event.clientX - rect.left) / rect.width) * (width / zoom)
       const pointerY = y + ((event.clientY - rect.top) / rect.height) * (height / zoom)
 
@@ -88,14 +98,14 @@ export function useMapZoom({ width, height }: UseMapZoomOptions) {
       )
     }
 
-    element.addEventListener('wheel', handleWheel, { passive: false })
-    return () => element.removeEventListener('wheel', handleWheel)
+    svg.addEventListener('wheel', handleWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', handleWheel)
     /*
      * viewport 가 바뀔 때마다 리스너를 다시 단다. 최신 값을 ref 로 들고 있으면 등록은
      * 한 번으로 끝나지만, 그 ref 를 렌더 중에 갱신해야 해서 규칙에 걸린다
      * (react-hooks/refs). 리스너 교체는 휠 한 번에 한 번이라 값이 싸다.
      */
-  }, [viewport, width, height, clampViewport])
+  }, [svg, viewport, width, height, clampViewport])
 
   /* 끌기. 눌린 지점과 그때의 시작점을 기억했다가 차이만큼 되민다 */
   const drag = useRef<{ clientX: number; clientY: number; x: number; y: number } | null>(null)
@@ -134,9 +144,6 @@ export function useMapZoom({ width, height }: UseMapZoomOptions) {
     const start = drag.current
     if (!start) return
 
-    const element = svgRef.current
-    if (!element) return
-
     const deltaX = event.clientX - start.clientX
     const deltaY = event.clientY - start.clientY
 
@@ -153,7 +160,7 @@ export function useMapZoom({ width, height }: UseMapZoomOptions) {
     if (!draggedRef.current) return
 
     /* 화면에서 움직인 거리를 viewBox 단위로 환산한다 */
-    const rect = element.getBoundingClientRect()
+    const rect = event.currentTarget.getBoundingClientRect()
     const { zoom } = viewport
 
     setViewport(
@@ -178,7 +185,8 @@ export function useMapZoom({ width, height }: UseMapZoomOptions) {
   const reset = () => setViewport({ x: 0, y: 0, zoom: MIN_ZOOM })
 
   return {
-    svgRef,
+    /** SVG 에 그대로 넘긴다. 콜백 ref 라 DOM 이 붙고 떨어질 때 훅이 알 수 있다 */
+    svgRef: setSvg,
     viewBox: `${viewport.x} ${viewport.y} ${width / viewport.zoom} ${height / viewport.zoom}`,
     zoom: viewport.zoom,
     /** 확대한 상태인가. 리셋 버튼을 띄울지 정한다 */

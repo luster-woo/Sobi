@@ -1,6 +1,7 @@
 package com.sobi.support.controller;
 
 import com.sobi.global.response.ApiResponse;
+import com.sobi.support.dto.SupportExplanationResponse;
 import com.sobi.support.dto.SupportProgramDetailResponse;
 import com.sobi.support.dto.SupportProgramListResponse;
 import com.sobi.support.dto.SupportSearchCondition;
@@ -89,6 +90,35 @@ public class SupportController {
                         HttpStatus.OK,
                         "지원사업 상세 정보 조회 성공",
                         response,
+                        request
+                ));
+    }
+
+    /**
+     * 판정 사유 설명. AI 가 공고 원문을 읽고 문장으로 풀어준다.
+     *
+     * <p><b>상세 조회와 일부러 나눠 뒀다.</b> 상세는 수십 ms 인데 설명은 처음
+     * 만들 때 2~3초가 걸린다. 합치면 공고를 누르는 순간 화면이 멈춘다.
+     * 프런트는 상세를 먼저 그리고 이 응답이 오면 설명 영역을 채우면 된다.
+     *
+     * <p>한 번 만들면 저장해 두므로 두 번째부터는 즉시 돌아온다.
+     * explanation 이 null 이면 상세 응답의 reason 을 그대로 쓴다.
+     */
+    @GetMapping("/{supportProgramId}/explanation")
+    public ResponseEntity<ApiResponse<SupportExplanationResponse>> explanation(
+            @PathVariable Long supportProgramId,
+            @AuthenticationPrincipal Long userId,
+            HttpServletRequest request
+    ) {
+
+        String explanation = supportService.getExplanation(userId, supportProgramId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "판정 사유 설명 조회 성공",
+                        SupportExplanationResponse.of(explanation),
                         request
                 ));
     }

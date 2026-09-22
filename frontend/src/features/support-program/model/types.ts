@@ -141,3 +141,13 @@ export type SupportProgramDetail =
   | (SupportProgramDetailBase & WithBalance & { type: 'SUPPORT' })
   | (SupportProgramDetailBase & WithBalance & { type: 'LOAN'; interestRate?: number })
   | (SupportProgramDetailBase & { type: 'ETC' })
+
+/**
+ * 판정 사유 설명. AI 가 공고 원문을 읽고 사장님 상황에 맞춰 풀어 쓴 문장이다.
+ *
+ * null 이 정상적으로 온다 — 판정이 없거나(예비창업자, 마이데이터 연동 전)
+ * 생성에 실패한 경우다. 그때는 상세의 `reason`(템플릿 문장)을 쓰면 된다.
+ */
+export interface SupportProgramExplanation {
+  explanation: string | null
+}

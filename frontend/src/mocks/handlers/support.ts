@@ -1,4 +1,4 @@
-import { http } from 'msw'
+import { delay, http } from 'msw'
 
 import type { ApplicationSupportSummary } from '@/features/application/model/types'
 import type {
@@ -378,5 +378,39 @@ export const supportHandlers = [
             }
 
     return ok(detail, '지원사업 상세 정보 조회 성공', { path: `/api/v1/support/${id}` })
+  }),
+
+  /*
+   * GET /api/v1/support/:supportProgramId/explanation
+   *
+   * 실제 서버는 처음 한 번 AI 로 만드느라 2~3초가 걸린다. 그 지연이 화면에서
+   * 어떻게 보이는지가 이 기능의 핵심이라, 목에서도 일부러 늦춘다.
+   * 안 늦추면 스켈레톤이 도는 순간을 개발 중에 한 번도 못 본다.
+   */
+  http.get('/api/v1/support/:supportProgramId/explanation', async ({ params }) => {
+    const id = Number(params.supportProgramId)
+    const found = mockPrograms.find((program) => program.supportProgramId === id)
+    const path = `/api/v1/support/${id}/explanation`
+
+    if (!found) {
+      return fail(404, 'COMMON_001', '공고를 찾을 수 없습니다.', path)
+    }
+
+    await delay(2500)
+
+    // 판정이 없으면 서버도 null 을 준다. 그때 화면이 reason 으로 돌아가는지 본다
+    const explanation =
+      found.status === 'INELIGIBLE'
+        ? '사장님 사업장은 서울 마포구에 있는데, 이 공고는 중랑구 관내 사업장만 신청할 수 있어 대상이 아닙니다. ' +
+          '이 사업은 업체 정보를 구청 홈페이지와 소상공인연합회 사이트에 게시해 홍보를 지원합니다.'
+        : found.status === 'UNKNOWN'
+          ? '사업장이 울산 소재인 점은 공고 요건에 맞습니다. 다만 자영업자 고용보험 가입 여부가 사업자 정보에 없어 확인이 필요합니다. ' +
+            '이 사업은 고용보험료 납부액의 15%~30%를 3년간 지원합니다.'
+          : found.status === 'ELIGIBLE'
+            ? '상시근로자가 3명으로 5명 미만 기준을 충족하고, 업종도 지원제외 대상이 아닙니다. ' +
+              '이 사업은 키오스크·테이블오더 도입 비용의 70%를 지원합니다.'
+            : null
+
+    return ok({ explanation }, '판정 사유 설명 조회 성공', { path })
   }),
 ]

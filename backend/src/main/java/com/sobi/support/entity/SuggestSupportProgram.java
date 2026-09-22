@@ -67,9 +67,27 @@ public class SuggestSupportProgram {
     /** 코사인 거리. 0에 가까울수록 유사. SQL 필터 탈락 건은 null */
     private Double distance;
 
-    /** llm(조건 판정) / sql(정형 필터 탈락) */
+    /** jev(자격 판정) / llm(Jev 장애 시 GMS 폴백) / sql(정형 필터 탈락) */
     @Column(name = "judged_by", nullable = false, length = 3)
     private String judgedBy;
+
+    /**
+     * 판정 사유 설명. AI 가 생성한 문장이고, null 이면 아직 만들지 않았다는 뜻이다.
+     *
+     * <p>생성에 GMS 크레딧과 2~3초가 들기 때문에 여기 담아두고 재사용한다.
+     * 별도 무효화는 필요 없다 — 마이데이터를 다시 연동하면 판정 행 자체가
+     * 지워졌다 다시 들어오므로 설명도 같이 사라진다.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String explanation;
+
+    /**
+     * 생성된 설명을 붙인다. 이 엔티티에서 나중에 바뀌는 값은 이것뿐이라
+     * 세터를 열지 않고 이 메서드만 둔다.
+     */
+    public void applyExplanation(String explanation) {
+        this.explanation = explanation;
+    }
 
     public static SuggestSupportProgram of(
             SupportProgram supportProgram,

@@ -103,3 +103,52 @@ export function heatTextClass(step: number | null): string {
 export function heatHaloClass(step: number | null): string {
   return step !== null && step >= 3 ? 'stroke-text' : 'stroke-surface'
 }
+
+/**
+ * 지도에 색으로 띄우고 비교표에 세울 동 수.
+ *
+ * 다섯이면 한눈에 훑을 수 있고, 조회한 동을 더해도 여섯 줄이라 표가 길어지지 않는다.
+ */
+export const COMPARE_COUNT = 5
+
+/**
+ * 고른 지표 기준으로 상위 N 개를 고른다.
+ *
+ * 서버는 점포 수 내림차순으로만 정렬해 준다(MarketServiceImpl 의
+ * findByDistrictCodeAndBusinessCodeOrderByTotalCountDesc). 그래서 유동인구를 골라도
+ * 색칠되는 동이 그대로였다 — 지표만 바뀌고 대상은 안 바뀌던 것이다.
+ *
+ * 자치구의 동을 넉넉히 받아 두고(compareLimit) 여기서 다시 고른다. 서울 25개 자치구 중
+ * 22개가 행정동 20개 이하라 대부분은 전부 받아 정확하고, 송파·강남·관악만 일부가
+ * 서버 단계에서 잘린다.
+ *
+ * 조회한 동은 순위에 없어도 남긴다. 자기 상권이 지도에서 사라지면 기준점이 없어진다.
+ *
+ * 값이 없는 동은 뒤로 보낸다. 0 으로 세면 '가장 적은 동' 과 구분되지 않는다.
+ */
+export function pickTopNeighbors(
+  neighbors: NeighborMarket[],
+  metric: HeatMetric,
+  currentDongCode: string,
+  count: number = COMPARE_COUNT,
+): NeighborMarket[] {
+  const pick = HEAT_METRIC_SPEC[metric].pick
+
+  const sorted = [...neighbors].sort((a, b) => {
+    const left = pick(a)
+    const right = pick(b)
+
+    if (left === null && right === null) return 0
+    if (left === null) return 1
+    if (right === null) return -1
+
+    return right - left
+  })
+
+  const top = sorted.slice(0, count)
+
+  if (top.some((neighbor) => neighbor.dongCode === currentDongCode)) return top
+
+  const current = neighbors.find((neighbor) => neighbor.dongCode === currentDongCode)
+  return current ? [...top, current] : top
+}

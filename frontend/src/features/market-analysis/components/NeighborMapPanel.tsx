@@ -179,6 +179,8 @@ export default function NeighborMapPanel({
               const step = stepOf(dong.dongCode)
               const compared = byCode.has(dong.dongCode)
               const current = dong.dongCode === location.dongCode
+              /** 비교 대상인데 이 지표의 값이 없는 동. 0 으로 칠하면 '가장 적은 동' 이 된다 */
+              const hatched = compared && step === null
 
               return (
                 <path
@@ -186,9 +188,19 @@ export default function NeighborMapPanel({
                   d={dong.path}
                   className={cn(
                     'transition-[fill] duration-200 motion-reduce:transition-none',
-                    // 비교 대상이 아닌 동은 칠하지 않는다. 가장 연한 칸(heat-1)과 회색
-                    // 배경은 색이 거의 같아서, 칠해 두면 '가장 적은 동' 과 구분되지 않는다
-                    compared && step !== null ? HEAT_FILL[step] : 'fill-surface',
+                    /*
+                     * 빗금일 때는 fill 클래스를 아예 얹지 않는다.
+                     *
+                     * 빗금은 아래 fill 속성으로 넣는데, SVG presentation attribute 는
+                     * CSS 보다 우선순위가 낮다. 클래스로 fill 을 한 번이라도 지정하면
+                     * 그쪽이 이겨서 빗금이 사라지고 흰 칸으로 보인다 — '집계 안 됨' 과
+                     * '비교 대상 밖' 이 구분되지 않는다.
+                     *
+                     * 비교 대상이 아닌 동을 칠하지 않는 이유는 따로다. 가장 연한
+                     * 칸(heat-1)과 회색 배경은 색이 거의 같아서, 칠해 두면 '가장 적은 동'
+                     * 과 구분되지 않는다.
+                     */
+                    hatched ? '' : step !== null ? HEAT_FILL[step] : 'fill-surface',
                     /*
                      * 경계선을 배경색으로 그어 칸 사이를 띄운다. 농도가 비슷한 두 동이
                      * 붙어 있으면 선이 없을 때 한 덩어리로 보인다.
@@ -199,7 +211,7 @@ export default function NeighborMapPanel({
                      */
                     current ? 'stroke-primary' : compared ? 'stroke-surface' : 'stroke-border',
                   )}
-                  fill={compared && step === null ? `url(#${HATCH_ID})` : undefined}
+                  fill={hatched ? `url(#${HATCH_ID})` : undefined}
                   strokeWidth={current ? 3 : compared ? 2 : 1.5}
                 />
               )

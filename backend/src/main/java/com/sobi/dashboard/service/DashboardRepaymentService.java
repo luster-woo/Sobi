@@ -3,6 +3,7 @@ package com.sobi.dashboard.service;
 import com.sobi.dashboard.dto.DashboardResponse.RepaymentManagement;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.repayment.calculator.RepaymentSchedule;
 import com.sobi.repayment.client.SsafyRepaymentClient;
 import com.sobi.repayment.clientDto.RepaymentRecordList;
 import com.sobi.repayment.clientDto.SsafyInquireLoanAccountDetail;
@@ -52,11 +53,18 @@ public class DashboardRepaymentService {
                         repaymentClient.inquireRepaymentRecords(userKey, loanAccount.getAccountNo());
                 SsafyRepaymentRecord repaymentRecord = ssafyResponseRecord.getRec();
 
-                // 남은 대출 잔액 합산
-                long remainingLoanBalance = Long.parseLong(repaymentRecord.getRemainingLoanBalance());
-                totalLoanBalance = Math.addExact(totalLoanBalance, remainingLoanBalance);
-
                 Set<Integer> paidInstallments = getPaidInstallments(repaymentRecord);
+
+                /*
+                 * 금융망이 준 remainingLoanBalance 를 쓰지 않는다. 회차마다 전체 기간치 이자가
+                 * 중복으로 붙어 있어서다(RepaymentSchedule 주석 참고). 상환 관리 화면과 같은
+                 * 계산으로 맞춘다 — 두 화면의 잔액이 다르면 어느 쪽도 믿을 수 없다.
+                 */
+                RepaymentSchedule schedule = RepaymentSchedule.from(loanAccount);
+
+                // 남은 대출 잔액 합산
+                long remainingLoanBalance = schedule.getRemainingBalance(paidInstallments.size());
+                totalLoanBalance = Math.addExact(totalLoanBalance, remainingLoanBalance);
 
                 // 전액 상환한 계좌는 예정 금액과 다음 상환일 계산에서 제외
                 if (remainingLoanBalance <= 0) {
@@ -64,7 +72,8 @@ public class DashboardRepaymentService {
                 }
 
                 // 이번 달 미납 회차의 원금과 이자 합산
-                long monthlyRepaymentAmount = calculateMonthlyDueAmount(loanAccount, paidInstallments, today);
+                long monthlyRepaymentAmount =
+                        calculateMonthlyDueAmount(loanAccount, schedule, paidInstallments, today);
                 thisMonthRepaymentAmount = Math.addExact(thisMonthRepaymentAmount, monthlyRepaymentAmount);
 
                 // 여러 계좌 중 가장 빠른 다음 상환일 선택
@@ -120,17 +129,12 @@ public class DashboardRepaymentService {
     // 이번 달 미납 회차의 예정 금액 계산 (이번 달 연체 포함)
     private long calculateMonthlyDueAmount(
             SsafyInquireLoanAccountDetail loanAccount,
+            RepaymentSchedule schedule,
             Set<Integer> paidInstallments,
             LocalDate today
     ) {
 
-        long loanBalance = Long.parseLong(loanAccount.getLoanBalance());
-        int loanPeriod = Integer.parseInt(loanAccount.getLoanPeriod());
-        double interestRate = Double.parseDouble(loanAccount.getInterestRate());
-
-        if (loanPeriod <= 0) {
-            throw new IllegalArgumentException("대출 기간은 양수여야 합니다.");
-        }
+        int loanPeriod = schedule.getLoanPeriod();
 
         LocalDate loanDate = LocalDate.parse(loanAccount.getLoanDate(), DateTimeFormatter.BASIC_ISO_DATE);
         LocalDate maturityDate = LocalDate.parse(loanAccount.getMaturityDate(), DateTimeFormatter.BASIC_ISO_DATE);
@@ -154,39 +158,11 @@ public class DashboardRepaymentService {
                 continue;
             }
 
-            long dailyDueAmount = calculateDailyDueAmount(loanBalance, loanPeriod, interestRate, installmentNumber);
+            long dailyDueAmount = schedule.getInstallmentAmount(installmentNumber);
             monthlyRepaymentAmount = Math.addExact(monthlyRepaymentAmount, dailyDueAmount);
         }
 
         return monthlyRepaymentAmount;
-    }
-
-    // 기존 RepaymentServiceImpl과 동일한 회차별 원금, 일 이자 계산
-    private long calculateDailyDueAmount(long loanBalance, int loanPeriod, double interestRate, long installmentNumber) {
-
-        // 기본적으로 매일 갚는 원금
-        long principalPerDay = loanBalance / loanPeriod;
-
-        // 해당 회차 상환 전 남아 있는 원금
-        long remainingPrincipal = loanBalance - (principalPerDay * (installmentNumber - 1));
-
-        // 마지막 회차에는 나머지 원금을 모두 상환
-        long principalDue;
-
-        if (installmentNumber == loanPeriod) {
-            principalDue = remainingPrincipal;
-        } else {
-            principalDue = principalPerDay;
-        }
-
-        // 하루치 이자
-        long interest = Math.round(
-                remainingPrincipal
-                        * (interestRate / 100.0)
-                        * (1.0 / 365.0)
-        );
-
-        return Math.addExact(principalDue, interest);
     }
 
     // 실행 다음 날부터 일 단위 상환. 오늘 이후의 미납 회차 중 가장 빠른 날짜 반환

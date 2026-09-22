@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 
 import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
 import { useLoanProducts } from '@/features/loan-repayment/hooks/useRepayment'
+import RefreshResultModal from '@/features/mydata/components/RefreshResultModal'
 import { useMydataRefresh } from '@/features/mydata/hooks/useMydata'
 import { useMyPage } from '@/features/mypage/hooks/useMyPage'
 import { ROUTES } from '@/shared/constants/routes'
@@ -239,6 +240,8 @@ export function AccountsPage() {
           )}
         </Panel>
       </section>
+
+      <RefreshResultModal result={refresh.result} onClose={refresh.closeResult} />
     </div>
   )
 }

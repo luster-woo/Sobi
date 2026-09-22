@@ -28,6 +28,11 @@ interface DocumentUploadItemProps {
    * 하는 건 후자입니다.
    */
   fileName?: string | null
+  /**
+   * 카드 아래쪽에 붙는 영역. 올린 서류의 검증 모습(OCR 미리보기)이 들어간다.
+   * 카드가 button 일 수 있어 span 으로만 그려야 한다.
+   */
+  detail?: ReactNode
   onSelectFile: (file: File) => void
   /** 확장자·용량·파일명 검사에서 걸렸을 때 */
   onFileError?: (message: string) => void
@@ -66,6 +71,7 @@ export default function DocumentUploadItem({
   status,
   description,
   fileName,
+  detail,
   onSelectFile,
   onFileError,
   accept,
@@ -76,7 +82,7 @@ export default function DocumentUploadItem({
   const isEmpty = status === 'EMPTY'
   const isUploadable = !readOnly && (isEmpty || status === 'FAILED')
 
-  const body = (
+  const row = (
     <span className="flex w-full items-center gap-4">
       <span className="min-w-0 flex-1">
         <span className={cn('text-body1 text-text block', !isEmpty && 'font-semibold')}>
@@ -116,6 +122,15 @@ export default function DocumentUploadItem({
         </span>
       )}
     </span>
+  )
+
+  const body = detail ? (
+    <span className="block w-full">
+      {row}
+      {detail}
+    </span>
+  ) : (
+    row
   )
 
   if (isUploadable) {

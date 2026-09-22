@@ -33,8 +33,5 @@ const CODE_MESSAGE: Record<string, string> = {
 export function uploadErrorMessage(error: unknown): string {
   const code = getErrorCode(error)
 
-  return (
-    (code && CODE_MESSAGE[code]) ||
-    getErrorMessage(error, { 401: '로그인이 필요해요.' })
-  )
+  return (code && CODE_MESSAGE[code]) || getErrorMessage(error, { 401: '로그인이 필요해요.' })
 }

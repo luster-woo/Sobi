@@ -29,7 +29,7 @@ def _sigungu(title: str) -> str | None:
     return m.group(1) if m else None
 
 
-def _profile_block(
+def format_profile(
     *,
     address: str,
     industry_name: str,
@@ -67,8 +67,8 @@ def _profile_block(
     return "\n".join(lines)
 
 
-def _build_state(hit: search.ProgramHit, profile_block: str, *,
-                 with_doc: bool = True) -> str:
+def build_state(hit: search.ProgramHit, profile_block: str, *,
+                with_doc: bool = True) -> str:
     """공고 하나에 대한 state. 조건과 원문을 함께 넣는다(A/C 비교 결과).
 
     with_doc=False 는 GMS 폴백용이다. 원문을 넣으면 공고당 4천 토큰이라
@@ -152,7 +152,7 @@ async def recommend(
     verdicts: dict[int, dict] = {}
     judged_by = "jev"
     if result.hits:
-        block = _profile_block(
+        block = format_profile(
             address=address,
             industry_name=result.industry_name,
             std_excluded=result.std_excluded,
@@ -162,13 +162,13 @@ async def recommend(
             birth_date=birth_date,
             is_prestartup=is_prestartup,
         )
-        states = {h.program_id: _build_state(h, block) for h in result.hits}
+        states = {h.program_id: build_state(h, block) for h in result.hits}
         try:
             verdicts = await jev.judge(states, prestartup=is_prestartup)
         except jev.JevUnavailable:
             logger.warning("Jev 장애 — GMS 폴백으로 전환 (공고 %d건)", len(states))
             # 폴백은 원문 없이 조건만 넣는다. 배치에 원문을 실으면 터진다.
-            lean = {h.program_id: _build_state(h, block, with_doc=False)
+            lean = {h.program_id: build_state(h, block, with_doc=False)
                     for h in result.hits}
             verdicts = await llm_judge.judge(lean, prestartup=is_prestartup)
             judged_by = "llm"

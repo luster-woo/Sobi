@@ -57,7 +57,7 @@ async def main() -> None:
     await db.open_pool()
     try:
         result = await search.search(**PROFILE, with_rejected=False)
-        block = recommend._profile_block(
+        block = recommend.format_profile(
             address=PROFILE["address"],
             industry_name=result.industry_name,
             std_excluded=result.std_excluded,
@@ -69,7 +69,7 @@ async def main() -> None:
         )
         # 원문 포함. 두 경로가 글자 하나까지 같은 입력을 받는다.
         hits = result.hits[:LIMIT]
-        states = {h.program_id: recommend._build_state(h, block) for h in hits}
+        states = {h.program_id: recommend.build_state(h, block) for h in hits}
         chars = sum(len(s) for s in states.values())
         # 한국어는 글자당 토큰이 많다. 1.4자/토큰 정도로 잡는다.
         print(f"후보 {len(result.hits)}공고 중 {len(states)}건 사용 / "

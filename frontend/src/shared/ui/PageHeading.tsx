@@ -19,15 +19,18 @@ interface PageHeadingProps {
  * 화면 안쪽 제목 줄.
  *
  * 예전에는 화면마다 제목을 직접 그려서 text-h1(28) · text-[20px] · text-[21px] ·
- * text-[23px] 네 크기가 돌아다녔고, 같은 위계를 h1 과 h2 로 번갈아 썼다.
- * 크기는 text-h2 하나로 모으고 태그만 화면 종류에 따라 고른다.
+ * text-[23px] 네 크기가 돌아다녔다. 크기는 text-h1 하나로 모으고 태그만 화면 종류에
+ * 따라 고른다 — 상권 분석의 상권 이름도 같은 크기다.
+ *
+ * 인증·온보딩 화면은 여기 해당하지 않는다. 424px 카드 안의 제목이라 28px 은 과하고,
+ * 문장형이라 제목 줄이 아니라 본문 머리글에 가깝다 (각 화면에서 text-h2 로 그린다).
  */
 export default function PageHeading({ title, aside, level = 'h2', className }: PageHeadingProps) {
   const Tag = level
 
   return (
     <div className={cn('flex flex-wrap items-end justify-between gap-3', className)}>
-      <Tag className="text-h2 text-text tracking-[-0.02em]">{title}</Tag>
+      <Tag className="text-h1 text-text tracking-[-0.02em]">{title}</Tag>
       {aside}
     </div>
   )

@@ -11,9 +11,9 @@ interface RevenueStructurePanelProps {
 /**
  * 매출 성비가 유동인구 성비보다 몇 %p 남성 쪽인지.
  *
- * 유동인구와 견준 **쏠림**이다. 둘은 방향이 갈릴 수 있다 
- * — 매출 남 49.7 / 여 50.3 인데 유동인구가 남 44.8 이면, 
- * 여성 매출이 더 많으면서 동시에 남성 쪽으로 쏠린 상태다. 
+ * 유동인구와 견준 **쏠림**이다. 둘은 방향이 갈릴 수 있다
+ * — 매출 남 49.7 / 여 50.3 인데 유동인구가 남 44.8 이면,
+ * 여성 매출이 더 많으면서 동시에 남성 쪽으로 쏠린 상태다.
  * 문구를 절대 비교로 쓰면 틀린다.
  *
  * 막대에 적힌 정수끼리 뺀다. 반올림 전 값으로 계산하면 화면에 '남성 50%'·'남성 45%'
@@ -90,7 +90,12 @@ export default function RevenueStructurePanel({
   const { weekdayRatio, weekendRatio } = byDayType
   const { maleRatio, femaleRatio, coverageRatio } = byGender
 
-  if (weekdayRatio === null || weekendRatio === null || maleRatio === null || femaleRatio === null) {
+  if (
+    weekdayRatio === null ||
+    weekendRatio === null ||
+    maleRatio === null ||
+    femaleRatio === null
+  ) {
     return null
   }
 
@@ -117,7 +122,7 @@ export default function RevenueStructurePanel({
     <Panel
       title="매출 구조"
       headerRight={
-        <span className="text-text-muted text-[11.5px] tabular-nums">
+        <span className="text-text-muted text-caption tabular-nums">
           상권 전체 {formatBigWonText(total)}
         </span>
       }
@@ -130,20 +135,20 @@ export default function RevenueStructurePanel({
         {/* 보조 열(292px)에서는 두 칸이 세로로 쌓인다. flex-wrap 이 알아서 접는다 */}
         <div className="flex flex-wrap gap-x-7 gap-y-2">
           <div>
-            <p className="text-text-secondary text-[11.5px]">주중 매출</p>
+            <p className="text-text-secondary text-caption">주중 매출</p>
             <p className="text-text text-[19px] leading-tight font-bold tabular-nums">
               {weekdayPercent}%
-              <span className="text-text-secondary ml-1.5 text-[11.5px] font-normal">
+              <span className="text-text-secondary ml-1.5 text-caption font-normal">
                 월 {formatBigWonText(byDayType.weekdayRevenueMonthly)}
               </span>
             </p>
           </div>
 
           <div>
-            <p className="text-text-secondary text-[11.5px]">주말 매출</p>
+            <p className="text-text-secondary text-caption">주말 매출</p>
             <p className="text-text text-[19px] leading-tight font-bold tabular-nums">
               {weekendPercent}%
-              <span className="text-text-secondary ml-1.5 text-[11.5px] font-normal">
+              <span className="text-text-secondary ml-1.5 text-caption font-normal">
                 월 {formatBigWonText(byDayType.weekendRevenueMonthly)}
               </span>
             </p>
@@ -151,7 +156,7 @@ export default function RevenueStructurePanel({
         </div>
 
         <div className="border-border-subtle border-t pt-3.5">
-          <p className="text-text-secondary text-[11.5px]">
+          <p className="text-text-secondary text-caption">
             오간 사람에서 매출로, 성비가 어떻게 달라지나
           </p>
 
@@ -161,9 +166,9 @@ export default function RevenueStructurePanel({
             그때는 매출 성비만 숫자로 적는다.
           */}
           {footTrafficMalePercent === null ? (
-            <p className="text-text mt-1.5 text-[13px] font-bold tabular-nums">
+            <p className="text-text mt-1.5 text-body2 font-bold tabular-nums">
               남성 {malePercent}% · 여성 {femalePercent}%
-              <span className="text-text-secondary ml-2 text-[11.5px] font-normal">
+              <span className="text-text-secondary ml-2 text-caption font-normal">
                 오간 사람의 성비는 집계되지 않았어요
               </span>
             </p>
@@ -176,13 +181,13 @@ export default function RevenueStructurePanel({
             </div>
           )}
 
-          <p className="text-text-secondary mt-1 flex flex-wrap gap-x-4 text-[11.5px] tabular-nums">
+          <p className="text-text-secondary mt-1 flex flex-wrap gap-x-4 text-caption tabular-nums">
             <span>남성 매출 월 {formatBigWonText(byGender.maleRevenueMonthly)}</span>
             <span>여성 매출 월 {formatBigWonText(byGender.femaleRevenueMonthly)}</span>
           </p>
         </div>
 
-        <p className="text-text-secondary text-[11.5px] leading-relaxed">
+        <p className="text-text-secondary text-caption leading-relaxed">
           {/*
             원인을 단정하지 않는다. 우리가 아는 것은 '비중이 다르다' 까지다. 유동인구는
             그 업종의 손님이 아니라 상권을 오간 사람 전부라(seoul_commercial_data 의
@@ -203,4 +208,5 @@ export default function RevenueStructurePanel({
     </Panel>
   )
 }
+
 

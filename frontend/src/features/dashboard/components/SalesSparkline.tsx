@@ -49,7 +49,7 @@ export default function SalesSparkline({ points }: SalesSparklineProps) {
   return (
     <div>
       {/* 단위는 여기 한 번만. 막대마다 '만' 을 붙이면 6칸에 글자가 안 들어간다 */}
-      <p className="text-text-muted mb-[5px] text-[11px]">
+      <p className="text-text-muted text-caption mb-[5px]">
         최근 {points.length}개월 매출 <span className="text-text-disabled">(만 원)</span>
       </p>
 
@@ -79,7 +79,6 @@ export default function SalesSparkline({ points }: SalesSparklineProps) {
           </div>
         ))}
       </div>
-
     </div>
   )
 }

@@ -30,7 +30,7 @@ export default function RevenueEstimatePanel({ summary, seoulRank }: RevenueEsti
     return (
       <MiniPanel title="월 매출 추정">
         <p className="text-text-disabled text-[25px] leading-none font-bold">-</p>
-        <p className="text-text-secondary text-[11.5px] leading-relaxed">
+        <p className="text-text-secondary text-caption leading-relaxed">
           이 상권은 매출이 집계되지 않았어요. 점포 수와 유동인구로 판단해주세요.
         </p>
       </MiniPanel>
@@ -51,11 +51,11 @@ export default function RevenueEstimatePanel({ summary, seoulRank }: RevenueEsti
     <MiniPanel title="월 매출 추정">
       <p className="text-text text-[25px] leading-none font-bold tracking-tight tabular-nums">
         {revenue.value}
-        <small className="text-text-secondary text-[14px] font-normal">{revenue.unit}</small>
+        <small className="text-text-secondary text-body1 font-normal">{revenue.unit}</small>
       </p>
 
       {lines.length > 0 && (
-        <div className="text-text-secondary flex flex-col gap-1 text-[11.5px] tabular-nums">
+        <div className="text-text-secondary text-caption flex flex-col gap-1 tabular-nums">
           {lines.map((line) => (
             <span key={line}>{line}</span>
           ))}

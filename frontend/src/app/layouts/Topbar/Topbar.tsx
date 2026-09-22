@@ -58,7 +58,7 @@ export function Topbar() {
         </button>
 
         {/* h1 은 사이드바 로고가 아니라 이 문구다. 로고를 h1 으로 두면 모든 화면 제목이 같아진다 */}
-        {title && <h1 className="font-heading truncate text-[16.5px] font-bold">{title}</h1>}
+        {title && <h1 className="text-h4 truncate font-bold">{title}</h1>}
       </div>
 
       <div className="flex shrink-0 items-center gap-2.5">

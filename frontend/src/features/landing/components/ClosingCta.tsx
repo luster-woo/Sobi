@@ -9,7 +9,7 @@ interface ClosingCtaProps {
 export default function ClosingCta({ onStart }: ClosingCtaProps) {
   return (
     <section className="bg-primary px-6 py-9 text-center">
-      <h2 className="font-heading text-text-inverse text-[23px] font-bold tracking-[-0.02em]">
+      <h2 className="text-h2 text-text-inverse tracking-[-0.02em]">
         지금 받을 수 있는 정책자금부터 확인해 보세요
       </h2>
 

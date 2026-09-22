@@ -212,7 +212,7 @@ export function PasswordResetPage() {
 
   return (
     <div className="border-border bg-surface w-full max-w-[424px] rounded-md border px-7 pt-6.5 pb-7">
-      <h1 className="font-heading text-text mb-6 text-[20px] font-bold">새 비밀번호 설정</h1>
+      <h1 className="text-h2 mb-6 tracking-[-0.02em]">새 비밀번호 설정</h1>
 
       <form onSubmit={handleSubmit} noValidate>
         {/* 라벨을 Input 에 넘기면 오른쪽 버튼이 라벨 높이까지 포함해 어긋난다 */}

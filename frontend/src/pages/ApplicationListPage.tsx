@@ -7,7 +7,9 @@ import ApplicationStatusTabs from '@/features/application/components/Application
 import { useApplications } from '@/features/application/hooks/useApplication'
 import type { ApplicationFilter } from '@/features/application/model/filter'
 import { filterApplications, toApplicationFilter } from '@/features/application/model/filter'
+import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
+import PageHeading from '@/shared/ui/PageHeading'
 import Skeleton from '@/shared/ui/Skeleton'
 import { cn } from '@/shared/utils/cn'
 
@@ -41,7 +43,7 @@ const PAGE_WIDTH = 'mx-auto flex w-full max-w-[1120px] flex-col'
  * 진행 사항 스텝퍼는 174 에서 이 카드 안으로 들어온다.
  */
 export function ApplicationListPage() {
-  const { data: applications, isLoading, isError } = useApplications()
+  const { data: applications, isLoading, isError, refetch } = useApplications()
 
   /*
    * 탭을 주소에 둔다. 자금 조합으로 신청을 만들면 전부 준비 중이라 그 탭을 지목해서
@@ -73,6 +75,11 @@ export function ApplicationListPage() {
         <EmptyState
           title="신청 현황을 불러오지 못했어요"
           description="잠시 후 다시 시도해 주세요."
+          action={
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              다시 시도
+            </Button>
+          }
         />
       </div>
     )
@@ -83,7 +90,7 @@ export function ApplicationListPage() {
   return (
     <div className={cn(PAGE_WIDTH, 'gap-5')}>
       {/* 건수 요약을 제목 위에 따로 두지 않는다. 바로 아래 탭이 같은 숫자를 이미 말한다 */}
-      <h1 className="text-h1">신청 현황</h1>
+      <PageHeading title="신청 현황" />
 
       <ApplicationStatusTabs applications={applications} value={filter} onChange={setFilter} />
 

@@ -136,7 +136,7 @@ export default function NeighborMapPanel({
                 aria-pressed={active}
                 onClick={() => setMetric(item)}
                 className={cn(
-                  'focus-visible:outline-primary rounded-sm px-2 py-1 text-[11.5px] transition-colors focus-visible:outline focus-visible:-outline-offset-2',
+                  'focus-visible:outline-primary text-caption rounded-sm px-2 py-1 transition-colors focus-visible:outline focus-visible:-outline-offset-2',
                   active
                     ? 'bg-primary-soft text-primary font-semibold'
                     : 'text-text-secondary hover:bg-surface-muted',
@@ -149,7 +149,7 @@ export default function NeighborMapPanel({
         </div>
       }
     >
-      <div className="flex flex-col gap-2.5 px-[15px] py-3.5">
+      <div className="px-card flex flex-col gap-2.5 py-3.5">
         <svg
           viewBox={`0 0 ${projection.width} ${projection.height}`}
           className="h-auto w-full"
@@ -258,7 +258,7 @@ export default function NeighborMapPanel({
                     strokeWidth={LABEL_HALO_WIDTH}
                     strokeLinejoin="round"
                     className={cn(
-                      'pointer-events-none text-[11px]',
+                      'text-caption pointer-events-none',
                       current ? 'font-bold' : 'font-medium',
                       neighbor ? heatTextClass(step) : 'fill-text-disabled',
                       heatHaloClass(neighbor ? step : null),
@@ -291,7 +291,7 @@ export default function NeighborMapPanel({
           </g>
         </svg>
 
-        <div className="text-text-muted flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]">
+        <div className="text-text-muted text-caption flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <span className="flex items-center gap-1.5">
             적다
             <span className="flex gap-0.5">
@@ -329,7 +329,7 @@ export default function NeighborMapPanel({
         </div>
 
         {missingCount > 0 && (
-          <p className="text-text-muted text-[11px]">
+          <p className="text-text-muted text-caption">
             행정동이 개편된 {missingCount}곳은 경계를 찾지 못해 지도에서 빠졌어요. 아래 비교표에는
             그대로 있습니다.
           </p>

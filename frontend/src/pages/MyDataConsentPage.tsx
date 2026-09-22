@@ -55,7 +55,7 @@ export function MyDataConsentPage() {
   return (
     <>
       <div className="mb-6 text-center">
-        <h1 className="font-heading text-text text-[23px] font-bold tracking-[-0.02em]">
+        <h1 className="text-h2 tracking-[-0.02em]">
           마이데이터를 연동하면 가능한 상품만 보여드려요
         </h1>
         <p className="text-body2 text-text-secondary mt-2.5 leading-[1.7]">

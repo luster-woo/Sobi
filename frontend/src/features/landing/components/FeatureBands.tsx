@@ -154,7 +154,7 @@ export default function FeatureBands() {
                 1단으로 접히면 설명 없이 표부터 읽히기 때문 */}
             <div className={cn(demoFirst && 'md:order-2')}>
               <p className="text-caption text-text-muted">{band.eyebrow}</p>
-              <h2 className="font-heading text-text mt-1.5 text-[21px] leading-snug font-bold tracking-[-0.02em] text-balance">
+              <h2 className="text-h2 mt-1.5 leading-snug tracking-[-0.02em] text-balance">
                 {band.title}
               </h2>
               <p className="text-body2 text-text-secondary mt-2.5 mb-3.5 leading-[1.75]">

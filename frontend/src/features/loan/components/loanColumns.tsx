@@ -1,5 +1,5 @@
 import type { LoanListItem } from '@/features/loan/model/types'
-import { LOAN_STATUS,LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
+import { LOAN_STATUS, LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { BOOKMARK_TARGET } from '@/shared/types'
 import BookmarkToggle from '@/shared/ui/BookmarkToggle'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
@@ -35,7 +35,7 @@ export const loanColumns: Column<LoanListItem>[] = [
         >
           {loan.accountName}
         </b>
-        <span className="text-text-muted block truncate text-[11px]">{loan.bankName}</span>
+        <span className="text-text-muted text-caption block truncate">{loan.bankName}</span>
       </div>
     ),
   },
@@ -47,7 +47,7 @@ export const loanColumns: Column<LoanListItem>[] = [
     render: (loan) => (
       <span
         className={cn(
-          'text-[12.5px] tabular-nums',
+          'text-caption tabular-nums',
           loan.status === LOAN_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text',
         )}
       >
@@ -64,7 +64,7 @@ export const loanColumns: Column<LoanListItem>[] = [
     render: (loan) => (
       <span
         className={cn(
-          'text-[12.5px] tabular-nums',
+          'text-caption tabular-nums',
           loan.status === LOAN_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text',
         )}
       >

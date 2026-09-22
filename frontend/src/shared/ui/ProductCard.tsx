@@ -86,9 +86,7 @@ export default function ProductCard({
           )}
 
           {organization && (
-            <span className="text-text-muted mt-1 block truncate text-[11.5px]">
-              {organization}
-            </span>
+            <span className="text-text-muted text-caption mt-1 block truncate">{organization}</span>
           )}
         </span>
 

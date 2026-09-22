@@ -31,7 +31,7 @@ function Figure({
 }) {
   return (
     <div className="bg-surface-muted flex-1 rounded-md px-4 py-3.5">
-      <p className="text-text-muted text-[11.5px]">{label}</p>
+      <p className="text-text-muted text-caption">{label}</p>
       <p
         className={
           emphasis
@@ -40,9 +40,9 @@ function Figure({
         }
       >
         {value}
-        <small className="text-text-secondary text-[14px] font-normal">{unit}</small>
+        <small className="text-text-secondary text-body1 font-normal">{unit}</small>
       </p>
-      <p className="text-text-secondary mt-2 text-[11.5px] tabular-nums">{note}</p>
+      <p className="text-text-secondary text-caption mt-2 tabular-nums">{note}</p>
     </div>
   )
 }
@@ -90,8 +90,8 @@ export default function FullRepaymentCard({ product, detail, progress }: FullRep
   return (
     <>
       <Panel title="전액 상환 (완납)">
-        <div className="flex flex-col gap-3.5 px-[15px] py-3.5">
-          <p className="text-text-secondary text-[12.5px] leading-relaxed">
+        <div className="px-card flex flex-col gap-3.5 py-3.5">
+          <p className="text-text-secondary text-caption leading-relaxed">
             일부 금액 조기상환은 지원하지 않아요. 남은 대출을 한 번에 갚을 수 있어요.
           </p>
 
@@ -115,7 +115,7 @@ export default function FullRepaymentCard({ product, detail, progress }: FullRep
             지금 완납하기
           </Button>
 
-          <p className="text-text-muted text-[11.5px]">
+          <p className="text-text-muted text-caption">
             출금 계좌 {account}에서 즉시 출금돼요 · 완납 후 자동이체는 자동 해지됩니다
           </p>
         </div>

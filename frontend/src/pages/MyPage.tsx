@@ -74,7 +74,7 @@ function Field({ term, description }: { term: string; description: string }) {
  * 되지만, 찾을 수 없을 만큼 숨기면 그것대로 불친절하다.
  */
 export function MyPage() {
-  const { data, isLoading, isError } = useMyPage()
+  const { data, isLoading, isError, refetch } = useMyPage()
   const refresh = useMydataRefresh()
 
   /*
@@ -109,8 +109,8 @@ export function MyPage() {
         title="내 정보를 불러오지 못했어요"
         description="잠시 후 다시 시도해 주세요."
         action={
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            다시 불러오기
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            다시 시도
           </Button>
         }
       />
@@ -139,7 +139,7 @@ export function MyPage() {
   return (
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-w-0 flex-col gap-3.5">
-        <Panel className="flex flex-wrap items-center justify-between gap-3 px-[15px] py-3.5">
+        <Panel className="px-card flex flex-wrap items-center justify-between gap-3 py-3.5">
           <span className="min-w-0">
             <b className="text-text text-body1 block font-semibold">{profile.name}</b>
             <span className="text-text-muted text-caption block truncate">
@@ -180,7 +180,7 @@ export function MyPage() {
         {preOwner ? (
           <Panel>
             <PanelHead title="사업자 정보" aside={<Badge variant="outline">미인증</Badge>} />
-            <div className="flex flex-wrap items-center justify-between gap-3 px-[15px] py-3.5">
+            <div className="px-card flex flex-wrap items-center justify-between gap-3 py-3.5">
               <p className="text-text-secondary text-body2 leading-[1.7]">
                 사업자 인증을 하면 매출·신용 기준으로 자격을 판정하고
                 <br />
@@ -199,22 +199,22 @@ export function MyPage() {
                 />
                 <dl className="divide-border-subtle grid grid-cols-3 divide-x">
                   <div className="px-3.5 py-3">
-                    <dt className="text-text-muted text-[11px]">입출금 잔액</dt>
-                    <dd className="text-text mt-0.5 text-[17px] font-bold tracking-tight tabular-nums">
+                    <dt className="text-text-muted text-caption">입출금 잔액</dt>
+                    <dd className="text-text text-h4 mt-0.5 font-bold tracking-tight tabular-nums">
                       {formatMoneyShort(accountSummary.totalBalance)}
                     </dd>
                   </div>
                   <div className="px-3.5 py-3">
-                    <dt className="text-text-muted text-[11px]">대출 잔액</dt>
-                    <dd className="text-text mt-0.5 text-[17px] font-bold tracking-tight tabular-nums">
+                    <dt className="text-text-muted text-caption">대출 잔액</dt>
+                    <dd className="text-text text-h4 mt-0.5 font-bold tracking-tight tabular-nums">
                       {formatMoneyShort(accountSummary.totalLoanBalance)}
                     </dd>
                   </div>
                   <div className="px-3.5 py-3">
-                    <dt className="text-text-muted text-[11px]">연결 계좌</dt>
-                    <dd className="text-text mt-0.5 text-[17px] font-bold tracking-tight tabular-nums">
+                    <dt className="text-text-muted text-caption">연결 계좌</dt>
+                    <dd className="text-text text-h4 mt-0.5 font-bold tracking-tight tabular-nums">
                       {accountSummary.accountCount}
-                      <span className="text-text-secondary text-[11.5px] font-normal">개</span>
+                      <span className="text-text-secondary text-caption font-normal">개</span>
                     </dd>
                   </div>
                 </dl>
@@ -230,7 +230,7 @@ export function MyPage() {
                * `/business/me` 를 영구 500 으로 만드는 경로다. 못 불러왔다고만 알린다.
                */}
               {business ? (
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-2 px-[15px] py-3">
+                <dl className="px-card grid grid-cols-2 gap-x-6 gap-y-2 py-3">
                   <Field term="상호" description={business.businessName} />
                   {/*
                    * 등록번호를 가린다. 상호·대표자·개업일이 한 화면에 같이 떠 있어서,
@@ -244,7 +244,7 @@ export function MyPage() {
                   <Field term="개업일" description={business.openDate.replaceAll('-', '. ')} />
                 </dl>
               ) : (
-                <p className="text-text-muted text-body2 px-[15px] py-3.5">
+                <p className="text-text-muted text-body2 px-card py-3.5">
                   업체 정보를 불러오지 못했어요. 잠시 후 새로고침해 주세요.
                 </p>
               )}
@@ -261,7 +261,7 @@ export function MyPage() {
 
                     {/* 서버 쿨다운이 남아 있으면 눌러도 429 라 미리 잠근다 */}
                     {refresh.remaining && (
-                      <span className="text-text-muted text-[11.5px]">
+                      <span className="text-text-muted text-caption">
                         {refresh.remaining} 갱신 가능
                       </span>
                     )}
@@ -302,7 +302,7 @@ export function MyPage() {
        * 알림 도메인이 생기면 되살린다.
        */}
       <div className="flex flex-col gap-3.5">
-        <Panel className="px-[15px] py-2.5">
+        <Panel className="px-card py-2.5">
           <button
             type="button"
             onClick={() => setWithdrawOpen(true)}

@@ -474,13 +474,13 @@ export default function PhoneVerifyPopup({
         )}
 
         {/*
-         * 입력칸이 size="lg"(56px)라 낮은 창에서 3단계가 넘친다. size 는 prop 이라
+         * 입력칸이 size="xl"(56px)라 낮은 창에서 3단계가 넘친다. size 는 prop 이라
          * 미디어쿼리로 못 바꾸므로 여기서 높이만 눌러준다 — 820px 이상에서는 원래대로.
          */}
         {step === 2 && (
           <div className="contents [@media(max-height:819px)]:[&_input]:h-[46px]">
             <Input
-              size="lg"
+              size="xl"
               label="이름"
               required
               autoComplete="name"
@@ -506,7 +506,7 @@ export default function PhoneVerifyPopup({
               <div className="flex items-center gap-2">
                 <Input
                   id={rrnFrontId}
-                  size="lg"
+                  size="xl"
                   className="min-w-0 flex-1"
                   inputMode="numeric"
                   autoComplete="off"
@@ -574,7 +574,7 @@ export default function PhoneVerifyPopup({
 
               <Input
                 id={phoneFieldId}
-                size="lg"
+                size="xl"
                 inputMode="tel"
                 autoComplete="tel"
                 placeholder="숫자만 입력"

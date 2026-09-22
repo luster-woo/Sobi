@@ -8,7 +8,9 @@ import { SUPPORT_STATUS, type SupportStatus } from '@/shared/constants/productSt
 import { routeTo } from '@/shared/constants/routes'
 import { useListParams } from '@/shared/hooks/useListParams'
 import type { SupportProgramType } from '@/shared/types'
+import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
+import PageHeading from '@/shared/ui/PageHeading'
 import Pagination from '@/shared/ui/Pagination'
 import Panel from '@/shared/ui/Panel'
 import SearchBar from '@/shared/ui/SearchBar'
@@ -29,7 +31,9 @@ const PAGE_SIZE = 20
  * 대출(188)은 keyword 가 필터와 같이 걸려서 같은 화면에 검색창만 얹었다 — 다른 구조다.
  */
 export function SupportProgramListPage() {
-  const { page, values, setPage, setValues } = useListParams({ keys: FILTER_KEYS })
+  const { page, values, setPage, setValues, activeCount, reset } = useListParams({
+    keys: FILTER_KEYS,
+  })
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -55,7 +59,7 @@ export function SupportProgramListPage() {
   )
 
   // 훅은 조건부로 호출할 수 없어 둘 다 부르고 enabled 로 하나만 켠다
-  const { data, isLoading, isFetching, isError } = isSearchMode ? searchQuery : listQuery
+  const { data, isLoading, isFetching, isError, refetch } = isSearchMode ? searchQuery : listQuery
 
   const programs = data?.programs ?? []
   const totalElements = data?.page.totalElements ?? 0
@@ -63,7 +67,7 @@ export function SupportProgramListPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
-      <h1 className="text-h1">지원사업</h1>
+      <PageHeading title="지원사업" />
 
       <Panel>
         <div className="px-4 pt-4">
@@ -95,6 +99,8 @@ export function SupportProgramListPage() {
             isBookmark={values.isBookmark === 'true'}
             sort={values.sort}
             onChange={setValues}
+            activeCount={activeCount}
+            onReset={reset}
           />
         )}
 
@@ -142,6 +148,11 @@ export function SupportProgramListPage() {
               <EmptyState
                 title="목록을 불러오지 못했어요"
                 description="잠시 후 다시 시도해주세요."
+                action={
+                  <Button variant="outline" size="sm" onClick={() => refetch()}>
+                    다시 시도
+                  </Button>
+                }
               />
             ) : isSearchMode ? (
               <EmptyState

@@ -38,7 +38,7 @@ export default function BusinessMixPanel({ business, businessMix }: BusinessMixP
     <MiniPanel
       title="업종 구성"
       headerRight={
-        <span className="text-text-muted text-[11.5px] tabular-nums">
+        <span className="text-text-muted text-caption tabular-nums">
           전체 {businessMix.totalStoreCount.toLocaleString('ko-KR')}곳
         </span>
       }
@@ -59,7 +59,7 @@ export default function BusinessMixPanel({ business, businessMix }: BusinessMixP
       </div>
 
       {rest && (
-        <p className="text-text-secondary text-[11.5px] leading-relaxed tabular-nums">
+        <p className="text-text-secondary text-caption leading-relaxed tabular-nums">
           그 외 업종 {mixValue(rest.storeCount, rest.sharePercent)}
         </p>
       )}

@@ -19,7 +19,7 @@ export default function BusinessVerifyPromoCard() {
        * 한 문장으로 흘리면 320px 열에서 '쓸 / 수 있어요' 처럼 어색하게 끊긴다.
        * 두 문장으로 나눠 각 줄이 온전히 떨어지게 한다.
        */}
-      <div className="text-text-muted space-y-0.5 text-[11.5px] leading-[1.65]">
+      <div className="text-text-muted text-caption space-y-0.5 leading-[1.65]">
         <p>인증하면 매출·신용 기준으로 자격을 판정해드려요.</p>
         <p>상환 관리와 계좌 연동도 쓸 수 있어요.</p>
       </div>

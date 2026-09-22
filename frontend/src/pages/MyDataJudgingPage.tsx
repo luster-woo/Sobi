@@ -56,9 +56,7 @@ export function MyDataJudgingPage() {
     <div className="flex w-full max-w-[460px] flex-col items-center gap-5 pt-6">
       <Spinner size={44} label="자격을 판정하는 중" />
 
-      <h1 className="font-heading text-text text-[21px] font-bold tracking-[-0.02em]">
-        내 사업체 기준으로 상품을 고르고 있어요
-      </h1>
+      <h1 className="text-h2 tracking-[-0.02em]">내 사업체 기준으로 상품을 고르고 있어요</h1>
 
       <p className="text-body2 text-text-muted text-center">
         매출·업력·부채비율·신용등급을 상품 요건과 대조하는 중

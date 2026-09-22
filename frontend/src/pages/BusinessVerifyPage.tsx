@@ -246,9 +246,7 @@ export function BusinessVerifyPage() {
        * 바로 아래 필수 표시 세 개가 이미 하고 있어서, 따로 두면 45px 을 쓰고
        * 같은 말을 반복한다.
        */}
-      <h1 className="font-heading text-text mb-4 text-[20px] font-bold tracking-[-0.02em]">
-        사업자 인증 정보를 입력해 주세요
-      </h1>
+      <h1 className="text-h2 mb-4 tracking-[-0.02em]">사업자 인증 정보를 입력해 주세요</h1>
 
       <div className="border-border bg-surface w-full max-w-[560px] rounded-md border px-7 py-5">
         <Input

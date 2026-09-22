@@ -90,7 +90,7 @@ export default function GenderSlopeChart({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="text-text-secondary flex items-center gap-3 text-[11px]">
+      <div className="text-text-secondary text-caption flex items-center gap-3">
         <span className="flex items-center gap-1.5">
           <span className="bg-primary inline-block size-2 rounded-full" />
           남성
@@ -131,7 +131,7 @@ export default function GenderSlopeChart({
           x={LEFT_X}
           y={BOTTOM_Y + 26}
           textAnchor="middle"
-          className="fill-text-muted text-[11px]"
+          className="fill-text-muted text-caption"
         >
           오간 사람
         </text>
@@ -139,7 +139,7 @@ export default function GenderSlopeChart({
           x={RIGHT_X}
           y={BOTTOM_Y + 26}
           textAnchor="middle"
-          className="fill-text-muted text-[11px]"
+          className="fill-text-muted text-caption"
         >
           매출
         </text>
@@ -173,7 +173,7 @@ export default function GenderSlopeChart({
           x={LEFT_X - 11}
           y={maleTrafficLabelY + 4}
           textAnchor="end"
-          className="fill-primary text-[12px] font-bold tabular-nums"
+          className="fill-primary text-caption font-bold tabular-nums"
         >
           {Math.round(maleTraffic)}%
         </text>
@@ -181,21 +181,21 @@ export default function GenderSlopeChart({
           x={LEFT_X - 11}
           y={femaleTrafficLabelY + 4}
           textAnchor="end"
-          className="fill-alt text-[12px] font-bold tabular-nums"
+          className="fill-alt text-caption font-bold tabular-nums"
         >
           {Math.round(femaleTraffic)}%
         </text>
         <text
           x={RIGHT_X + 11}
           y={maleRevenueLabelY + 4}
-          className="fill-primary text-[12px] font-bold tabular-nums"
+          className="fill-primary text-caption font-bold tabular-nums"
         >
           {Math.round(maleRevenue)}%
         </text>
         <text
           x={RIGHT_X + 11}
           y={femaleRevenueLabelY + 4}
-          className="fill-alt text-[12px] font-bold tabular-nums"
+          className="fill-alt text-caption font-bold tabular-nums"
         >
           {Math.round(femaleRevenue)}%
         </text>

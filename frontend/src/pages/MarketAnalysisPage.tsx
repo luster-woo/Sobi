@@ -1,4 +1,4 @@
-import { type CSSProperties, useState } from 'react'
+import { type CSSProperties, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 
 import BusinessMixPanel from '@/features/market-analysis/components/BusinessMixPanel'
@@ -14,7 +14,10 @@ import StoreChurnPanel from '@/features/market-analysis/components/StoreChurnPan
 import { useMarketAnalysis } from '@/features/market-analysis/hooks/useMarketAnalysis'
 import { readConditionFromParams } from '@/features/market-analysis/model/condition'
 import { formatDataQuarter } from '@/features/market-analysis/model/format'
+import type { MarketAnalysis } from '@/features/market-analysis/model/types'
+import { ERROR_CODE, getErrorCode } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
+import { useUiStore } from '@/shared/lib/store/useUiStore'
 import Button from '@/shared/ui/Button'
 import ColumnResizer from '@/shared/ui/ColumnResizer'
 import EmptyState from '@/shared/ui/EmptyState'
@@ -76,9 +79,81 @@ export function MarketAnalysisPage() {
     if (!params) setConditionOpen(true)
   }
 
-  const { data, isLoading, isError, error, isPlaceholderData, refetch } = useMarketAnalysis(
+  const showToast = useUiStore((state) => state.showToast)
+
+  const {
+    data: fetched,
+    isLoading,
+    isError,
+    error,
+    isPlaceholderData,
+  } = useMarketAnalysis(
     params && { ...params, compareLimit: COMPARE_LIMIT, mixLimit: MIX_LIMIT },
   )
+
+  /*
+   * 데이터가 없는 상권을 골랐을 때.
+   *
+   * 지도에서 아무 동이나 누를 수 있게 열어 둔 뒤로 이 404 는 예외가 아니라 일상이다.
+   * 자치구 안에서도 그 업종 점포가 한 곳도 없는 동이 흔하다. 그때마다 화면을 에러로
+   * 갈아엎으면, 지도를 보며 동을 눌러 가던 흐름이 매번 끊기고 되돌아와야 한다.
+   *
+   * 그래서 보던 상권을 그대로 두고 토스트로만 알린 뒤 주소를 되돌린다. 주소를 안
+   * 되돌리면 화면과 주소가 어긋나 새로고침하는 순간 다시 에러가 된다.
+   *
+   * replace 로 바꾼다. 실패한 주소를 히스토리에 남기면 뒤로가기가 그 자리로 돌아가
+   * 또 404 를 맞는다.
+   */
+  const [lastGood, setLastGood] = useState<{
+    dongCode: string
+    businessCode: string
+    data: MarketAnalysis
+  } | null>(null)
+
+  /*
+   * 마지막으로 성공한 조건과 그 결과를 함께 들고 있는다.
+   *
+   * 결과까지 붙드는 이유는 react-query 의 keepPreviousData 로는 부족해서다. 그쪽은
+   * 다음 요청이 pending 인 동안만 이전 데이터를 내주고, 응답이 404 로 떨어지는 순간
+   * data 를 비운다. 그러면 되돌리는 찰나에 그릴 것이 없어 흰 화면이 지나간다.
+   *
+   * effect 가 아니라 렌더 중에 담는다. 같은 렌더에서 아래 recovering 판정이 이 값을
+   * 읽어야 하기 때문이다 — effect 로 미루면 한 프레임 동안 '돌아갈 자리가 없다' 로
+   * 읽혀 에러 화면이 한 번 스쳐 지나간다. 결과가 달라질 때만 담으므로 렌더가
+   * 반복되지 않는다(이 파일의 lastHasParams 와 같은 꼴).
+   */
+  if (fetched && dongCode && businessCode && lastGood?.data !== fetched) {
+    setLastGood({ dongCode, businessCode, data: fetched })
+  }
+
+  /** 조건이 잘못된 것이지 장애가 아닌 오류. 이때만 되돌린다 */
+  const errorCode = getErrorCode(error)
+  const isNoData =
+    errorCode === ERROR_CODE.DONG_NOT_FOUND ||
+    errorCode === ERROR_CODE.INDUSTRY_NOT_FOUND ||
+    errorCode === ERROR_CODE.MARKET_DATA_EMPTY
+
+  /* 돌아갈 자리가 있을 때만 되돌린다. 첫 화면부터 404 면 에러 화면을 그대로 보여준다 */
+  const recovering = isError && isNoData && lastGood !== null
+
+  /* 되돌리는 동안에는 직전 결과를 계속 그린다. 화면이 그대로여야 흐름이 안 끊긴다 */
+  const data = fetched ?? (recovering && lastGood ? lastGood.data : undefined)
+
+  useEffect(() => {
+    if (!recovering || !lastGood) return
+
+    showToast('그 지역에는 이 업종의 상권 데이터가 없어요', 'warning')
+    navigate(
+      {
+        pathname: ROUTES.MARKET_ANALYSIS,
+        search: new URLSearchParams({
+          dongCode: lastGood.dongCode,
+          businessCode: lastGood.businessCode,
+        }).toString(),
+      },
+      { replace: true },
+    )
+  }, [recovering, lastGood, navigate, showToast])
 
   /**
    * 모달을 닫을 때.
@@ -126,19 +201,32 @@ export function MarketAnalysisPage() {
           (useMarketAnalysis 의 keepPreviousData) 둘을 나란히 두면 '불러오지 못했어요'
           아래에 직전 상권의 지표가 그대로 서 있게 된다.
         */}
-        {isError ? (
+        {isError && !recovering ? (
           <EmptyState
             title="상권 정보를 불러오지 못했어요"
             // 존재하지 않는 행정동(MARKET_001)과 그 외 오류를 구분해 보여준다
             description={
               error instanceof Error && error.message.includes('404')
-                ? '선택한 지역의 상권 데이터가 없어요. 다른 행정동을 골라주세요.'
+                ? '선택한 지역에는 이 업종의 상권 데이터가 없어요. 다른 행정동이나 업종을 골라주세요.'
                 : '잠시 후 다시 시도해주세요.'
             }
+            /*
+              빠져나갈 길을 반드시 준다. 지도에서 데이터 없는 동을 누르면 이 화면으로
+              오는데, 사이드바를 접어 둔 사람에게는 화면에 누를 것이 하나도 없다.
+
+              '이전 상권' 은 히스토리가 있을 때만 그린다. 주소를 직접 치고 들어오면
+              (location.key === 'default') 뒤로 갈 곳이 없어 눌러도 아무 일이 없다.
+            */
             action={
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
-                다시 시도
-              </Button>
+              <div className="flex flex-wrap justify-center gap-2">
+                {location.key !== 'default' && (
+                  <Button variant="outline" onClick={() => navigate(-1)}>
+                    이전 상권으로
+                  </Button>
+                )}
+
+                <Button onClick={() => setConditionOpen(true)}>조건 다시 고르기</Button>
+              </div>
             }
           />
         ) : (
@@ -156,11 +244,11 @@ export function MarketAnalysisPage() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-text text-body1 font-bold">
+                  <h1 className="text-h1 break-keep">
                     {data.location.cityName} {data.location.districtName} {data.location.dongName} ·{' '}
                     {data.business.name}
-                  </p>
-                  <p className="text-text-muted text-caption mt-1">
+                  </h1>
+                  <p className="text-text-muted mt-1 text-caption">
                     행정동 기준 · {formatDataQuarter(data.meta.dataQuarter)}
                   </p>
                 </div>
@@ -207,15 +295,11 @@ export function MarketAnalysisPage() {
                   />
 
                   {/*
-                  요약 타일 다음이 매출 구조다. 타일이 '얼마나 파는가' 까지 말했으니
-                  '누가 언제 사 가는가' 로 이어진다. 지도·밀집도는 그 다음 질문
-                  ('그래서 이 자리가 어떤가')이라 아래로 내렸다.
-                */}
-                  <RevenueStructurePanel
-                    summary={data.summary}
-                    revenueStructure={data.revenueStructure}
-                  />
-
+                    지도가 요약 타일 바로 아래에 온다. 자리를 고정하려는 것이다 —
+                    매출 구조는 집계되지 않은 상권에서 통째로 사라지는데(원본의 53%),
+                    그 위에 두면 상권을 바꿀 때마다 지도가 한 칸씩 오르내린다.
+                    지도는 눌러서 탐색하는 대상이라 자리가 흔들리면 특히 거슬린다.
+                  */}
                   <NeighborMapPanel
                     location={data.location}
                     neighbors={data.neighbors}
@@ -241,6 +325,16 @@ export function MarketAnalysisPage() {
 
                 <div className="flex flex-col gap-3.5">
                   <BusinessMixPanel business={data.business} businessMix={data.businessMix} />
+
+                  {/*
+                    업종 구성 바로 아래다. 둘 다 '이 상권은 어떤 곳인가' 를 뜯어보는
+                    카드라 결이 같고, 본문 열에는 지도·밀집도·비교표처럼 넓이를 쓰는
+                    것들만 남는다.
+                  */}
+                  <RevenueStructurePanel
+                    summary={data.summary}
+                    revenueStructure={data.revenueStructure}
+                  />
 
                   <RevenueEstimatePanel summary={data.summary} seoulRank={data.seoulRank} />
 

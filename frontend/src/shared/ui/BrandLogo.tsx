@@ -46,7 +46,7 @@ export default function BrandLogo({ markOnly = false, className }: BrandLogoProp
       {markOnly ? (
         <span className="sr-only">소상공인 도우미</span>
       ) : (
-        <span className="font-heading text-text text-[14.5px] font-bold">소상공인 도우미</span>
+        <span className="font-heading text-text text-body1 font-bold">소상공인 도우미</span>
       )}
     </span>
   )

@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { cn } from '@/shared/utils/cn'
 
 /** 시안 .panel 과 같은 프레임. shared/ui/Panel 은 div 만 그려서 링크 카드에 쓸 수 없다 */
-const FRAME = 'border-border bg-surface flex flex-col gap-[11px] rounded-md border px-[15px] py-3'
+const FRAME = 'border-border bg-surface flex flex-col gap-[11px] rounded-md border px-card py-3'
 
 function Chevron() {
   return (
@@ -58,7 +58,7 @@ export default function MiniPanel({
   const body = (
     <>
       <div>
-        {label && <p className="text-text-muted mb-0.5 text-[11px]">{label}</p>}
+        {label && <p className="text-text-muted text-caption mb-0.5">{label}</p>}
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-text text-body2 font-bold">{title}</h3>
           {aside ?? (to && <Chevron />)}
@@ -67,7 +67,7 @@ export default function MiniPanel({
 
       {children}
 
-      {note && <p className="text-text-muted text-[11px] leading-[1.7]">{note}</p>}
+      {note && <p className="text-text-muted text-caption leading-[1.7]">{note}</p>}
     </>
   )
 

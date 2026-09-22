@@ -1,8 +1,10 @@
-import { Outlet } from 'react-router'
+import { useEffect } from 'react'
+import { Outlet, useLocation } from 'react-router'
 
 import IdleWarningModal from '@/features/auth/components/IdleWarningModal'
 import { useIdleLogout } from '@/features/auth/hooks/useIdleLogout'
 import { useSession } from '@/features/auth/hooks/useSession'
+import { resolveDocumentTitle } from '@/shared/constants/pageTitles'
 
 /**
  * 모든 라우트의 부모. 여기서 세션 복구를 시작한다.
@@ -14,7 +16,13 @@ import { useSession } from '@/features/auth/hooks/useSession'
 export function RootLayout() {
   useSession()
 
+  const { pathname } = useLocation()
   const { remainingMs, extend } = useIdleLogout()
+
+  /* 브라우저 탭 제목. 라우트가 바뀔 때마다 갈아끼운다 */
+  useEffect(() => {
+    document.title = resolveDocumentTitle(pathname)
+  }, [pathname])
 
   return (
     <>

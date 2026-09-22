@@ -35,7 +35,7 @@ export default function ComparisonBar({
   const percent = Math.max(0, Math.min(1, ratio)) * 100
 
   return (
-    <div className="flex items-center gap-2.5 text-[12px]">
+    <div className="text-caption flex items-center gap-2.5">
       <span className="text-text-secondary shrink-0 truncate" style={{ width: labelWidth }}>
         {label}
       </span>

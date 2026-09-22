@@ -7,7 +7,9 @@ import type { LoanSort } from '@/features/loan/model/types'
 import { LOAN_STATUS, type LoanStatus } from '@/shared/constants/productStatus'
 import { routeTo } from '@/shared/constants/routes'
 import { useListParams } from '@/shared/hooks/useListParams'
+import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
+import PageHeading from '@/shared/ui/PageHeading'
 import Panel from '@/shared/ui/Panel'
 import SearchBar from '@/shared/ui/SearchBar'
 import Table from '@/shared/ui/Table'
@@ -29,11 +31,11 @@ const FILTER_KEYS = ['keyword', 'status', 'bookmarked', 'sort'] as const
  * 대신 상태별 개수(statusCounts)가 오므로 그걸 필터 선택지에 붙인다.
  */
 export function LoanListPage() {
-  const { values, setValues } = useListParams({ keys: FILTER_KEYS })
+  const { values, setValues, activeCount, reset } = useListParams({ keys: FILTER_KEYS })
   const navigate = useNavigate()
   const location = useLocation()
 
-  const { data, isLoading, isFetching, isError } = useLoans({
+  const { data, isLoading, isFetching, isError, refetch } = useLoans({
     keyword: values.keyword || undefined,
     status: (values.status as LoanStatus) || undefined,
     bookmarked: values.bookmarked === 'true' ? true : undefined,
@@ -56,7 +58,7 @@ export function LoanListPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
-      <h1 className="text-h1">대출</h1>
+      <PageHeading title="대출" />
 
       <Panel>
         <div className="px-4 pt-4">
@@ -79,6 +81,8 @@ export function LoanListPage() {
           bookmarked={values.bookmarked === 'true'}
           sort={values.sort}
           onChange={setValues}
+          activeCount={activeCount}
+          onReset={reset}
         />
 
         {/*
@@ -125,6 +129,11 @@ export function LoanListPage() {
               <EmptyState
                 title="목록을 불러오지 못했어요"
                 description="잠시 후 다시 시도해주세요."
+                action={
+                  <Button variant="outline" size="sm" onClick={() => refetch()}>
+                    다시 시도
+                  </Button>
+                }
               />
             ) : keyword ? (
               <EmptyState

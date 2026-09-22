@@ -177,7 +177,7 @@ export function MarketAnalysisPage() {
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
         {/*
           조건이 없을 때 모달 뒤에 깔리는 배경. 모달을 닫으면 화면을 떠나므로 이 상태로
           머무를 일은 없고, 오버레이 뒤가 텅 비어 보이지 않게 두는 것이다.
@@ -248,7 +248,7 @@ export function MarketAnalysisPage() {
                     {data.location.cityName} {data.location.districtName} {data.location.dongName} ·{' '}
                     {data.business.name}
                   </h1>
-                  <p className="text-text-muted mt-1 text-[11.5px]">
+                  <p className="text-text-muted mt-1 text-caption">
                     행정동 기준 · {formatDataQuarter(data.meta.dataQuarter)}
                   </p>
                 </div>

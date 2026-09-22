@@ -111,7 +111,7 @@ export default function FundingComparisonTable({
        */
       render: (row) =>
         row.index === selectedIndex ? (
-          <span className="text-primary text-[11.5px] font-semibold">선택됨</span>
+          <span className="text-primary text-caption font-semibold">선택됨</span>
         ) : (
           <Button variant="outline" size="sm" onClick={() => onSelect(row.index)}>
             선택
@@ -123,7 +123,7 @@ export default function FundingComparisonTable({
   return (
     <Panel
       title="조합 비교"
-      headerRight={<span className="text-text-muted text-[11.5px]">총 상환액이 적은 순</span>}
+      headerRight={<span className="text-text-muted text-caption">총 상환액이 적은 순</span>}
     >
       <Table
         caption="자금 조합 비교"

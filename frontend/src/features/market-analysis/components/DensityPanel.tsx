@@ -46,7 +46,7 @@ export default function DensityPanel({ location, density, neighbors }: DensityPa
       title="동종업종 밀집도 — 지역 평균 대비"
       headerRight={<Badge variant={DENSITY_VARIANT[level]}>{DENSITY_LABEL[level]}</Badge>}
     >
-      <div className="flex flex-col gap-2.5 px-[15px] py-3.5">
+      <div className="px-card flex flex-col gap-2.5 py-3.5">
         {rows.map((row) => (
           <ComparisonBar
             key={row.label}
@@ -59,7 +59,7 @@ export default function DensityPanel({ location, density, neighbors }: DensityPa
           />
         ))}
 
-        <p className="text-text-secondary mt-0.5 text-[11.5px] leading-relaxed">
+        <p className="text-text-secondary text-caption mt-0.5 leading-relaxed">
           {DENSITY_MESSAGE[level]}
           {looser && (
             <>

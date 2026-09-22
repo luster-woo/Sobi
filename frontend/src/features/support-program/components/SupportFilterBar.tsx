@@ -1,6 +1,7 @@
 import { SUPPORT_PROGRAM_TYPE_LABEL } from '@/features/support-program/model/types'
 import { SUPPORT_STATUS, SUPPORT_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { SUPPORT_PROGRAM_TYPE } from '@/shared/types'
+import FilterBar from '@/shared/ui/FilterBar'
 import FilterChip from '@/shared/ui/FilterChip'
 import Select from '@/shared/ui/Select'
 
@@ -84,6 +85,9 @@ interface SupportFilterBarProps {
   sort: string
   /** useListParams 의 setValues 를 그대로 넘긴다. page 리셋까지 그쪽이 처리한다 */
   onChange: (patch: Partial<Record<FilterKey, string | null>>) => void
+  /** 걸려 있는 필터 수. 1 이상이면 초기화 버튼이 나온다 */
+  activeCount: number
+  onReset: () => void
 }
 
 export default function SupportFilterBar({
@@ -93,9 +97,28 @@ export default function SupportFilterBar({
   isBookmark,
   sort,
   onChange,
+  activeCount,
+  onReset,
 }: SupportFilterBarProps) {
   return (
-    <div className="border-border-subtle flex flex-wrap items-center gap-2 border-b px-4 py-3">
+    <FilterBar
+      variant="inline"
+      activeCount={activeCount}
+      onReset={onReset}
+      sort={
+        <>
+          <span className="text-caption text-text-muted">정렬</span>
+          <Select
+            size="sm"
+            options={SORT_OPTIONS}
+            value={sort || 'endDate,asc'}
+            onChange={(event) => onChange({ sort: event.target.value })}
+            className="w-[148px]"
+            aria-label="정렬 기준"
+          />
+        </>
+      }
+    >
       <Select
         size="sm"
         options={TYPE_OPTIONS}
@@ -128,18 +151,6 @@ export default function SupportFilterBar({
         selected={isBookmark}
         onToggle={() => onChange({ isBookmark: isBookmark ? null : 'true' })}
       />
-
-      <div className="ml-auto flex shrink-0 items-center gap-2">
-        <span className="text-caption text-text-muted">정렬</span>
-        <Select
-          size="sm"
-          options={SORT_OPTIONS}
-          value={sort || 'endDate,asc'}
-          onChange={(event) => onChange({ sort: event.target.value })}
-          className="w-[148px]"
-          aria-label="정렬 기준"
-        />
-      </div>
-    </div>
+    </FilterBar>
   )
 }

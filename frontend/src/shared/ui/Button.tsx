@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 
+import { CONTROL_HEIGHT } from '@/shared/ui/controlSize'
 import { cn } from '@/shared/utils/cn'
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'danger'
@@ -23,9 +24,9 @@ const variantClass: Record<Variant, string> = {
 }
 
 const sizeClass: Record<Size, string> = {
-  sm: 'h-[34px] px-3 text-body2',
-  md: 'h-[42px] px-4 text-body1',
-  lg: 'h-12 px-6 text-body1',
+  sm: `${CONTROL_HEIGHT.sm} px-3 text-body2`,
+  md: `${CONTROL_HEIGHT.md} px-4 text-body1`,
+  lg: `${CONTROL_HEIGHT.lg} px-6 text-body1`,
 }
 
 /**

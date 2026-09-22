@@ -56,7 +56,7 @@ export const supportColumns: Column<SupportProgramListItem>[] = [
         >
           {program.pblancNm}
         </b>
-        <span className="text-text-muted block truncate text-[11px]">
+        <span className="text-text-muted text-caption block truncate">
           {program.jrsdInsttNm} · {SUPPORT_PROGRAM_TYPE_LABEL[program.type]}
         </span>
       </div>
@@ -70,7 +70,7 @@ export const supportColumns: Column<SupportProgramListItem>[] = [
     render: (program) => (
       <span
         className={cn(
-          'text-[12.5px] tabular-nums',
+          'text-caption tabular-nums',
           program.status === SUPPORT_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text',
         )}
       >
@@ -86,7 +86,7 @@ export const supportColumns: Column<SupportProgramListItem>[] = [
     render: (program) => (
       <span
         className={cn(
-          'text-[12.5px] tabular-nums',
+          'text-caption tabular-nums',
           program.status === SUPPORT_STATUS.INELIGIBLE ? 'text-text-muted' : 'text-text-secondary',
         )}
       >

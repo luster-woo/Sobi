@@ -28,7 +28,7 @@ function Stat({
       >
         {value}
       </p>
-      <p className="text-text-muted mt-1.5 text-[11px]">{label}</p>
+      <p className="text-text-muted text-caption mt-1.5">{label}</p>
     </div>
   )
 }
@@ -77,7 +77,7 @@ export default function StoreChurnPanel({ business, storeChurn }: StoreChurnPane
         />
       </div>
 
-      <p className="text-text-secondary text-[11.5px] leading-relaxed">
+      <p className="text-text-secondary text-caption leading-relaxed">
         {closeGap === null ? (
           '이 상권은 동종업종 점포가 집계되지 않아 개업·폐업률을 계산할 수 없어요.'
         ) : (

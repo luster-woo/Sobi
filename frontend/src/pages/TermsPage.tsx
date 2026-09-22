@@ -19,9 +19,7 @@ export function TermsPage() {
   return (
     <>
       <div className="mb-6.5 text-center">
-        <h1 className="font-heading text-text text-[23px] font-bold tracking-[-0.02em]">
-          서비스 이용을 위해 동의가 필요해요
-        </h1>
+        <h1 className="text-h2 tracking-[-0.02em]">서비스 이용을 위해 동의가 필요해요</h1>
         <p className="text-body2 text-text-secondary mt-2.5">
           필수 항목에 모두 동의하면 다음으로 넘어갈 수 있어요.
         </p>

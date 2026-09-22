@@ -9,8 +9,8 @@ interface JudgementSummaryPanelProps {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <dt className="text-text-muted text-[11px]">{label}</dt>
-      <dd className="text-text-secondary text-[16px] font-medium tabular-nums">{value}</dd>
+      <dt className="text-text-muted text-caption">{label}</dt>
+      <dd className="text-text-secondary text-h4 font-medium tabular-nums">{value}</dd>
     </div>
   )
 }
@@ -35,7 +35,7 @@ export default function JudgementSummaryPanel({ summary }: JudgementSummaryPanel
 
   return (
     <Panel className="flex flex-col gap-3 px-4.5 py-4">
-      <p className="text-text-muted text-[11.5px]">
+      <p className="text-text-muted text-caption">
         {/* 예비창업자는 마이데이터가 없어 갱신일도 없다 */}
         자격 판정{updatedAt && ` · 마이데이터 ${toDotDate(updatedAt)} 갱신`}
       </p>

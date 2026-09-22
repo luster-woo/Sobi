@@ -4,12 +4,12 @@ import { useNavigate } from 'react-router'
 import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
 import { useLoanProducts } from '@/features/loan-repayment/hooks/useRepayment'
 import { useMydataRefresh } from '@/features/mydata/hooks/useMydata'
-import PageHeading from '@/features/mypage/components/PageHeading'
 import { useMyPage } from '@/features/mypage/hooks/useMyPage'
 import { ROUTES } from '@/shared/constants/routes'
 import { isPreOwner } from '@/shared/types'
 import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
+import PageHeading from '@/shared/ui/PageHeading'
 import Panel from '@/shared/ui/Panel'
 import Skeleton from '@/shared/ui/Skeleton'
 import { formatMoneyShort } from '@/shared/utils/formatters'
@@ -32,10 +32,10 @@ function toUpdatedAt(iso: string | null) {
 function Tile({ term, value, unit }: { term: string; value: string; unit?: string }) {
   return (
     <div className="bg-surface px-3.5 py-3">
-      <dt className="text-text-muted text-[11px]">{term}</dt>
+      <dt className="text-text-muted text-caption">{term}</dt>
       <dd className="text-text mt-0.5 text-[19px] font-bold tracking-tight tabular-nums">
         {value}
-        {unit && <span className="text-text-secondary text-[11.5px] font-normal">{unit}</span>}
+        {unit && <span className="text-text-secondary text-caption font-normal">{unit}</span>}
       </dd>
     </div>
   )
@@ -57,17 +57,17 @@ function AccountRow({
   amount: string
 }) {
   return (
-    <div className="border-border-subtle flex items-center gap-4 border-b px-[15px] py-2.5 last:border-b-0">
+    <div className="border-border-subtle px-card flex items-center gap-4 border-b py-2.5 last:border-b-0">
       <span className="min-w-0 flex-1">
         <b className="text-text text-body2 block truncate font-medium tabular-nums">{title}</b>
         {description && (
-          <span className="text-text-muted mt-px block truncate text-[11px] tabular-nums">
+          <span className="text-text-muted text-caption mt-px block truncate tabular-nums">
             {description}
           </span>
         )}
       </span>
 
-      <span className="text-text shrink-0 text-right text-[13.5px] font-medium tabular-nums">
+      <span className="text-text text-body2 shrink-0 text-right font-medium tabular-nums">
         {amount}
       </span>
     </div>
@@ -92,7 +92,7 @@ function AccountRow({
  */
 export function AccountsPage() {
   const navigate = useNavigate()
-  const { data, isLoading, isError } = useMyPage()
+  const { data, isLoading, isError, refetch } = useMyPage()
   const refresh = useMydataRefresh()
 
   const owner = !isPreOwner(data?.profile.role ?? null)
@@ -115,8 +115,8 @@ export function AccountsPage() {
         title="계좌 정보를 불러오지 못했어요"
         description="잠시 후 다시 시도해 주세요."
         action={
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            다시 불러오기
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            다시 시도
           </Button>
         }
       />
@@ -150,8 +150,8 @@ export function AccountsPage() {
           }
           action={
             linked ? (
-              <Button variant="outline" onClick={() => window.location.reload()}>
-                다시 불러오기
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                다시 시도
               </Button>
             ) : (
               <Button onClick={() => void navigate(ROUTES.MYDATA_CONSENT)}>
@@ -170,7 +170,7 @@ export function AccountsPage() {
         title="연동 계좌"
         aside={
           <span className="flex items-center gap-2.5">
-            <span className="text-text-muted text-[11.5px] tabular-nums">
+            <span className="text-text-muted text-caption tabular-nums">
               마이데이터로 불러온 계좌예요 · {toUpdatedAt(myData?.linkedAt ?? null)} 갱신
               {/* 서버 쿨다운이 남아 있으면 눌러도 429 라 미리 잠근다 */}
               {refresh.remaining && ` · ${refresh.remaining} 갱신 가능`}

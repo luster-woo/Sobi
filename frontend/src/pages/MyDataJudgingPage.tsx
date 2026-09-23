@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
+import { useLoans } from '@/features/loan/hooks/useLoans'
 import JobProgressPanel from '@/features/mydata/components/JobProgressPanel'
 import { useMydataLinkResult } from '@/features/mydata/hooks/useMydata'
 import type { MydataLinkResult } from '@/features/mydata/model/types'
@@ -48,19 +49,41 @@ function CheckBadge() {
   )
 }
 
-function MatchResult({ result, onNext }: { result: MydataLinkResult; onNext: () => void }) {
+/**
+ * 신청할 수 있는 것을 한 문장으로.
+ *
+ * 대출 개수는 연동 응답에 없다 — 대출도 같은 job 에서 판정하지만(MydataStore 가
+ * suggest_loan 을 채운다) 응답은 AI 가 판정한 지원사업 개수만 담는다. 그래서 대출은
+ * 목록 API 의 statusCounts 로 센다. 대시보드도 같은 방식이라 두 화면 숫자가 맞는다.
+ */
+function toHeadline(programs: number, loans: number | null): string {
+  const parts: string[] = []
+  if (programs > 0) parts.push(`지원사업 ${programs}개`)
+  if (loans) parts.push(`대출 ${loans}개`)
+
+  if (parts.length === 0) return '지금 조건에 맞는 상품이 없어요'
+  return `신청할 수 있는 ${parts.join(', ')}를 찾았어요`
+}
+
+function MatchResult({
+  result,
+  eligibleLoans,
+  onNext,
+}: {
+  result: MydataLinkResult
+  eligibleLoans: number | null
+  onNext: () => void
+}) {
   return (
     <>
       <CheckBadge />
 
       <h1 className="text-h2 text-center tracking-[-0.02em]">
-        {result.eligibleCount > 0
-          ? `신청할 수 있는 지원사업 ${result.eligibleCount}개를 찾았어요`
-          : '지금 조건에 맞는 지원사업이 없어요'}
+        {toHeadline(result.eligibleCount, eligibleLoans)}
       </h1>
 
       <p className="text-body2 text-text-muted text-center">
-        마이데이터로 확인한 매출·업력·부채비율·신용등급을 지원사업 요건과 대조했어요
+        마이데이터로 확인한 매출·업력·부채비율·신용등급을 상품 요건과 대조했어요
       </p>
 
       <Button className="w-full" onClick={onNext}>
@@ -84,7 +107,14 @@ export function MyDataJudgingPage() {
   const navigate = useNavigate()
 
   const result = useMydataLinkResult()
-  const total = result?.totalCount ?? FALLBACK_TOTAL
+
+  /*
+   * 대출은 연동 응답에 개수가 없어서 목록 API 로 센다. 못 받으면 지원사업만 센다 —
+   * 덤으로 붙이는 숫자라 이것 때문에 이 화면을 막지 않는다.
+   */
+  const { data: loans } = useLoans({})
+  const eligibleLoans = loans?.statusCounts.ELIGIBLE ?? null
+  const total = (result?.totalCount ?? FALLBACK_TOTAL) + (loans?.totalCount ?? 0)
 
   const { percent, steps, done } = useEstimatedProgress({
     defs: STEPS,
@@ -115,7 +145,7 @@ export function MyDataJudgingPage() {
       )}
     >
       {showResult ? (
-        <MatchResult result={result} onNext={goDashboard} />
+        <MatchResult result={result} eligibleLoans={eligibleLoans} onNext={goDashboard} />
       ) : (
         <>
           <Spinner size={44} label="자격을 판정하는 중" />
@@ -133,7 +163,7 @@ export function MyDataJudgingPage() {
             barFirst
             summary={
               <>
-                지원사업 {total}개 중{' '}
+                상품 {total}개 중{' '}
                 <b className="font-semibold tabular-nums">
                   {Math.round((percent / 100) * total)}개
                 </b>{' '}

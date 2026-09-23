@@ -37,14 +37,29 @@ public class ApplicationDocumentServiceImpl implements ApplicationDocumentServic
     static final long MAX_FILE_BYTES = 10L * 1024 * 1024;
     private static final int ORIGINAL_FILENAME_MAX_LENGTH = 255;
 
+    private static final byte[] PDF_SIGNATURE = "%PDF".getBytes(StandardCharsets.US_ASCII);
     private static final byte[] JPEG_SIGNATURE = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
+    // hwp·doc 는 OLE2 복합 문서, hwpx·docx 는 ZIP 컨테이너다
+    private static final byte[] OLE2_SIGNATURE =
+            {(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0, (byte) 0xA1, (byte) 0xB1, 0x1A, (byte) 0xE1};
+    private static final byte[] ZIP_SIGNATURE = {'P', 'K', 0x03, 0x04};
 
-    // 확장자 → 파일 앞부분 시그니처. 이름만 바꾼 파일을 걸러낸다. AI 서버와 같은 규칙 (ai/app/ocr/router.py)
-    private static final Map<String, byte[]> SIGNATURES = Map.of(
-            "pdf", "%PDF".getBytes(StandardCharsets.US_ASCII),
+    // 확장자 → 파일 앞부분 시그니처. 이름만 바꾼 파일을 걸러낸다.
+    // 제출 서류는 OCR 로 검증하므로 AI 서버가 읽는 형식만 받는다. AI 서버와 같은 규칙 (ai/app/ocr/router.py)
+    private static final Map<String, byte[]> SUBMIT_SIGNATURES = Map.of(
+            "pdf", PDF_SIGNATURE,
             "png", new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'},
             "jpg", JPEG_SIGNATURE,
             "jpeg", JPEG_SIGNATURE
+    );
+
+    // 작성 서류는 검증 없이 보관만 한다. 초안을 한글·워드로 고친 파일을 그대로 받는다 (프론트 WRITE_ACCEPT 와 같은 목록)
+    private static final Map<String, byte[]> WRITE_SIGNATURES = Map.of(
+            "pdf", PDF_SIGNATURE,
+            "hwp", OLE2_SIGNATURE,
+            "doc", OLE2_SIGNATURE,
+            "hwpx", ZIP_SIGNATURE,
+            "docx", ZIP_SIGNATURE
     );
 
     private final ApplicationDocumentRepository applicationDocumentRepository;
@@ -81,8 +96,11 @@ public class ApplicationDocumentServiceImpl implements ApplicationDocumentServic
             throw new BusinessException(ErrorCode.APPLICATION_DOCUMENT_VALIDATING);
         }
 
-        String extension = extensionOf(file);
-        byte[] content = readValidatedContent(file, extension);
+        DocumentType documentType = DocumentType.valueOf(document.getDocumentType());
+        Map<String, byte[]> signatures = documentType == DocumentType.SUBMIT ? SUBMIT_SIGNATURES : WRITE_SIGNATURES;
+
+        String extension = extensionOf(file, signatures);
+        byte[] content = readValidatedContent(file, signatures.get(extension));
 
         String previousPath = document.getStoredPath();
         String storedPath = fileStorage.saveApplicationDocument(
@@ -94,25 +112,25 @@ public class ApplicationDocumentServiceImpl implements ApplicationDocumentServic
         document.upload(originalFilenameOf(file, extension), storedPath, LocalDateTime.now(KOREA_ZONE));
 
         // 작성 서류는 검증하지 않는다 (upload 에서 바로 PASSED)
-        if (DocumentType.valueOf(document.getDocumentType()) == DocumentType.SUBMIT) {
+        if (documentType == DocumentType.SUBMIT) {
             eventPublisher.publishEvent(new DocumentUploadedEvent(document.getId(), storedPath, extension));
         }
 
         return ApplicationDocumentUploadResponse.from(document);
     }
 
-    private String extensionOf(MultipartFile file) {
+    private String extensionOf(MultipartFile file, Map<String, byte[]> signatures) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(ErrorCode.APPLICATION_DOCUMENT_FILE_EMPTY);
         }
         String extension = StringUtils.getFilenameExtension(file.getOriginalFilename());
-        if (extension == null || !SIGNATURES.containsKey(extension.toLowerCase(Locale.ROOT))) {
+        if (extension == null || !signatures.containsKey(extension.toLowerCase(Locale.ROOT))) {
             throw new BusinessException(ErrorCode.APPLICATION_DOCUMENT_FILE_TYPE_INVALID);
         }
         return extension.toLowerCase(Locale.ROOT);
     }
 
-    private byte[] readValidatedContent(MultipartFile file, String extension) {
+    private byte[] readValidatedContent(MultipartFile file, byte[] signature) {
         // spring.servlet.multipart.max-file-size(20MB) 보다 엄격한 서류 한도. AI 계약서와 같은 10MB
         if (file.getSize() > MAX_FILE_BYTES) {
             throw new BusinessException(ErrorCode.APPLICATION_DOCUMENT_FILE_TOO_LARGE);
@@ -123,7 +141,6 @@ public class ApplicationDocumentServiceImpl implements ApplicationDocumentServic
         } catch (IOException e) {
             throw new UncheckedIOException("업로드 파일 읽기 실패", e);
         }
-        byte[] signature = SIGNATURES.get(extension);
         if (content.length < signature.length
                 || !Arrays.equals(Arrays.copyOf(content, signature.length), signature)) {
             throw new BusinessException(ErrorCode.APPLICATION_DOCUMENT_FILE_TYPE_INVALID);

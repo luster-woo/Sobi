@@ -104,7 +104,7 @@ public enum ErrorCode {
     APPLICATION_DOCUMENT_VALIDATING(HttpStatus.CONFLICT, "APPLICATION_014", "서류를 검증하는 중입니다. 검증이 끝난 뒤 다시 올려주세요."),
     APPLICATION_DOCUMENT_FILE_EMPTY(HttpStatus.BAD_REQUEST, "APPLICATION_015", "업로드할 파일이 없습니다."),
     APPLICATION_DOCUMENT_FILE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "APPLICATION_016", "파일은 10MB 이하만 올릴 수 있습니다."),
-    APPLICATION_DOCUMENT_FILE_TYPE_INVALID(HttpStatus.BAD_REQUEST, "APPLICATION_017", "PDF, JPG, PNG 파일만 올릴 수 있습니다.");
+    APPLICATION_DOCUMENT_FILE_TYPE_INVALID(HttpStatus.BAD_REQUEST, "APPLICATION_017", "지원하지 않는 파일 형식입니다.");
 
 
     private final HttpStatus status;

@@ -16,18 +16,6 @@ export function formatBizNo(value: string): string {
   return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`
 }
 
-/** '01012345678' → '010-1234-5678' (10~11자리가 아니면 원본 그대로) */
-export function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '')
-  if (digits.length === 11) {
-    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
-  }
-  if (digits.length === 10) {
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
-  }
-  return value
-}
-
 /** '20230410' → '2023-04-10' (8자리가 아니면 원본 그대로) */
 export function formatIsoDate(value: string): string {
   const digits = value.replace(/\D/g, '')

@@ -7,8 +7,6 @@ import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   PASSWORD_REGEX,
-  PHONE_DIGITS_REGEX,
-  PHONE_REGEX,
   VALIDATION_MESSAGE,
 } from '@/shared/constants/validation'
 
@@ -60,14 +58,6 @@ export function validateBizNo(value: string): string | null {
 
 export function validateAuthCode(value: string): string | null {
   if (!AUTH_CODE_REGEX.test(value)) return VALIDATION_MESSAGE.authCodeFormat
-  return null
-}
-
-export function validatePhone(value: string): string | null {
-  if (!value.trim()) return VALIDATION_MESSAGE.required
-  if (!PHONE_REGEX.test(value) && !PHONE_DIGITS_REGEX.test(value)) {
-    return VALIDATION_MESSAGE.phoneFormat
-  }
   return null
 }
 

@@ -21,12 +21,7 @@ export const ROUTES = {
   /** 비로그인 재설정(`/auth/password/reset`). 로그인 상태 변경은 마이페이지의 `/user/password` 다 */
   PASSWORD_RESET: '/password',
 
-  /**
-   * 온보딩 — 사업자 인증, 마이데이터 연동. 가입 직후 순서대로 지난다.
-   *
-   * 휴대폰 본인확인은 경로가 없다. 실제 본인확인처럼 `/verify` 위에 팝업으로 뜬다
-   * (`features/auth/components/PhoneVerifyPopup.tsx`).
-   */
+  /** 온보딩 — 사업자 인증, 마이데이터 연동. 가입 직후 순서대로 지난다 */
   BUSINESS_VERIFY: '/verify',
   MYDATA_CONSENT: '/mydata/consent',
   MYDATA_COLLECT: '/mydata/collect',

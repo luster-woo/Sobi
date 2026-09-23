@@ -89,6 +89,8 @@ export default function OcrScanModal({ documents, previews }: OcrScanModalProps)
       onClose={close}
       title={TITLE[shownStatus]}
       size="lg"
+      /* X 와 푸터 버튼이 똑같이 close 를 부른다. 같은 일을 하는 버튼을 둘 두지 않는다 */
+      hideClose
       footer={
         <Button variant="outline" onClick={close}>
           {settled ? '닫기' : '뒤에서 계속 확인하기'}

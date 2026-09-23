@@ -41,6 +41,14 @@ interface ModalProps {
    * 탈퇴·삭제 확인처럼 실수로 닫히면 안 되는 경우 false 로 끕니다.
    */
   closeOnOverlayClick?: boolean
+  /**
+   * 오른쪽 위 X 를 숨깁니다.
+   *
+   * 푸터 버튼이 X 와 똑같이 닫기만 하는 경우에 씁니다 — 같은 일을 하는 것이 둘이면
+   * 어느 쪽이 '취소' 고 어느 쪽이 '그냥 닫기' 인지 고르게 만듭니다.
+   * ESC 와 오버레이 클릭은 그대로 닫습니다.
+   */
+  hideClose?: boolean
   className?: string
 }
 
@@ -70,6 +78,7 @@ export default function Modal({
   footer,
   size = 'md',
   closeOnOverlayClick = true,
+  hideClose = false,
   className,
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
@@ -181,24 +190,26 @@ export default function Modal({
           {/* 누를 수 있는 것끼리 오른쪽 위에 모은다. 제목 옆은 읽는 자리다 */}
           {headerAction}
 
-          <button
-            type="button"
-            aria-label="닫기"
-            onClick={onClose}
-            className="text-text-muted hover:text-text -mt-1 -mr-1 shrink-0 rounded-sm p-1 transition-colors"
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="size-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
+          {!hideClose && (
+            <button
+              type="button"
+              aria-label="닫기"
+              onClick={onClose}
+              className="text-text-muted hover:text-text -mt-1 -mr-1 shrink-0 rounded-sm p-1 transition-colors"
             >
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
-          </button>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="size-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M6 6l12 12M18 6 6 18" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* 본문이 길면 여기만 스크롤됩니다. 제목·버튼은 자리에 남습니다 */}

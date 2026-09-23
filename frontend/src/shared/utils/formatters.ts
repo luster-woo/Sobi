@@ -115,3 +115,57 @@ export function splitMoneyShort(won: number | null): MoneyParts {
     unit: '만 원',
   }
 }
+
+/** 한 자리 숫자의 한글. 0 은 읽지 않는다 */
+const KOREAN_DIGITS = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구']
+/** 네 자리 안에서의 자리 이름 */
+const KOREAN_PLACES = ['', '십', '백', '천']
+/** 네 자리씩 끊었을 때의 단위 */
+const KOREAN_GROUPS = ['', '만', '억', '조']
+
+/** 네 자리 이하를 읽는다. 1000 → '일천' */
+function readKoreanGroup(group: number): string {
+  let text = ''
+
+  for (let place = KOREAN_PLACES.length - 1; place >= 0; place -= 1) {
+    const digit = Math.floor(group / 10 ** place) % 10
+    if (digit === 0) continue
+    text += KOREAN_DIGITS[digit] + KOREAN_PLACES[place]
+  }
+
+  return text
+}
+
+/**
+ * 원 단위 금액 → 한글 병기. 10_000_000 → '일천만 원'
+ *
+ * 입력한 금액 옆에 적어 자릿수를 잘못 센 것을 바로 알아채게 한다. 대출 한도가
+ * '500만 ~ 8,000만' 이라 0 하나가 더 붙거나 빠지면 천만과 억을 오가는데, 콤마만으로는
+ * 그 차이가 눈에 잘 안 들어온다.
+ *
+ * 수표 표기 관행대로 앞자리 일을 살린다 — '천만' 이 아니라 '일천만' 이다. 한 글자를
+ * 덧대는 것만으로 앞에 숫자가 더 있었는지 확인할 수 있다.
+ *
+ * formatMoneyShort 와 달리 1원 단위까지 읽는다. 저쪽은 상품 한도를 어림으로 보여주는
+ * 자리지만, 이쪽은 사용자가 방금 친 값을 되읽어 주는 자리라 버리면 안 된다.
+ *
+ * 0 이하와 조 단위를 넘는 값은 빈 문자열이다. 병기는 거들 뿐이라 읽을 수 없으면
+ * 아무것도 안 적는 편이 낫다.
+ */
+export function toKoreanMoney(won: number | null | undefined): string {
+  if (won === null || won === undefined) return ''
+  if (!Number.isFinite(won) || won <= 0) return ''
+
+  const parts: string[] = []
+  let rest = Math.floor(won)
+
+  for (let group = 0; group < KOREAN_GROUPS.length && rest > 0; group += 1) {
+    const chunk = rest % 10_000
+    if (chunk > 0) parts.unshift(readKoreanGroup(chunk) + KOREAN_GROUPS[group])
+    rest = Math.floor(rest / 10_000)
+  }
+
+  if (rest > 0) return ''
+
+  return `${parts.join(' ')} 원`
+}

@@ -23,7 +23,7 @@ import psutil
 SAMPLE_DIR = ROOT / "data" / "raw" / "ocr"
 PDF_DPI = int(os.getenv("OCR_PDF_DPI", "200"))  # 스캔 문서 기준. 낮으면 작은 글씨를 놓친다
 PREVIEW_LINES = int(os.getenv("OCR_PREVIEW", "15"))   # 출력할 칸 수 (0 이면 전부)
-MKLDNN = os.getenv("OCR_MKLDNN", "0") == "1"   # oneDNN 가속. 3.3.0 버그로 기본 끔
+MKLDNN = os.getenv("OCR_MKLDNN", "1") == "1"   # oneDNN 가속. paddle 3.2.0 기준 기본 켬 (3.3.x 는 켜면 에러)
 MAX_SIDE = int(os.getenv("OCR_MAX_SIDE", "0"))  # 긴 변을 이 크기로 축소 (0이면 원본). 속도 비교용
 # lang="korean" 은 검출(det)에 무거운 server 모델을 쓴다 → 느리다. 그래서 det 를 mobile 로 지정하는데,
 # ⚠ 모델 이름을 하나라도 지정하면 lang 이 통째로 무시된다 ("lang will be ignored when model names ...").
@@ -487,8 +487,9 @@ def get_ocr(proc, mem0):
     from paddleocr import PaddleOCR
 
     t = time.time()
-    # enable_mkldnn: PaddlePaddle 3.3.0 의 oneDNN 회귀(PIR 변환 실패)로 기본 끔.
-    #   Paddle #77340 / PaddleOCR #15782. 속도 비교하려면 OCR_MKLDNN=1
+    # enable_mkldnn: paddlepaddle 3.2.0 에서는 켜야 4~5배 빠르다 (기본 켬).
+    #   3.3.x 로 올리면 oneDNN/PIR 회귀로 NotImplementedError — Paddle #77340 / PaddleOCR #15782.
+    #   가속 없는 속도와 비교하려면 OCR_MKLDNN=0
     kwargs = dict(lang="korean", enable_mkldnn=MKLDNN,
                   use_doc_orientation_classify=False,
                   use_doc_unwarping=False, use_textline_orientation=False)

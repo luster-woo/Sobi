@@ -24,6 +24,8 @@ pgvector==0.5.0
 hwp2hwpx==1.0.1
 
 # OCR (제출 서류 검증)
-paddlepaddle==3.3.1
+# 3.3.x 는 oneDNN/PIR 회귀로 enable_mkldnn 을 못 켠다 (Paddle #77340) → 가속을 쓰려고 3.2.0 고정.
+# 3.2.0 + oneDNN 실측: 인식 13.3s → 2.6s (PDF), 19.8s → 4.3s (2480×3508 JPG), 신뢰도·추출 결과 동일
+paddlepaddle==3.2.0
 paddleocr==3.7.0
 pymupdf==1.28.2

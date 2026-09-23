@@ -30,8 +30,10 @@ def load():
         _ocr = PaddleOCR(
             text_detection_model_name=DET_MODEL,
             text_recognition_model_name=REC_MODEL,
-            # PaddlePaddle 3.3.x 의 oneDNN/PIR 회귀로 켜면 NotImplementedError (Paddle #77340)
-            enable_mkldnn=False,
+            # oneDNN 가속. 인식 시간이 4~5배 줄고(13.3s → 2.6s) 신뢰도·추출 결과는 같다. 추론 메모리는 +0.6GB.
+            # ⚠ paddlepaddle 3.3.x 에서는 PIR 회귀로 켜면 NotImplementedError (Paddle #77340) →
+            #   requirements.txt 가 3.2.0 으로 고정돼 있다. paddle 을 올릴 때 이 옵션을 함께 확인할 것
+            enable_mkldnn=True,
             # 증명서는 바로 찍힌 스캔·PDF 라 방향 보정·왜곡 보정이 필요 없고, 켜면 느려진다
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,

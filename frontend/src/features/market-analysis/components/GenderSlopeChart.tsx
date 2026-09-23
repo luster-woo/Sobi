@@ -59,7 +59,8 @@ function separateLabels(first: number, second: number): [number, number] {
  * 하나라, 그 어긋남이 곧 선의 기울기가 되어야 그림이 문장을 대신한다.
  *
  * 색을 남녀로 가른다. 여기서는 초록이 '매출' 이 아니라 '남성' 을 뜻한다 — 한 그림 안에서
- * 두 계열이 좌우로 교차하므로 선을 구분할 축이 성별밖에 없다.
+ * 두 계열이 좌우로 교차하므로 선을 구분할 축이 성별밖에 없다. 여성 쪽 danger 도 마찬가지로
+ * '경고' 가 아니라 계열 색이다. 이 그림에는 좋고 나쁨이 없다.
  *
  * 들어올 때 남성 선은 맨 위에서, 여성 선은 맨 아래에서 제자리를 찾아온다. 두 선이
  * 반대 방향에서 좁혀 들어오면 '100% 를 나눠 갖는 관계' 가 움직임만으로 읽힌다.
@@ -96,7 +97,7 @@ export default function GenderSlopeChart({
           남성
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="bg-alt inline-block size-2 rounded-full" />
+          <span className="bg-danger inline-block size-2 rounded-full" />
           여성
         </span>
 
@@ -158,15 +159,15 @@ export default function GenderSlopeChart({
           y1={femaleTrafficY}
           x2={RIGHT_X}
           y2={femaleRevenueY}
-          className="stroke-alt"
+          className="stroke-danger"
           strokeWidth="2.5"
           strokeLinecap="round"
         />
 
         <circle cx={LEFT_X} cy={maleTrafficY} r="4.5" className="fill-primary" />
         <circle cx={RIGHT_X} cy={maleRevenueY} r="4.5" className="fill-primary" />
-        <circle cx={LEFT_X} cy={femaleTrafficY} r="4.5" className="fill-alt" />
-        <circle cx={RIGHT_X} cy={femaleRevenueY} r="4.5" className="fill-alt" />
+        <circle cx={LEFT_X} cy={femaleTrafficY} r="4.5" className="fill-danger" />
+        <circle cx={RIGHT_X} cy={femaleRevenueY} r="4.5" className="fill-danger" />
 
         {/* 이름표는 점 바깥쪽에. 안쪽에 두면 선이 교차하는 가운데에서 겹친다 */}
         <text
@@ -181,7 +182,7 @@ export default function GenderSlopeChart({
           x={LEFT_X - 11}
           y={femaleTrafficLabelY + 4}
           textAnchor="end"
-          className="fill-alt text-caption font-bold tabular-nums"
+          className="fill-danger text-caption font-bold tabular-nums"
         >
           {Math.round(femaleTraffic)}%
         </text>
@@ -195,7 +196,7 @@ export default function GenderSlopeChart({
         <text
           x={RIGHT_X + 11}
           y={femaleRevenueLabelY + 4}
-          className="fill-alt text-caption font-bold tabular-nums"
+          className="fill-danger text-caption font-bold tabular-nums"
         >
           {Math.round(femaleRevenue)}%
         </text>

@@ -93,14 +93,6 @@
   --color-heat-4: #4a9a84;
   --color-heat-5: #0a6e5c;
 
-  /*
-   * 매출과 짝을 이루는 두 번째 계열. 성비 슬로프에서 여성 선에 쓴다.
-   *
-   * 한 그림 안에서 두 선이 좌우로 교차하므로 색으로 갈라야 한다. 채도를 primary 보다
-   * 낮춰 브랜드 색이 주인 자리를 유지하게 했다.
-   */
-  --color-alt: #4a6b8a;
-
   --color-danger: #b42318;
   --color-danger-hover: #9a1e15;
   --color-danger-soft: #f6e3e1;

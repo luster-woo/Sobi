@@ -4,15 +4,17 @@ import { loanColumns } from '@/features/loan/components/loanColumns'
 import LoanFilterBar from '@/features/loan/components/LoanFilterBar'
 import { useLoans } from '@/features/loan/hooks/useLoans'
 import type { LoanSort } from '@/features/loan/model/types'
-import { PRODUCT_STATUS, type ProductStatus } from '@/shared/constants/productStatus'
+import { LOAN_STATUS, type LoanStatus } from '@/shared/constants/productStatus'
 import { routeTo } from '@/shared/constants/routes'
 import { useListParams } from '@/shared/hooks/useListParams'
+import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
+import PageHeading from '@/shared/ui/PageHeading'
 import Panel from '@/shared/ui/Panel'
 import SearchBar from '@/shared/ui/SearchBar'
 import Table from '@/shared/ui/Table'
 
-const FILTER_KEYS = ['keyword', 'bankName', 'status', 'bookmarked', 'sort'] as const
+const FILTER_KEYS = ['keyword', 'status', 'bookmarked', 'sort'] as const
 
 /**
  * 대출 상품 조회 · 검색 (S15P21D101-187 · 188)
@@ -29,14 +31,13 @@ const FILTER_KEYS = ['keyword', 'bankName', 'status', 'bookmarked', 'sort'] as c
  * 대신 상태별 개수(statusCounts)가 오므로 그걸 필터 선택지에 붙인다.
  */
 export function LoanListPage() {
-  const { values, setValues } = useListParams({ keys: FILTER_KEYS })
+  const { values, setValues, activeCount, reset } = useListParams({ keys: FILTER_KEYS })
   const navigate = useNavigate()
   const location = useLocation()
 
-  const { data, isLoading, isFetching, isError } = useLoans({
+  const { data, isLoading, isFetching, isError, refetch } = useLoans({
     keyword: values.keyword || undefined,
-    bankName: values.bankName || undefined,
-    status: (values.status as ProductStatus) || undefined,
+    status: (values.status as LoanStatus) || undefined,
     bookmarked: values.bookmarked === 'true' ? true : undefined,
     sort: (values.sort as LoanSort) || undefined,
   })
@@ -53,13 +54,11 @@ export function LoanListPage() {
    */
   const shownCount = loans.length
   const totalCount = data?.totalCount ?? 0
-  const filtered = Boolean(
-    values.keyword || values.bankName || values.status || values.bookmarked === 'true',
-  )
+  const filtered = Boolean(values.keyword || values.status || values.bookmarked === 'true')
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
-      <h1 className="text-h1">대출</h1>
+      <PageHeading title="대출" />
 
       <Panel>
         <div className="px-4 pt-4">
@@ -78,11 +77,12 @@ export function LoanListPage() {
         </div>
 
         <LoanFilterBar
-          bankName={values.bankName}
           status={values.status}
           bookmarked={values.bookmarked === 'true'}
           sort={values.sort}
           onChange={setValues}
+          activeCount={activeCount}
+          onReset={reset}
         />
 
         {/*
@@ -122,13 +122,18 @@ export function LoanListPage() {
            * 관심 목록과 같은 처리다.
            */
           rowClassName={(loan) =>
-            loan.status === PRODUCT_STATUS.INELIGIBLE ? 'bg-surface-muted' : undefined
+            loan.status === LOAN_STATUS.INELIGIBLE ? 'bg-surface-muted' : undefined
           }
           empty={
             isError ? (
               <EmptyState
                 title="목록을 불러오지 못했어요"
                 description="잠시 후 다시 시도해주세요."
+                action={
+                  <Button variant="outline" size="sm" onClick={() => refetch()}>
+                    다시 시도
+                  </Button>
+                }
               />
             ) : keyword ? (
               <EmptyState

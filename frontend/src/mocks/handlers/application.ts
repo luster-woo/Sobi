@@ -1,16 +1,20 @@
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 
+import { isSettled } from '@/features/application/model/statusLabel'
 import type {
   ApplicationDetail,
   ApplicationDocument,
   ApplicationListItem,
-  ApplicationProduct,
+  ApplicationLoanSummary,
+  ApplicationSupportSummary,
+  DraftStatus,
   SubmitApplicationBody,
-  VerifyStatus,
-  WriteStatus,
+  ValidationStatus,
 } from '@/features/application/model/types'
+import { UPLOAD_MAX_SIZE_MB, uploadAccept } from '@/features/application/model/upload'
 import { findLoanProductSummary } from '@/mocks/handlers/loan'
-import { findSupportProductSummary } from '@/mocks/handlers/support'
+import { findSupportProductSummary, isSupportProgramClosed } from '@/mocks/handlers/support'
+import { ERROR_CODE } from '@/shared/api/errors'
 import type { ApiResponse } from '@/shared/types'
 import type { ApplicationStatus } from '@/shared/types/application'
 
@@ -32,13 +36,12 @@ const PENDING_MS = 1_500
 /** 그 뒤 검증 진행중으로 보이는 구간. 이 시간이 지나면 결과가 확정된다 */
 const VALIDATING_MS = 5_000
 /** AI 가 초안을 만드는 데 걸리는 시간 */
-const DRAFTING_MS = 4_000
 
 interface MockDocument {
   applicationDocumentId: number
   docName: string
   issuer: string | null
-  documentType: 'VERIFY' | 'WRITE'
+  documentType: 'SUBMIT' | 'WRITE'
   originalFilename: string | null
   /** 업로드 시각(ms). null 이면 미제출 */
   uploadedAt: number | null
@@ -49,19 +52,22 @@ interface MockDocument {
    * 검증 실패 → 다시 업로드 흐름을 화면에서 확인해야 해서 하나는 실패로 둔다.
    */
   failsFirstAttempt: boolean
-  /** 통과했을 때 OCR 이 확인했다고 보여줄 내용 */
-  passedDetail: string | null
   /**
    * 시연용으로 상태를 고정한다. 시드 신청 건에만 쓴다 —
    * 화면을 열자마자 검증 중·검증 실패가 어떻게 보이는지 봐야 하는데,
    * 시간 계산에만 맡기면 몇 초 뒤 전부 통과로 바뀌어 버린다.
    */
-  frozenStatus: VerifyStatus | null
+  frozenStatus: ValidationStatus | null
   /** WRITE 서류 전용 */
-  writeStatus: WriteStatus
-  templateUrl: string | null
+  writeStatus: DraftStatus
+  /**
+   * 공고 서식 id. 빈 서식·AI 초안이 이 값으로 부른다.
+   *
+   * 대출 서류는 null 이다 — 서버도 program_document 쪽만 채우고, 대출에는 작성 서류도
+   * 서식 파일도 없다(V20 시드).
+   */
+  programDocumentId: number | null
   /** 초안 생성을 요청한 시각(ms). null 이면 요청 전 */
-  draftStartedAt: number | null
 }
 
 interface MockApplication {
@@ -72,7 +78,8 @@ interface MockApplication {
   rejectReason: string | null
   applyAmount: number | null
   accountNo: string | null
-  product: ApplicationProduct
+  loan: ApplicationLoanSummary | null
+  support: ApplicationSupportSummary | null
   documents: MockDocument[]
   createdAt: string
   updatedAt: string
@@ -88,51 +95,44 @@ interface MockApplication {
 /** 서류 서식. 신청을 만들 때 이걸 복제해서 행을 미리 깔아 둔다 */
 type DocumentTemplate = Pick<
   MockDocument,
-  'docName' | 'issuer' | 'documentType' | 'failsFirstAttempt' | 'passedDetail' | 'templateUrl'
+  'docName' | 'issuer' | 'documentType' | 'failsFirstAttempt' | 'programDocumentId'
 >
 
-/** 대출 서류. loan_document 를 항내 낸다 */
+/**
+ * 대출 서류. V20 시드 그대로 네 개, 전부 제출용이다.
+ *
+ * 작성 서류가 없고 url 도 전부 NULL 이라 대출 신청에서는 '빈 서식 받기'·'AI 초안' 이
+ * 아예 안 나온다. 예전 목이 '자금 사용 계획서'(WRITE)를 하나 끼워 넣고 있어서, 대출에도
+ * 그 기능이 있는 줄 알고 화면을 만들었다 — 실서버에는 없는 서류였다.
+ */
 const LOAN_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   {
-    docName: '부가세 과세표준증명원',
+    docName: '사업자등록증명원',
     issuer: '홈택스',
-    documentType: 'VERIFY',
+    documentType: 'SUBMIT',
     failsFirstAttempt: false,
-    passedDetail: '발급일 2026. 08. 20 · 직인 확인 · 필수 필드 완료',
-    templateUrl: null,
+    programDocumentId: null,
   },
   {
-    docName: '재무제표',
+    docName: '부가가치세 과세표준증명원',
     issuer: '홈택스',
-    documentType: 'VERIFY',
+    documentType: 'SUBMIT',
     failsFirstAttempt: false,
-    passedDetail: '발급일 2026. 07. 31 · 직인 확인 · 필수 필드 완료',
-    templateUrl: null,
-  },
-  {
-    docName: '등기부등본',
-    issuer: '인터넷등기소',
-    documentType: 'VERIFY',
-    // 첫 업로드는 실패시킨다. '다시 업로드' 버튼이 실제로 동작하는지 봐야 한다
-    failsFirstAttempt: true,
-    passedDetail: '발급일 2026. 09. 01 · 인감 도장 확인',
-    templateUrl: null,
-  },
-  {
-    docName: '자금 사용 계획서',
-    issuer: '화면에서 작성',
-    documentType: 'WRITE',
-    failsFirstAttempt: false,
-    passedDetail: null,
-    templateUrl: '/mock/자금사용계획서_서식.hwpx',
+    programDocumentId: null,
   },
   {
     docName: '국세 납세증명서',
     issuer: '홈택스·정부24',
-    documentType: 'VERIFY',
+    documentType: 'SUBMIT',
+    failsFirstAttempt: true,
+    programDocumentId: null,
+  },
+  {
+    docName: '표준재무상태표·손익계산서',
+    issuer: '홈택스',
+    documentType: 'SUBMIT',
     failsFirstAttempt: false,
-    passedDetail: '발급일 2026. 09. 10 · 체납 없음',
-    templateUrl: null,
+    programDocumentId: null,
   },
 ]
 
@@ -146,53 +146,48 @@ const SUPPORT_DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   {
     docName: '사업자등록증명원',
     issuer: '홈택스',
-    documentType: 'VERIFY',
+    documentType: 'SUBMIT',
     failsFirstAttempt: false,
-    passedDetail: '발급일 2026. 09. 02 · 업종 일치 · 직인 확인',
-    templateUrl: null,
+    programDocumentId: 101,
   },
   {
     docName: '국세 납세증명서',
     issuer: '홈택스·정부24',
-    documentType: 'VERIFY',
+    documentType: 'SUBMIT',
     failsFirstAttempt: true,
-    passedDetail: '발급일 2026. 09. 10 · 체납 없음',
-    templateUrl: null,
+    programDocumentId: 102,
   },
   {
     docName: '지방세 납세증명서',
     issuer: '위택스',
-    documentType: 'VERIFY',
+    documentType: 'SUBMIT',
     failsFirstAttempt: false,
-    passedDetail: '발급일 2026. 09. 08 · 체납 없음',
-    templateUrl: null,
+    programDocumentId: 103,
   },
   {
     docName: '사업계획서',
     issuer: '화면에서 작성',
     documentType: 'WRITE',
     failsFirstAttempt: false,
-    passedDetail: null,
-    templateUrl: '/mock/사업계획서_서식.hwpx',
+    programDocumentId: 104,
   },
   {
     docName: '개인정보 수집·이용 동의서',
     issuer: '서식 내려받아 서명',
     documentType: 'WRITE',
     failsFirstAttempt: false,
-    passedDetail: null,
-    templateUrl: '/mock/개인정보동의서_서식.pdf',
+    programDocumentId: 105,
   },
 ]
 
 /** 목에 없는 id 로 신청이 들어왔을 때. 화면이 비는 것보다 낫다 */
-const FALLBACK_PRODUCT: ApplicationProduct = {
-  name: '알 수 없는 상품',
-  organization: null,
-  interestRate: null,
-  minAmount: null,
-  maxAmount: null,
-  deadline: null,
+const FALLBACK_LOAN: ApplicationLoanSummary = {
+  loanId: 0,
+  accountName: '알 수 없는 상품',
+  bankName: '-',
+  interestRate: 0,
+  minLoanBalance: 0,
+  maxLoanBalance: 0,
 }
 
 let nextApplicationId = 13
@@ -207,7 +202,6 @@ function createDocuments(templates: readonly DocumentTemplate[]): MockDocument[]
     attempts: 0,
     frozenStatus: null,
     writeStatus: 'NOT_STARTED',
-    draftStartedAt: null,
   }))
 }
 
@@ -246,7 +240,8 @@ function seedApplication(): MockApplication {
     applyAmount: null,
     accountNo: null,
     // 목록과 같은 데이터를 쓴다. 시드만 따로 놓으면 상세 모달과 어긋난다
-    product: findLoanProductSummary(2) ?? FALLBACK_PRODUCT,
+    loan: findLoanProductSummary(2) ?? FALLBACK_LOAN,
+    support: null,
     documents,
     createdAt: '2026-09-05T10:20:30',
     updatedAt: '2026-09-07T15:10:12',
@@ -270,10 +265,9 @@ function seedTracked(
   completeAt: string | null,
   extra: { applyAmount: number | null; rejectReason?: string },
 ): MockApplication {
-  const product =
-    source.loanId !== null
-      ? (findLoanProductSummary(source.loanId) ?? FALLBACK_PRODUCT)
-      : (findSupportProductSummary(source.supportProgramId ?? 0) ?? FALLBACK_PRODUCT)
+  const isLoan = source.loanId !== null
+  const loan = isLoan ? (findLoanProductSummary(source.loanId ?? 0) ?? FALLBACK_LOAN) : null
+  const support = isLoan ? null : findSupportProductSummary(source.supportProgramId ?? 0)
 
   return {
     applicationId,
@@ -283,14 +277,15 @@ function seedTracked(
     rejectReason: extra.rejectReason ?? null,
     applyAmount: extra.applyAmount,
     accountNo: '50812345678',
-    product,
+    loan,
+    support,
     // 제출이 끝난 건이라 서류는 전부 통과로 두고 읽기 전용으로 보인다
     documents: createDocuments(
       source.loanId !== null ? LOAN_DOCUMENT_TEMPLATES : SUPPORT_DOCUMENT_TEMPLATES,
     ).map((doc) => ({
       ...doc,
       originalFilename: `${doc.docName}.pdf`,
-      frozenStatus: doc.documentType === 'VERIFY' ? ('PASSED' as const) : null,
+      frozenStatus: 'PASSED' as const,
       writeStatus: doc.documentType === 'WRITE' ? ('WRITTEN' as const) : doc.writeStatus,
       attempts: 1,
     })),
@@ -402,10 +397,28 @@ const applications = new Map<number, MockApplication>([
       },
     ),
   ],
+  /*
+   * 작성하는 사이에 마감된 건. 27번 공고는 접수가 끝나 새 신청을 만들 수 없으므로
+   * (생성에서 APPLICATION_004 로 막힌다) 이 건이 없으면 제출 시점의 마감 안내에
+   * 닿을 방법이 없다. 서류는 다 통과라 바로 '신청하기' 를 누를 수 있다.
+   */
+  [
+    108,
+    seedTracked(
+      108,
+      { loanId: null, supportProgramId: 27 },
+      'PREPARING',
+      '2026-09-02T10:30:00',
+      null,
+      {
+        applyAmount: null,
+      },
+    ),
+  ],
 ])
 
 /** 업로드 시각으로 검증 단계를 계산한다. 고정된 서류는 그 값을 그대로 쓴다 */
-function resolveVerifyStatus(doc: MockDocument): VerifyStatus {
+function resolveValidationStatus(doc: MockDocument): ValidationStatus {
   if (doc.frozenStatus) return doc.frozenStatus
   if (doc.uploadedAt === null) return 'NOT_SUBMITTED'
 
@@ -416,64 +429,62 @@ function resolveVerifyStatus(doc: MockDocument): VerifyStatus {
   return doc.failsFirstAttempt && doc.attempts === 1 ? 'FAILED' : 'PASSED'
 }
 
+/**
+ * 서류 응답 변환.
+ *
+ * 확정 응답은 한 서류에 두 상태를 단다. 검증(validationStatus)은 모든 서류가 갖고,
+ * 초안(draftStatus)은 작성 서류만 갖는다. issuer 와 서식 주소는 없다.
+ */
 function toDocumentResponse(doc: MockDocument): ApplicationDocument {
-  const base = {
-    applicationDocumentId: doc.applicationDocumentId,
-    docName: doc.docName,
-    issuer: doc.issuer,
-    originalFilename: doc.originalFilename,
-  }
-
-  if (doc.documentType === 'WRITE') {
-    return {
-      ...base,
-      documentType: 'WRITE',
-      status: doc.writeStatus,
-      templateUrl: doc.templateUrl,
-      // 생성을 시작한 뒤 일정 시간이 지나야 받을 수 있다. 그 전까지가 '작성 중'
-      draftUrl:
-        doc.draftStartedAt !== null && Date.now() - doc.draftStartedAt >= DRAFTING_MS
-          ? `/mock/${doc.docName}_초안.hwpx`
-          : null,
-    }
-  }
-
-  const status = resolveVerifyStatus(doc)
+  const validationStatus = resolveValidationStatus(doc)
 
   return {
-    ...base,
-    documentType: 'VERIFY',
-    status,
-    validationMessage: verifyMessage(status, doc),
+    applicationDocumentId: doc.applicationDocumentId,
+    programDocumentId: doc.programDocumentId,
+    documentName: doc.docName,
+    documentType: doc.documentType,
+    validationStatus,
+    validationMessage: verifyMessage(validationStatus),
+    originalFilename: doc.originalFilename,
+    /*
+     * WRITING 을 만들지 않는다. 서버가 이 값을 갱신하지 않기 때문이다 — 초안 생성이
+     * 동기라 '만드는 중' 을 기록할 구간이 없다. 예전 목은 시각을 재서 몇 초간 WRITING
+     * 을 흉내 냈는데, 실서버에 없는 상태를 화면이 처리하게 만들고 있었다.
+     */
+    draftStatus: doc.documentType === 'WRITE' ? doc.writeStatus : null,
   }
 }
 
-function verifyMessage(status: VerifyStatus, doc: MockDocument): string | null {
-  switch (status) {
-    case 'VALIDATING':
-      return '서명 / 도장 / 발급 유효기간 / 필수 필드를 확인하고 있어요'
-    case 'FAILED':
-      return '인감 도장이 확인되지 않아요. 날인 후 다시 올려주세요.'
-    case 'PASSED':
-      return doc.passedDetail
-    default:
-      return null
-  }
+/**
+ * 실서버는 실패일 때만 문구를 저장한다(DocumentValidationProcessor). 문구는 AI 의
+ * 항목별 고정 문구라(ai/app/ocr/rules.py MESSAGES) 화면이 이걸로 걸린 항목을 짚는다.
+ */
+function verifyMessage(status: ValidationStatus): string | null {
+  return status === 'FAILED'
+    ? '유효기간이 지난 서류입니다 (2026-06-30). 새로 발급받아 올려주세요.'
+    : null
 }
 
+/**
+ * 상세 응답.
+ *
+ * 금액·계좌는 내려주지 않는다. 서버가 임시 저장하지 않고 제출할 때만 받기 때문이다 —
+ * 입력하다 화면을 떠나면 값이 사라지는 게 실제 동작이다.
+ */
 function toResponse(app: MockApplication): ApplicationDetail {
+  const documents = app.documents.map(toDocumentResponse)
+
   return {
     applicationId: app.applicationId,
-    loanId: app.loanId,
-    supportProgramId: app.supportProgramId,
+    type: app.loan !== null ? 'LOAN' : 'SUPPORT',
     status: app.status,
     rejectReason: app.rejectReason,
-    applyAmount: app.applyAmount,
-    accountNo: app.accountNo,
-    product: app.product,
-    documents: app.documents.map(toDocumentResponse),
-    createdAt: app.createdAt,
-    updatedAt: app.updatedAt,
+    loan: app.loan,
+    support: app.support,
+    documents,
+    // 서버가 세어 준다. 종류를 가리지 않고 검증 통과만 센다
+    completedCount: documents.filter((doc) => doc.validationStatus === 'PASSED').length,
+    totalCount: documents.length,
   }
 }
 
@@ -481,6 +492,12 @@ function success<T>(path: string, message: string, data: T): ApiResponse<T> {
   return { statusCode: 200, timestamp: nowIso(), path, message, data, error: null }
 }
 
+/**
+ * 실패 응답.
+ *
+ * ⚠️ `code` 는 ErrorCode 의 **코드**('APPLICATION_014')다. enum 이름을 보내면 화면의
+ *    코드별 문구 매퍼가 한 건도 못 맞춘다 — 목에서만 맞는 상태가 된다.
+ */
 function failure(path: string, message: string, code = 'COMMON_001') {
   return HttpResponse.json(
     { statusCode: 400, timestamp: nowIso(), path, message, data: null, error: { code } },
@@ -517,27 +534,107 @@ function awakenSeed(app: MockApplication) {
 }
 
 /**
- * 목록용 변환. 서류는 안 담고 화면에 바로 필요한 상품명·기관명을 펼쳐서 내려준다.
+ * 목록용 변환. 서류는 안 담고 화면에 바로 필요한 것만 펼쳐서 내려준다.
  *
- * ⚠️ subjectAt 은 createdAt 을 그대로 넣는다. ERD 는 subject_at / complete_at 인데
- *    명세 예시는 createdAt / updatedAt 이라 이름이 갈렸다. 백엔드에 정리를
- *    요청해 둔 상태라, 확정되면 이 함수와 타입만 고치면 된다.
+ * 기관명(organization)은 확정 응답에 없어 빠졌다. 카드 부제에서도 함께 지웠다.
  */
 function toListItem(app: MockApplication): ApplicationListItem {
   const isLoan = app.loanId !== null
 
   return {
     applicationId: app.applicationId,
-    sourceType: isLoan ? 'LOAN' : 'SUPPORT_PROGRAM',
-    programId: (isLoan ? app.loanId : app.supportProgramId) ?? 0,
-    productName: app.product.name,
-    organization: app.product.organization,
+    type: isLoan ? 'LOAN' : 'SUPPORT',
+    programId: isLoan ? app.loanId : app.supportProgramId,
+    programName: app.loan?.accountName ?? app.support?.programName ?? null,
     status: app.status,
-    applyAmount: app.applyAmount,
+    amount: app.applyAmount,
     subjectAt: app.createdAt,
     completeAt: app.completeAt,
     rejectReason: app.rejectReason,
   }
+}
+
+/**
+ * 신청 생성 결과. 자금 조합(handlers/funding.ts)이 항목마다 이 함수를 부른다.
+ *
+ * 핸들러 안에 두면 조합 쪽에서 쓸 수 없고, 조합이 따로 만들면 같은 규칙이 두 벌이 된다 —
+ * 서버도 FundingService 가 ApplicationService.create() 를 그대로 부른다.
+ */
+type CreateResult =
+  { ok: true; applicationId: number } | { ok: false; code: string; message: string }
+
+/** 새 신청을 막는 상태. 반려(REJECTED)는 다시 신청할 수 있어서 빠진다 */
+const BLOCKING_STATUSES: ApplicationStatus[] = ['SUBMITTED', 'REVIEWING', 'APPROVED', 'PAID']
+
+function createMockApplication(type: string | null, programId: number): CreateResult {
+  if (!type || !programId) {
+    return {
+      ok: false,
+      code: ERROR_CODE.APPLICATION_TYPE_INVALID,
+      message: '유효하지 않은 요청입니다.',
+    }
+  }
+
+  const isLoan = type === 'LOAN'
+
+  /*
+   * 대출에는 마감이 없다. 지원사업은 공고라 접수 기간이 있고, 서버가 최근 신청을 보기도
+   * 전에 먼저 막는다 — 이어서 작성하려는 경우에도 기간이 지났으면 못 한다
+   * (ApplicationServiceImpl.createSupportApplication).
+   */
+  if (!isLoan && isSupportProgramClosed(programId)) {
+    return {
+      ok: false,
+      code: ERROR_CODE.APPLICATION_PERIOD_CLOSED,
+      message: '신청 기간이 아닌 지원사업입니다.',
+    }
+  }
+
+  // 같은 상품의 가장 최근 신청으로 판단한다 (checkLatestApplication)
+  const latest = [...applications.values()]
+    .filter((app) => (isLoan ? app.loanId === programId : app.supportProgramId === programId))
+    .sort((a, b) => b.applicationId - a.applicationId)[0]
+
+  // 작성 중이면 새로 만들지 않고 그걸 이어서 쓴다
+  if (latest?.status === 'PREPARING') {
+    return { ok: true, applicationId: latest.applicationId }
+  }
+
+  if (latest && BLOCKING_STATUSES.includes(latest.status)) {
+    return {
+      ok: false,
+      code: ERROR_CODE.APPLICATION_ALREADY_IN_PROGRESS,
+      message: '이미 신청이 진행 중이거나 지급이 완료된 상품입니다.',
+    }
+  }
+
+  /*
+   * 지원사업은 support 목에서 가져온다. 여기서 따로 들고 있으면 목록에서 고른 공고와
+   * 신청 화면의 상품이 어긋난다.
+   */
+  const app: MockApplication = {
+    applicationId: nextApplicationId++,
+    loanId: isLoan ? programId : null,
+    supportProgramId: isLoan ? null : programId,
+    status: 'PREPARING',
+    rejectReason: null,
+    applyAmount: null,
+    accountNo: null,
+    loan: isLoan ? (findLoanProductSummary(programId) ?? FALLBACK_LOAN) : null,
+    support: isLoan ? null : findSupportProductSummary(programId),
+    documents: createDocuments(isLoan ? LOAN_DOCUMENT_TEMPLATES : SUPPORT_DOCUMENT_TEMPLATES),
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    completeAt: null,
+  }
+  applications.set(app.applicationId, app)
+
+  return { ok: true, applicationId: app.applicationId }
+}
+
+/** 자금 조합 목이 항목마다 부른다. 서버와 같은 경로를 타게 하려는 것이다 */
+export function createApplicationFromBatch(type: string, programId: number): CreateResult {
+  return createMockApplication(type, programId)
 }
 
 export const applicationHandlers = [
@@ -548,16 +645,24 @@ export const applicationHandlers = [
    * 돌아갈 길이 없었다. 자금 조합이 한 번에 여러 건을 만들기 시작하면 갈 곳 없는
    * 신청서가 더 늘어난다.
    *
+   * status 파라미터(IN_PROGRESS / DONE)를 받지만 화면이 안 보낸다. 화면 탭은 준비 중을
+   * 진행 중에서 떼어 네 갈래라 서버의 2분류로는 못 맞춘다. 그래서 목도 거르지 않는다.
+   *
+   * 개수는 필터 적용 전 전체 기준이다. 서버가 그렇게 준다.
+   *
    * 최신 신청이 위로 온다.
    */
   http.get('/api/v1/application', () => {
-    const applications_ = [...applications.values()]
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .map(toListItem)
+    const all = [...applications.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+    const inProgressCount = all.filter((app) => !isSettled(app.status)).length
 
     return HttpResponse.json(
       success('/api/v1/application', '신청 목록 조회에 성공하였습니다.', {
-        applications: applications_,
+        totalCount: all.length,
+        inProgressCount,
+        doneCount: all.length - inProgressCount,
+        applications: all.map(toListItem),
       }),
     )
   }),
@@ -568,52 +673,22 @@ export const applicationHandlers = [
    */
   http.post('/api/v1/application', ({ request }) => {
     const url = new URL(request.url)
-    const type = url.searchParams.get('type')
-    const programId = Number(url.searchParams.get('programId'))
-
-    if (!type || !programId) {
-      return failure('/api/v1/application', '유효하지 않은 요청입니다.')
-    }
-
-    const isLoan = type === 'LOAN'
-    /*
-     * 지원사업은 support 목에서 가져온다. 여기서 따로 들고 있으면 목록에서 고른
-     * 공고와 신청 화면의 상품이 어긋난다.
-     */
-    const product = isLoan
-      ? (findLoanProductSummary(programId) ?? FALLBACK_PRODUCT)
-      : (findSupportProductSummary(programId) ?? FALLBACK_PRODUCT)
-
-    // 같은 상품에 준비중인 건이 있으면 새로 만들지 않고 그걸 돌려준다
-    const existing = [...applications.values()].find(
-      (app) =>
-        app.status === 'PREPARING' &&
-        (isLoan ? app.loanId === programId : app.supportProgramId === programId),
+    const result = createMockApplication(
+      url.searchParams.get('type'),
+      Number(url.searchParams.get('programId')),
     )
-    if (existing) {
-      return HttpResponse.json(
-        success('/api/v1/application', '이미 진행 중인 신청이 있습니다.', toResponse(existing)),
-      )
-    }
 
-    const app: MockApplication = {
-      applicationId: nextApplicationId++,
-      loanId: isLoan ? programId : null,
-      supportProgramId: isLoan ? null : programId,
-      status: 'PREPARING',
-      rejectReason: null,
-      applyAmount: null,
-      accountNo: null,
-      product,
-      documents: createDocuments(isLoan ? LOAN_DOCUMENT_TEMPLATES : SUPPORT_DOCUMENT_TEMPLATES),
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
-      completeAt: null,
-    }
-    applications.set(app.applicationId, app)
+    if (!result.ok) return failure('/api/v1/application', result.message, result.code)
 
+    /*
+     * 서버는 id 하나만 준다(ApplicationCreateResponse). 상세를 돌려주면 목이 서버보다
+     * 관대해져서, 프론트가 생성 응답을 상세처럼 써도 목에서는 안 터진다. 실제로 그렇게
+     * 가려져 있던 버그가 실서버에서 터졌다.
+     */
     return HttpResponse.json(
-      success('/api/v1/application', '신청 목록 테이블이 생성되었습니다.', toResponse(app)),
+      success('/api/v1/application', '신청 목록 테이블이 생성되었습니다.', {
+        applicationId: result.applicationId,
+      }),
     )
   }),
 
@@ -641,7 +716,11 @@ export const applicationHandlers = [
     if (!app) return notFound(`/api/v1/application/${id}`)
 
     if (app.status !== 'PREPARING') {
-      return failure(`/api/v1/application/${id}`, '이미 신청이 완료되어 취소할 수 없습니다.')
+      return failure(
+        `/api/v1/application/${id}`,
+        '이미 신청이 완료되어 취소할 수 없습니다.',
+        ERROR_CODE.APPLICATION_CANCEL_NOT_ALLOWED,
+      )
     }
 
     applications.delete(id)
@@ -651,78 +730,154 @@ export const applicationHandlers = [
     )
   }),
 
-  /** 최종 신청. 서류가 다 끝나야 통과시킨다 */
-  http.post('/api/v1/application/finan', async ({ request }) => {
+  /**
+   * 최종 신청.
+   *
+   * 서버가 이 한 번의 호출에서 심사·계좌개설·입금까지 끝낸다. 접수만 하고 기다리는
+   * 구간이 없어서 응답에 결과가 실려 온다 — 거절도 200 이다.
+   *
+   * 금액 하나로 결과를 가른다. 실제 심사 기준은 신용등급이지만 목에는 그 정보가
+   * 없다. 거절 화면을 눌러볼 수 있어야 해서 한도의 90% 를 넘으면 거절로 둔다.
+   */
+  http.post('/api/v1/application/:applicationId/submit', async ({ params, request }) => {
+    const id = Number(params.applicationId)
+    const path = `/api/v1/application/${id}/submit`
     const body = (await request.json()) as SubmitApplicationBody
-    const app = applications.get(body.applicationId)
-    if (!app) return notFound('/api/v1/application/finan')
 
-    const remaining = app.documents.filter((doc) =>
-      doc.documentType === 'WRITE'
-        ? doc.writeStatus !== 'WRITTEN'
-        : resolveVerifyStatus(doc) !== 'PASSED',
-    )
+    const app = applications.get(id)
+    if (!app) return notFound(path)
+
+    if (app.status !== 'PREPARING') {
+      return failure(path, '이미 제출된 신청입니다.', ERROR_CODE.APPLICATION_SUBMIT_NOT_ALLOWED)
+    }
+
+    // 서버도 종류를 가리지 않고 검증 통과만 본다 (validateDocumentsPassed)
+    const remaining = app.documents.filter((doc) => resolveValidationStatus(doc) !== 'PASSED')
     if (remaining.length > 0) {
       return failure(
-        '/api/v1/application/finan',
+        path,
         `아직 완료되지 않은 서류가 ${remaining.length}건 있습니다.`,
+        ERROR_CODE.APPLICATION_DOCUMENT_NOT_COMPLETED,
       )
     }
 
-    // 대출은 금액이 필수고 한도 안에 있어야 한다. 지원사업은 금액 자체가 없다
-    if (app.loanId !== null) {
-      const amount = body.applyAmount
+    /*
+     * 작성하는 사이에 마감될 수 있어서 서버가 제출 시점에도 기간을 본다
+     * (ApplicationServiceImpl.submitSupport). 생성 때 통과한 건이라고 봐주지 않는다.
+     */
+    if (app.support && isSupportProgramClosed(app.support.supportProgramId)) {
+      return failure(path, '신청 기간이 아닌 지원사업입니다.', ERROR_CODE.APPLICATION_PERIOD_CLOSED)
+    }
+
+    /*
+     * 금액·계좌는 대출만 받는다. 지원사업은 유형이 '지원금' 이든 '대출' 이든 우리가
+     * 돈을 옮기지 않아 화면이 입력란을 그리지 않는다.
+     *
+     * ⚠️ 실서버는 아직 '기타' 가 아닌 지원사업에 둘을 요구한다(submitSupport). 목을
+     *    거기 맞추면 화면이 보내지 않는 값을 목이 요구하게 되어 제출을 눌러볼 수 없다.
+     *    백엔드가 그 분기를 걷어내면 양쪽이 맞는다.
+     */
+    const range = app.loan ? { min: app.loan.minLoanBalance, max: app.loan.maxLoanBalance } : null
+
+    if (range) {
+      const amount = body.amount
       if (amount === null || amount === undefined) {
-        return failure('/api/v1/application/finan', '신청 금액을 입력해 주세요.')
+        return failure(path, '신청 금액을 입력해 주세요.', ERROR_CODE.APPLICATION_AMOUNT_INVALID)
       }
-      // 범위가 없는 상품은 검사할 기준이 없다
-      const { minAmount, maxAmount } = app.product
-      if (minAmount !== null && maxAmount !== null && (amount < minAmount || amount > maxAmount)) {
-        return failure('/api/v1/application/finan', '신청 가능한 금액 범위를 벗어났습니다.')
+      if (amount < range.min || amount > range.max) {
+        return failure(
+          path,
+          '신청 가능한 금액 범위를 벗어났습니다.',
+          ERROR_CODE.APPLICATION_AMOUNT_INVALID,
+        )
+      }
+      if (body.accountId === null || body.accountId === undefined) {
+        return failure(path, '출금 계좌를 선택해 주세요.', ERROR_CODE.APPLICATION_ACCOUNT_INVALID)
       }
     }
 
-    if (!body.accountNo) {
-      return failure('/api/v1/application/finan', '출금 계좌를 선택해 주세요.')
-    }
+    const rejected = range !== null && (body.amount ?? 0) > range.max * 0.9
 
-    app.status = 'SUBMITTED'
-    app.applyAmount = body.applyAmount
-    app.accountNo = body.accountNo
+    app.status = rejected ? 'REJECTED' : 'PAID'
+    app.rejectReason = rejected ? '신용등급이 신청 조건에 미치지 않습니다.' : null
+    app.applyAmount = body.amount
+    app.completeAt = nowIso()
     app.updatedAt = nowIso()
 
-    return HttpResponse.json(success('/api/v1/application/finan', '신청이 완료되었습니다.', null))
+    return HttpResponse.json(
+      success(path, '신청 제출에 성공하였습니다.', {
+        applicationId: app.applicationId,
+        status: app.status,
+        rejectReason: app.rejectReason,
+        amount: app.applyAmount,
+        // 대출이 실행됐을 때만 계좌가 열린다
+        loanAccountNo: !rejected && app.loan !== null ? '0044815881614041' : null,
+      }),
+    )
   }),
 
   /**
-   * 제출 서류 업로드.
+   * 신청 서류 업로드 (첫 업로드·재업로드 공통).
    *
-   * Spring 의 @RequestPart 방식이라 파일과 JSON 이 각각 다른 part 로 온다.
-   * JSON part 는 Blob 으로 감싸 보내야 해서 여기서도 text() 로 꺼내 파싱한다.
+   * 서버가 @RequestParam 으로 받는다. JSON part 가 따로 없고 값이 FormData 필드로
+   * 그냥 들어온다.
+   *
+   * 제출 서류만 검증을 태운다. 작성 서류는 올리는 즉시 PASSED 다 —
+   * ApplicationDocumentServiceImpl 이 SUBMIT 일 때만 검증 이벤트를 쏜다.
    */
   http.post('/api/v1/document', async ({ request }) => {
+    const path = '/api/v1/document'
     const formData = await request.formData()
     const file = formData.get('file')
-    const rawRequest = formData.get('request')
+    const rawId = formData.get('applicationDocumentId')
 
-    if (!(file instanceof File) || !rawRequest) {
-      return failure('/api/v1/document', '유효하지 않은 요청입니다.')
+    if (!(file instanceof File)) {
+      return failure(path, '파일을 선택해 주세요.', ERROR_CODE.APPLICATION_DOCUMENT_FILE_EMPTY)
     }
 
-    const json = rawRequest instanceof Blob ? await rawRequest.text() : String(rawRequest)
-    const { applicationDocumentId } = JSON.parse(json) as { applicationDocumentId: number }
+    const applicationDocumentId = Number(rawId)
 
     for (const app of applications.values()) {
       const doc = app.documents.find((d) => d.applicationDocumentId === applicationDocumentId)
       if (!doc) continue
+
+      if (app.status !== 'PREPARING') {
+        return failure(
+          path,
+          '이미 제출한 신청입니다.',
+          ERROR_CODE.APPLICATION_DOCUMENT_UPLOAD_NOT_ALLOWED,
+        )
+      }
+
+      // 검증이 도는 중에는 파일을 바꿀 수 없다
+      const current = resolveValidationStatus(doc)
+      if (current === 'PENDING' || current === 'VALIDATING') {
+        return failure(path, '검증이 진행 중입니다.', ERROR_CODE.APPLICATION_DOCUMENT_VALIDATING)
+      }
+
+      // 서버가 확장자와 시그니처를 함께 본다. 목은 확장자만 본다
+      const accept = uploadAccept(doc.documentType)
+      const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase()
+      if (!accept.includes(extension)) {
+        return failure(
+          path,
+          '허용되지 않는 파일 형식입니다.',
+          ERROR_CODE.APPLICATION_DOCUMENT_FILE_TYPE_INVALID,
+        )
+      }
+
+      if (file.size > UPLOAD_MAX_SIZE_MB * 1024 * 1024) {
+        return failure(path, '파일이 너무 큽니다.', ERROR_CODE.APPLICATION_DOCUMENT_FILE_TOO_LARGE)
+      }
 
       doc.originalFilename = file.name
       doc.attempts += 1
       app.updatedAt = nowIso()
 
       if (doc.documentType === 'WRITE') {
-        // 작성 서류는 OCR 검증을 하지 않는다. 올리는 순간 통과다
-        doc.writeStatus = 'WRITTEN'
+        // 작성 서류는 검증하지 않는다. 올리는 순간 통과다
+        doc.frozenStatus = 'PASSED'
+        doc.uploadedAt = null
       } else {
         doc.uploadedAt = Date.now()
         // 시연용 고정 상태를 풀어야 재업로드가 실제로 진행된다
@@ -730,37 +885,61 @@ export const applicationHandlers = [
       }
 
       return HttpResponse.json(
-        success('/api/v1/document', '제출용 문서 업로드에 성공하였습니다.', null),
+        success(path, '서류 업로드에 성공하였습니다.', {
+          applicationDocumentId: doc.applicationDocumentId,
+          validationStatus: resolveValidationStatus(doc),
+          originalFilename: doc.originalFilename,
+        }),
       )
     }
 
-    return failure('/api/v1/document', '해당 서류를 찾을 수 없습니다.')
+    return failure(path, '해당 서류를 찾을 수 없습니다.', ERROR_CODE.APPLICATION_DOCUMENT_NOT_FOUND)
   }),
 
   /**
-   * 작성 서류 초안 생성.
+   * 공고가 배포하는 빈 서식 내려받기.
    *
-   * 서버가 비동기로 만들고 응답에는 결과가 없다. 시각만 기록해 두면 조회할 때마다
-   * 경과 시간으로 완성 여부를 계산한다 — 검증과 같은 방식이다.
+   * 진짜 HWPX 를 들고 있을 이유가 없다. 확인해야 할 것은 '받아진다' 와 '파일명이
+   * 한글로 온다' 두 가지뿐이라 작은 텍스트를 그 형식인 척 돌려준다.
    */
-  http.post('/api/v1/document/draft', async ({ request }) => {
-    const { applicationDocumentId } = (await request.json()) as { applicationDocumentId: number }
+  http.get('/api/v1/program-documents/:programDocumentId/download', ({ params }) => {
+    const id = Number(params.programDocumentId)
+    const fileName = `지원사업_서식_${id}.hwpx`
 
-    for (const app of applications.values()) {
-      const doc = app.documents.find((d) => d.applicationDocumentId === applicationDocumentId)
-      if (!doc) continue
+    return new HttpResponse(new Blob([`mock original ${id}`]), {
+      headers: {
+        'Content-Type': 'application/vnd.hancom.hwpx',
+        // 서버가 한글 파일명을 이 형태로 준다. 프론트가 풀어 읽는지 확인하는 자리다
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+      },
+    })
+  }),
 
-      if (doc.documentType !== 'WRITE') {
-        return failure('/api/v1/document/draft', '작성 서류가 아닙니다.')
-      }
+  /**
+   * AI 초안 생성 + 다운로드.
+   *
+   * 만들기와 받기가 한 번이다. 서버가 초안을 어디에도 저장하지 않아서 다시 받을 곳이
+   * 없고, 그래서 draftStatus 도 움직이지 않는다.
+   *
+   * 실제로는 최대 300초라 일부러 끈다. 5분을 기다릴 수는 없으니 6초로 줄인다 —
+   * 진행 모달이 실제로 뜨고 막대가 도는지 눌러볼 수 있어야 한다.
+   */
+  http.post('/api/v1/document/write/:programDocumentId', async ({ params }) => {
+    const id = Number(params.programDocumentId)
+    const path = `/api/v1/document/write/${id}`
 
-      doc.writeStatus = 'WRITING'
-      doc.draftStartedAt = Date.now()
-      app.updatedAt = nowIso()
+    await delay(6_000)
 
-      return HttpResponse.json(success('/api/v1/document/draft', '초안 작성을 시작했습니다.', null))
+    // 채울 정보가 모자란 경우를 눌러볼 수 있게 한 건은 실패로 둔다
+    if (id % 5 === 0) {
+      return failure(path, '자동 작성에 필요한 정보를 확인할 수 없습니다.', 'DOCUMENT_004')
     }
 
-    return failure('/api/v1/document/draft', '해당 서류를 찾을 수 없습니다.')
+    return new HttpResponse(new Blob([`mock draft ${id}`]), {
+      headers: {
+        'Content-Type': 'application/hwp+zip',
+        'Content-Disposition': `attachment; filename="draft-${id}.hwpx"`,
+      },
+    })
   }),
 ]

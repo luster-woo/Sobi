@@ -8,17 +8,12 @@ import { INSURANCE_STATUS } from '@/shared/types'
 /**
  * 의무보험 (insurance) 목 핸들러.
  *
- * 백엔드에 컨트롤러는 있지만 **`insurance_checklist` 를 채우는 코드가 없다.**
- * 체크리스트는 마이데이터 연동 시점에 생기기로 되어 있는데 그 작업이 아직이라,
- * 실서버에 붙어도 `{ insurances: [] }` 만 온다.
+ * 백엔드에 컨트롤러도 있고 체크리스트를 채우는 코드도 있다 — 마이데이터 연동 시점에
+ * `MydataStore.saveInsuranceChecklist()` 가 만든다. 그래서 이 목은 **실서버가 뜨면
+ * 비켜선다**(`lib/serverFirst.ts`). 한동안 `.env.mock` 의 `VITE_MOCK_FORCE=insurance` 로
+ * 강제해 뒀는데, 그러면 목 모드에서 실서버 API 가 한 번도 안 불려 연동이 깨져도 모른다.
  *
- * ⚠️ 그래서 이 목은 **기본값으로는 절대 안 탄다.** 컨트롤러가 살아 있으니 실서버 우선
- *    규칙(`lib/serverFirst.ts`)이 빈 배열을 정상 응답으로 보고 그대로 쓴다. 화면을 보려면
- *    `.env.mock` 에 아래를 넣어 목을 강제해야 한다.
- *
- *      VITE_MOCK_FORCE=insurance
- *
- *    체크리스트를 채우는 작업이 백엔드에 생기면 이 줄을 지우면 된다.
+ * 목은 백엔드가 안 떠 있을 때만 받는다.
  *
  * 이름·설명·조건은 `V11__insert_insurance_data.sql`·`V12__insert_mandatory_insurance_data.sql`
  * 의 실제 시드에서 가져왔다. 조건 전문은 항목당 30줄이 넘어 여기서는 줄였다 —
@@ -82,25 +77,27 @@ function statusOf(item: { insuranceChecklistId: number; status: InsuranceStatus 
  * `insuranceId` 는 시드 삽입 순서를 따른다 — SOCIAL 1~4(국민연금·건강보험·고용보험·산재보험),
  * MANDATORY 5~11. 한식음식점 업체 하나를 가정해 `code_insurance` 매핑에 걸리는 항목만 담았다.
  *
- * 초기 status 는 마이데이터 연동 때 서버가 정한다(팀 결정). 프론트는 계산하지 않지만,
- * 목 데이터가 이 규칙과 어긋나면 화면을 잘못 읽게 되므로 맞춰둔다.
+ * 초기 status 는 마이데이터 연동 때 서버가 정한다. 프론트는 계산하지 않지만, 목이
+ * 서버와 다른 규칙을 쓰면 목에서만 되는 화면을 만들게 되므로 맞춰둔다.
  *
- * | 항목                  | 가입 확인됨 | 미가입               |
- * | --------------------- | ---------- | -------------------- |
- * | 국민연금 · 건강보험     | COMPLETED  | REQUIRED             |
- * | 고용보험 · 산재보험     | COMPLETED  | NEEDS_VERIFICATION   |
- * | 업종별 의무보험         | COMPLETED  | NEEDS_VERIFICATION   |
+ * ⚠️ **서버는 미가입을 전부 `NEEDS_VERIFICATION` 으로 만든다.** 보험 종류를 가리지 않는다
+ *    (`MydataStore.NOT_JOINED_STATUS`). 한동안 이 주석에는 "국민연금·건강보험은 바로
+ *    REQUIRED" 라는 팀 결정이 적혀 있었지만 구현이 그렇지 않아, 목이 서버를 따르도록 고쳤다.
  *
- * 국민연금·건강보험만 바로 REQUIRED 인 건 직원 유무와 무관하게 의무라 판단할 게 없어서다.
- * 고용·산재는 직원이 없으면 의무가 아니라(대표자 본인은 임의가입) 1인 사업자에게 REQUIRED 를
- * 띄우면 안 되고, 업종별 의무보험은 면적·설비 조건을 서버가 알 수 없어 사용자에게 묻는다.
+ * | 항목      | 가입 확인됨 | 미가입             |
+ * | --------- | ---------- | ------------------ |
+ * | 전 항목    | COMPLETED  | NEEDS_VERIFICATION |
  *
- * ⚠️ **`category` 로는 이 갈래를 알 수 없다.** 넷 다 SOCIAL 인데 둘씩 다르게 시작하고,
- *    이를 담는 컬럼이 없어 서버가 서비스 레이어에서 분기한다. 화면도 `category` 로
- *    의무 여부를 판단하면 안 된다 — 표시용 그룹핑에만 쓸 것.
+ * ⚠️ 그래서 **국민연금·건강보험에도 선택 버튼이 뜬다.** 직원 유무와 무관하게 의무인
+ *    보험을 사용자가 '가입 대상이 아니에요'(EXEMPT)로 되돌릴 수 없게 확정할 수 있다는
+ *    뜻이다 — 화면 문제가 아니라 서버 규칙 문제이고, 백엔드에 분기를 요청해 둘 것.
  *
- * ⚠️ 그래서 **REQUIRED 는 두 가지 출처**가 섞인다 — 위 규칙으로 바로 정해진 것(건강보험)과
- *    사용자가 NEEDS_VERIFICATION 에서 고른 것(재난배상). 둘 다 더는 못 바꾸는 건 같다.
+ * ⚠️ **`category` 로 의무 여부를 판단하면 안 된다.** SOCIAL 넷이 서로 다른 성격이고
+ *    (국민연금·건강보험은 무조건 의무, 고용·산재는 직원이 있어야 의무) 이를 담는 컬럼이
+ *    없다. 표시용 그룹핑에만 쓸 것.
+ *
+ * ⚠️ 그래서 **REQUIRED 는 사용자가 고른 결과뿐이다**(재난배상). 서버가 바로 REQUIRED 로
+ *    만드는 경로는 없다 — 그 값이 보이면 누군가 한 번 확정했다는 뜻이다.
  *
  * 야영장사고·어린이놀이시설 배상책임보험은 대응하는 업종 코드가 없어 매핑이 0건이다.
  * 어떤 체크리스트에도 안 뜨므로 목에도 넣지 않았다.
@@ -132,8 +129,11 @@ const CHECKLIST: (InsuranceDetail & { insuranceId: number })[] = [
     name: '건강보험',
     info: '다치거나 아파도 걱정 없이 치료받을 수 있도록 대비하는 사회보험',
     category: 'SOCIAL',
-    // 미가입이면 확인을 물을 것 없이 바로 가입 필요다. 사용자가 상태를 바꿀 수 없다
-    status: 'REQUIRED',
+    /*
+     * 서버가 미가입을 전부 NEEDS_VERIFICATION 으로 만든다 — 건강보험도 예외가 아니다.
+     * 예전에는 여기가 REQUIRED 라서, 목에서는 안 뜨는 선택 버튼이 실서버에서만 떴다.
+     */
+    status: 'NEEDS_VERIFICATION',
     condition: `[사업자 기준 가입 대상]
 - 직원이 있는 경우: 의무가입
 - 직원이 없는 경우: 지역가입자로 의무가입
@@ -293,7 +293,7 @@ export const insuranceHandlers = [
    * 페이징·필터가 없다. 업종에 걸린 항목만 오므로 목록이 길지 않다.
    * 정렬은 서버가 한다 — SOCIAL 먼저, 그다음 insurance.id 순. 시드 순서가 곧 그 순서다.
    *
-   * 업체를 등록하지 않은 계정은 404 BUSINESS_O04 다 — `hasBusiness` 주석 참고.
+   * 업체를 등록하지 않은 계정은 404 BUSINESS_004 다 — `hasBusiness` 주석 참고.
    */
   http.get('/api/v1/insurance', ({ request }) => {
     const path = '/api/v1/insurance'
@@ -301,7 +301,7 @@ export const insuranceHandlers = [
     if (!authorized(request)) return fail(401, 'AUTH_010', '인증이 필요합니다.', path)
 
     if (!hasBusiness()) {
-      return fail(404, 'BUSINESS_O04', '등록된 사업자 정보가 없습니다.', path)
+      return fail(404, 'BUSINESS_004', '등록된 사업자 정보가 없습니다.', path)
     }
 
     const insurances = CHECKLIST.map(({ condition: _condition, ...item }) => withStatus(item))

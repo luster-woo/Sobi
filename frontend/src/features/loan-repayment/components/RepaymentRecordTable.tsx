@@ -92,7 +92,7 @@ export default function RepaymentRecordTable({ records }: RepaymentRecordTablePr
     <Panel
       title="자동 이체 기록"
       headerRight={
-        <span className="text-text-muted text-[11.5px] tabular-nums">
+        <span className="text-text-muted text-caption tabular-nums">
           {leadingSuccess > 0 ? `최근 ${leadingSuccess}회 정상 출금` : `전체 ${records.length}회`}
         </span>
       }

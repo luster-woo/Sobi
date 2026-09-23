@@ -1,4 +1,4 @@
-import type { ProductStatus } from '@/shared/constants/productStatus'
+import type { LoanStatus } from '@/shared/constants/productStatus'
 
 /**
  * 대출 목록의 한 행.
@@ -16,7 +16,7 @@ export interface LoanListItem {
   interestRate: number
   /** 한도(원) */
   maxLoanBalance: number
-  status: ProductStatus
+  status: LoanStatus
   bookmarked: boolean
 }
 
@@ -52,7 +52,7 @@ export interface LoanListData {
    * 기준이라 은행을 좁혀도 숫자가 그대로여서 오히려 헷갈렸다. 서버가 주는 값이라
    * 타입에는 남겨 둔다 — 상태별 분포를 보여줄 자리가 생기면 그때 쓴다.
    */
-  statusCounts: Record<ProductStatus, number>
+  statusCounts: Record<LoanStatus, number>
   loans: LoanListItem[]
 }
 
@@ -61,8 +61,11 @@ export interface LoanListParams {
   /** 상품명·은행명 부분 일치 검색 */
   keyword?: string
   /** 판정 결과 + 내 신청 상태를 합친 값 */
-  status?: ProductStatus
-  bankName?: string
+  status?: LoanStatus
+  /*
+   * 서버에는 bankName 필터가 남아 있다(LoanSearchCondition). 화면에서 뺐을 뿐이라
+   * 되살리려면 이 줄과 LoanFilterBar 의 Select 만 돌려놓으면 된다.
+   */
   /** true 일 때만 거른다. false 를 보내도 서버는 필터하지 않는다 */
   bookmarked?: boolean
   sort?: LoanSort
@@ -112,7 +115,7 @@ export interface LoanDetail {
   /** '원리금균등상환'. 금융망 대출은 이 방식 하나뿐이라 서버가 상수로 박아 보낸다 */
   repaymentMethod: string
   conditions: LoanConditions
-  status: ProductStatus
+  status: LoanStatus
   /**
    * 진행 중인 신청 id. 상태가 신청에서 온 값일 때만 온다(PREPARING~PAID).
    * ELIGIBLE·INELIGIBLE 이면 null — 아직 신청한 적이 없다는 뜻이다.

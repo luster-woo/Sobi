@@ -35,7 +35,7 @@ export default function LoanProductTabs({
             aria-selected={selected}
             onClick={() => onSelect(product.accountNo)}
             className={cn(
-              'focus-visible:outline-primary rounded-md border px-4 py-2.5 text-[13px] transition-colors focus-visible:outline focus-visible:-outline-offset-2',
+              'focus-visible:outline-primary text-body2 rounded-md border px-4 py-2.5 transition-colors focus-visible:outline focus-visible:-outline-offset-2',
               // 선택된 탭은 연한 초록 바탕 + 진한 초록 글씨. 둘 다 테두리를 그려야
               // 전환할 때 탭 너비가 흔들리지 않는다
               selected
@@ -46,7 +46,7 @@ export default function LoanProductTabs({
             {product.accountName}
             <span
               className={cn(
-                'ml-2 text-[11.5px] tabular-nums',
+                'text-caption ml-2 tabular-nums',
                 selected ? 'text-primary/70' : 'text-text-muted',
               )}
             >

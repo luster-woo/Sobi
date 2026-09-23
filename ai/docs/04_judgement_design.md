@@ -98,11 +98,13 @@ status       VARCHAR(10)  -- eligible | unknown | ineligible
 reason       VARCHAR(500)
 check_items  JSONB
 benefits     JSONB
-score        DOUBLE PRECISION  -- 벡터 거리. SQL 탈락 건은 NULL
+distance     DOUBLE PRECISION  -- 코사인 거리. 0에 가까울수록 유사. SQL 탈락 건은 NULL
 judged_by    VARCHAR(3)   -- sql | llm
 ```
 
-`judged_by`는 오판 보고 시 SQL과 LLM 중 어느 쪽을 고칠지 가르는 데 쓴다.
+`judged_by`는 오판 보고 시 어느 쪽을 고칠지 가르는 데 쓴다.
+값은 `jev`(자격 판정) / `llm`(Jev 장애 시 GMS 폴백) / `sql`(정형 필터 탈락)
+세 가지다. DB 쪽 CHECK 제약은 백엔드 `V28` 에 있다.
 
 계산 시점은 마이데이터 연동 완료 직후(화면 12 "자격 판정 로딩")이며,
 재계산은 마이데이터 갱신 API가 담당한다. 로딩 화면이 있어 수십 초를
@@ -110,7 +112,32 @@ judged_by    VARCHAR(3)   -- sql | llm
 
 ## 남은 과제
 
+- **`confidence` 가 저장되지 않는다.** AI 는 `eligible` 안에서 확신도 내림차순
+  으로 정렬해 돌려주는데, 백엔드 `RagResult` 에 해당 필드가 없어 버려진다.
+  DB 에서 다시 꺼낼 때는 `distance` 로만 정렬하므로 확신도 0.99 인 공고와
+  0.36 인 공고가 같은 취급을 받는다. 정렬 근거가 한 단계에서 사라지는 셈이다.
+  `suggest_support_program.confidence DOUBLE PRECISION` 추가 + `RagResult`
+  필드 추가 + 조회 정렬에 반영이 필요하다 (SQL 탈락 건은 null).
 - 신규 공고가 적재돼도 기존 사용자는 갱신 전까지 보지 못한다. 데모에선
   무관하나, 운영에선 "새 공고 N건" 배지로 갱신을 유도해야 한다
 - 점포 형태(무점포·비접객)는 CS 업종 코드로 알 수 없어 판정 불가.
   프로필 필드 추가가 필요하다
+
+## 배포 시 확인 (실제로 터진 것들)
+
+AI 응답 스키마를 바꾸면 백엔드 저장 경로가 같이 깨진다. 실제로
+`judged_by` 에 `jev` 를 추가했을 때 `/mydata/link` 가 500 으로 터졌다.
+V25 의 CHECK 이 `('llm','sql')` 뿐이었는데 AI 쪽만 보고 배포했기 때문이다.
+
+다음에 응답 필드를 바꿀 때 볼 곳.
+
+| | 위치 |
+|---|---|
+| DTO | `global/external/ai/clientDto/RagResult.java` |
+| 엔티티 | `support/entity/SuggestSupportProgram.java` |
+| DB 제약 | `db/migration/` 의 CHECK (`chk_suggest_support_program_*`) |
+| 컬럼 길이 | `judged_by VARCHAR(3)` — 세 글자를 넘는 값은 못 넣는다 |
+
+모르는 필드가 늘어나는 것 자체는 안전하다. Jackson 기본 설정이
+`FAIL_ON_UNKNOWN_PROPERTIES=false` 라 조용히 무시된다. **조용히 무시되는
+것이 위 `confidence` 문제의 원인이기도 하다.**

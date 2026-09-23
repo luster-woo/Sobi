@@ -23,10 +23,15 @@ export async function getFundingRecommendations(params: FundingRecommendParams) 
 /**
  * 고른 조합으로 신청 목록 생성.
  *
- * ⚠️ 아직 화면에서 부르지 않는다. 서버의 FundingService.application() 이 빈 반복문이라
- *    200 만 오고 application 행이 생기지 않는다. 게다가 body 가 { type, id } 뿐이라
- *    조합이 계산한 배분액(allocatedAmount)이 저장되지 않는다. 둘 다 해결돼야 화면의
- *    '이 조합으로 진행' 버튼을 열 수 있다.
+ * 응답이 비어 있다(ApiResponse<Void>). 만들어진 신청 id 를 돌려달라고 요청해 뒀지만
+ * 그것에 기대지 않는다 — 안 넣고 고쳐도 화면이 깨지면 안 된다. 신청 목록 캐시를 비우고
+ * 신청 현황으로 보내는 것으로 충분하다.
+ *
+ * 배분액(allocatedAmount)은 보내지 않는다. 서버가 금액을 제출 시점에만 받고 신청 생성
+ * 단계에서는 저장할 곳이 없다.
+ *
+ * ⚠️ items 의 type 은 LOAN · SUPPORT 여야 한다. model/batch.ts 의 toBatchItems 를
+ *    거쳐서 넘길 것.
  */
 export async function applyFundingBatch(items: FundingBatchItem[]) {
   await api.post<null>(endpoints.funding.batch, { item: items })

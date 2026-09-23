@@ -16,18 +16,19 @@ export default function RepaymentProgressPanel({ progress }: RepaymentProgressPa
     <Panel
       title="총 상환 진행률"
       headerRight={
-        <span className="text-text text-[13.5px] font-bold tabular-nums">{progress.percent}%</span>
+        <span className="text-text text-body2 font-bold tabular-nums">{progress.percent}%</span>
       }
     >
-      <div className="flex flex-col gap-2.5 px-[15px] py-3.5">
+      <div className="px-card flex flex-col gap-2.5 py-3.5">
         <div className="bg-bg-canvas h-1.5 overflow-hidden rounded-full">
+          {/* 상권 분석 막대보다 느리게 찬다. 화면에 하나뿐이라 끝까지 볼 여유가 있다 */}
           <div
-            className="bg-primary h-full rounded-full transition-[width]"
+            className="bg-primary animate-grow-bar-slow h-full rounded-full"
             style={{ width: `${progress.percent}%` }}
           />
         </div>
 
-        <p className="text-text-secondary text-[11.5px] tabular-nums">
+        <p className="text-text-secondary text-caption tabular-nums">
           {progress.totalCount}회 중 {progress.paidCount}회 완료 · 잔여 {progress.remainingCount}회
         </p>
       </div>

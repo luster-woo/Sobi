@@ -1,8 +1,7 @@
 package com.sobi.user.controller;
 
 import com.sobi.global.response.ApiResponse;
-import com.sobi.user.dto.NotificationResponse;
-import com.sobi.user.dto.PasswordChangeReqeust;
+import com.sobi.user.dto.*;
 import com.sobi.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -81,4 +80,63 @@ public class UserController {
                 ));
     }
 
+    @PatchMapping("/birth-date")
+    public ResponseEntity<ApiResponse<BirthDateResponse>> updateBirthDate(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody BirthDateRequest birthDateRequest,
+            HttpServletRequest request) {
+
+        BirthDateResponse response = userService.updateBirthDate(userId, birthDateRequest);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "생년월일이 저장되었습니다.",
+                        response,
+                        request
+                ));
+    }
+
+    /**
+     * 로그인한 본인 정보. 세션 복구에서 재발급 직후 호출한다.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserMeResponse>> me(
+            @AuthenticationPrincipal Long userId,
+            HttpServletRequest request
+    ) {
+
+        UserMeResponse response = userService.getMe(userId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "내 정보 조회에 성공했습니다.",
+                        response,
+                        request
+                ));
+    }
+
+    /**
+     * 마이페이지. 계좌 잔액·대출금은 금융망 실시간 조회라 1~2초 걸린다.
+     */
+    @GetMapping("/mypage")
+    public ResponseEntity<ApiResponse<MyPageResponse>> mypage(
+            @AuthenticationPrincipal Long userId,
+            HttpServletRequest request
+    ) {
+
+        MyPageResponse response = userService.getMyPage(userId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        HttpStatus.OK,
+                        "마이페이지 조회에 성공했습니다.",
+                        response,
+                        request
+                ));
+    }
 }

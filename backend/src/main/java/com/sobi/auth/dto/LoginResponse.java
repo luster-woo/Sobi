@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Getter
 @Builder
 @NoArgsConstructor
@@ -34,6 +36,7 @@ public class LoginResponse {
         private String email;
         private String name;
         private String role;
+        private LocalDate birthDate;
 
         public static UserInfo from(User user) {
             return UserInfo.builder()
@@ -41,6 +44,7 @@ public class LoginResponse {
                     .email(user.getEmail())
                     .name(user.getName())
                     .role(user.getRole() != null ? user.getRole().name() : null)
+                    .birthDate(user.getBirthDate())
                     .build();
         }
     }

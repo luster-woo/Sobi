@@ -11,8 +11,8 @@ interface LoanInfoPanelProps {
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-text-muted shrink-0 text-[11.5px]">{label}</dt>
-      <dd className="text-text truncate text-[12.5px] tabular-nums">{children}</dd>
+      <dt className="text-text-muted text-caption shrink-0">{label}</dt>
+      <dd className="text-text text-caption truncate tabular-nums">{children}</dd>
     </div>
   )
 }
@@ -31,7 +31,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 export default function LoanInfoPanel({ product }: LoanInfoPanelProps) {
   return (
     <Panel title="대출 정보">
-      <dl className="flex flex-col gap-2.5 px-[15px] py-3.5">
+      <dl className="px-card flex flex-col gap-2.5 py-3.5">
         <Row label="대출 원금">{formatWonText(product.loanBalance)}</Row>
         <Row label="실행일">{formatDotDate(product.loanDate)}</Row>
         <Row label="만기일">{formatDotDate(product.maturityDate)}</Row>

@@ -1,3 +1,6 @@
+import { useWithdraw } from '@/features/mypage/hooks/useUserAccount'
+import { getErrorMessage, getErrorStatus } from '@/shared/api/errors'
+import { useUiStore } from '@/shared/lib/store/useUiStore'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 
@@ -31,6 +34,30 @@ export default function WithdrawModal({
   repayingLoans,
   favoriteCount,
 }: WithdrawModalProps) {
+  const showToast = useUiStore((s) => s.showToast)
+  const { mutate: submitWithdraw, isPending } = useWithdraw()
+
+  /*
+   * 성공 처리는 훅이 한다 — 세션을 비우고 랜딩으로 전체 이동한다. 여기서는 실패만 받는다.
+   *
+   * 실패했는데 창을 닫으면 사용자는 탈퇴된 줄 알고 떠난다. 열어둔 채 알리면 '탈퇴하기'
+   * 를 다시 누를 수 있다.
+   */
+  const handleWithdraw = () => {
+    submitWithdraw(undefined, {
+      onError: (error) => {
+        /*
+         * 4xx 만 알린다. 네트워크 끊김과 5xx 는 `client.ts` 의 인터셉터가 이미 토스트를
+         * 띄우므로 여기서 또 띄우면 같은 문구가 두 장 쌓인다 (`notifyUnrecoverable` 주석).
+         */
+        const status = getErrorStatus(error)
+        if (status === undefined || status >= 500) return
+
+        showToast(getErrorMessage(error, { 401: '다시 로그인한 뒤 시도해 주세요.' }), 'danger')
+      },
+    })
+  }
+
   return (
     <Modal
       open={open}
@@ -45,11 +72,14 @@ export default function WithdrawModal({
       closeOnOverlayClick={false}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} className="flex-1">
+          <Button variant="outline" onClick={onClose} className="flex-1" disabled={isPending}>
             돌아가기
           </Button>
-          {/* TODO: POST /user/me (명세상 탈퇴가 POST 다) → 성공 시 세션 정리 후 랜딩으로 */}
-          <Button variant="danger" className="flex-1">
+          {/*
+           * `DELETE /user/me` 다. 명세에는 POST 로 적혀 있는데 `UserController` 구현이
+           * DELETE 라, 다른 엔드포인트와 같은 관례대로 구현을 따랐다.
+           */}
+          <Button variant="danger" className="flex-1" loading={isPending} onClick={handleWithdraw}>
             탈퇴하기
           </Button>
         </>

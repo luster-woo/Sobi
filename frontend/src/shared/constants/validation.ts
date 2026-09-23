@@ -23,12 +23,6 @@ export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 /** 숫자 6자리 */
 export const AUTH_CODE_REGEX = /^\d{6}$/
 
-/** 010-0000-0000 (011·016·017·018·019 포함) */
-export const PHONE_REGEX = /^01[016789]-\d{3,4}-\d{4}$/
-
-/** 하이픈 없이 입력한 경우도 허용합니다 (formatPhone 으로 변환) */
-export const PHONE_DIGITS_REGEX = /^01[016789]\d{7,8}$/
-
 /** YYYY-MM-DD */
 export const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
 
@@ -80,8 +74,12 @@ export const VALIDATION_MESSAGE = {
    */
   authCodeInvalidOrExpired: '인증번호가 올바르지 않거나 만료됐어요.',
 
-  phoneFormat: '010-0000-0000 형식으로 입력해 주세요.',
-
   dateFormat: 'YYYY-MM-DD 형식으로 입력해 주세요.',
   dateFuture: '오늘 이전 날짜를 입력해 주세요.',
+  /**
+   * 생년월일 전용. `dateFuture` 와 달리 **오늘도 안 된다** — 백엔드가 `@Past` 라
+   * 오늘 날짜를 보내면 400 이다. 문구를 따로 두지 않으면 '오늘 이전' 이라고 안내해
+   * 놓고 오늘을 고른 사용자가 서버 오류를 만난다.
+   */
+  birthDateFuture: '어제 이전 날짜를 입력해 주세요.',
 } as const

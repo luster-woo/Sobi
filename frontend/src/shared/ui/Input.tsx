@@ -1,16 +1,19 @@
-import type { InputHTMLAttributes, ReactNode } from 'react'
+import type { InputHTMLAttributes, ReactNode, Ref } from 'react'
 import { useId } from 'react'
 
+import { CONTROL_HEIGHT } from '@/shared/ui/controlSize'
 import { cn } from '@/shared/utils/cn'
 
 const sizeClass = {
-  lg: 'text-h4 h-14 px-4',
-  md: 'text-body1 h-[42px] px-3',
+  sm: `text-body2 ${CONTROL_HEIGHT.sm} px-3`,
+  md: `text-body1 ${CONTROL_HEIGHT.md} px-3`,
+  lg: `text-body1 ${CONTROL_HEIGHT.lg} px-4`,
+  xl: `text-h4 ${CONTROL_HEIGHT.xl} px-4`,
 } as const
 
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
-  /** lg 56 · md 42 (px). lg 는 본인확인처럼 큰 창의 폼 */
-  size?: 'lg' | 'md'
+  /** sm 34 · md 42 · lg 48 · xl 56 (px). Button·Select 와 같은 높이입니다 */
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   label?: string
   /** 입력칸 아래 안내 문구. error 가 있으면 가려집니다 */
   helperText?: string
@@ -20,6 +23,8 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'>
   rightSlot?: ReactNode
   /** 바깥 래퍼에 적용할 클래스 (폭 지정용) */
   className?: string
+  /** input 요소에 연결됩니다. 검증 실패 시 포커스를 옮길 때 씁니다 */
+  ref?: Ref<HTMLInputElement>
 }
 
 /**
@@ -37,6 +42,7 @@ export default function Input({
   required,
   id,
   className,
+  ref,
   ...rest
 }: InputProps) {
   const autoId = useId()
@@ -58,6 +64,7 @@ export default function Input({
 
       <div className="relative">
         <input
+          ref={ref}
           id={inputId}
           disabled={disabled}
           required={required}

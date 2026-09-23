@@ -8,7 +8,7 @@ interface ProductCardProps {
   organization?: string
   /**
    * 제목 아래 알약 조건.
-   *   대출   ['상환 36회']
+   *   대출   ['기간 365일']
    *   지원금 ['~9.29', '금리 2.0%']
    *
    * 개수를 제한하지 않지만 236px 카드에 두 줄까지가 한계다. 부르는 쪽에서 2개 정도로
@@ -86,9 +86,7 @@ export default function ProductCard({
           )}
 
           {organization && (
-            <span className="text-text-muted mt-1 block truncate text-[11.5px]">
-              {organization}
-            </span>
+            <span className="text-text-muted text-caption mt-1 block truncate">{organization}</span>
           )}
         </span>
 

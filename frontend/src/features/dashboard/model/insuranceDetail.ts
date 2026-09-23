@@ -1,4 +1,5 @@
-import type { ID } from '@/shared/types'
+import type { DashboardInsurance } from '@/features/dashboard/model/types'
+import { type ID, INSURANCE_STATUS } from '@/shared/types'
 
 /**
  * 안내 창 본문.
@@ -20,7 +21,7 @@ export interface InsuranceDetailData {
 }
 
 /**
- * 키는 `MOCK_PRE_OWNER_DASHBOARD.insurances` 의 insuranceChecklistId 와 맞춰 두었다.
+ * 키는 MSW `mocks/handlers/dashboard.ts` 예비 창업자 응답의 insuranceChecklistId 와 맞춰 두었다.
  *
  * 보장 한도·과태료는 법령에 있는 값을 옮긴 것이지만 개정될 수 있다. 모달 하단에
  * 확인 안내를 붙여 두었다.
@@ -110,3 +111,23 @@ LPG를 대주는 판매소를 통해 단체로 가입하는 경우가 가장 많
 건물 전체가 단체로 가입돼 있는 경우가 많으니 관리사무소에 먼저 확인해 보세요.`,
   },
 }
+
+/**
+ * 예비창업자에게 보여줄 참고 목록.
+ *
+ * 서버는 이 자리에 **항상 빈 배열**을 준다 — `business_info` 가 있어야 체크리스트가
+ * 생기는데 그건 업체 등록과 동시에 만들어지고, 그 순간 role 이 ENTREPRENEUR 로 바뀐다.
+ * 즉 예비창업자에게 체크리스트가 있을 수 없다.
+ *
+ * 그렇다고 패널을 비워두면 "개업 전에 뭘 준비해야 하는지" 를 알려줄 자리가 사라진다.
+ * 판정이 아니라 안내라서 프론트 상수로 충분하다. 업종을 아직 모르므로 업종별로
+ * 가르지 않고, 소상공인이 흔히 대상이 되는 셋만 둔다.
+ *
+ * `status` 는 참고 모드에서 화면에 그려지지 않는다(`InsuranceMiniPanel`).
+ * 그래도 판정한 척하지 않도록 '확인 필요' 로 둔다.
+ */
+export const REFERENCE_INSURANCES: readonly DashboardInsurance[] = [21, 22, 23].map((id) => ({
+  insuranceChecklistId: id,
+  name: INSURANCE_DETAIL[id].name,
+  status: INSURANCE_STATUS.NEEDS_VERIFICATION,
+}))

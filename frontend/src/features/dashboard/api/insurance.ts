@@ -32,7 +32,7 @@ export interface InsuranceDetail {
  * 의무보험 체크리스트 목록.
  *
  * 정렬은 서버가 한다 — 4대 사회보험(SOCIAL) 먼저, 그다음 보험 id 순.
- * 업체를 등록하지 않은 계정은 404 BUSINESS_O04 다. 예비 창업자가 여기 해당하므로
+ * 업체를 등록하지 않은 계정은 404 BUSINESS_004 다. 예비 창업자가 여기 해당하므로
  * 호출하는 쪽이 role 로 먼저 걸러야 한다.
  */
 export async function getInsurances() {

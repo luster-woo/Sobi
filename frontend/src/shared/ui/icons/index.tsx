@@ -142,6 +142,22 @@ export function BellIcon(props: IconProps) {
   )
 }
 
+/**
+ * 사이드바 여닫기 — 왼쪽 칸이 나뉜 패널.
+ *
+ * 화살표를 쓰지 않는다. 방향 화살표는 접힌 상태에 따라 뒤집어야 하는데, 뒤집히는
+ * 순간 무엇을 가리키는지 읽기 어려워진다. 모양을 고정하고 상태는 aria-expanded 로
+ * 알린다 — 눈으로는 '사이드바를 다루는 버튼' 하나로만 보이면 된다.
+ */
+export function SidebarToggleIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9.5 4v16" />
+    </svg>
+  )
+}
+
 /** 업체 — 사이드바 하단 카드의 자리 표시 */
 export function StoreIcon(props: IconProps) {
   return (
@@ -149,6 +165,19 @@ export function StoreIcon(props: IconProps) {
       <path d="M4 10v9.5h16V10" />
       <path d="M3 10 4.8 4.5h14.4L21 10a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z" />
       <path d="M10 19.5V14h4v5.5" />
+    </svg>
+  )
+}
+
+/** 원래 배율로 — 네 귀퉁이에서 가운데로 모이는 화살표. 지도 확대를 되돌릴 때 쓴다 */
+export function ZoomResetIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M9 3H5a2 2 0 0 0-2 2v4" />
+      <path d="M15 3h4a2 2 0 0 1 2 2v4" />
+      <path d="M9 21H5a2 2 0 0 1-2-2v-4" />
+      <path d="M15 21h4a2 2 0 0 0 2-2v-4" />
+      <path d="m8 8 3 3M16 8l-3 3M8 16l3-3M16 16l-3-3" />
     </svg>
   )
 }

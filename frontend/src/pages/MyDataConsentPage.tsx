@@ -7,6 +7,7 @@ import {
   TRANSFER_ITEMS,
   TRANSFER_TERMS,
 } from '@/features/auth/model/mydataConsent'
+import { useMydataLink } from '@/features/mydata/hooks/useMydata'
 import { ROUTES } from '@/shared/constants/routes'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
@@ -22,6 +23,7 @@ import { cn } from '@/shared/utils/cn'
  */
 export function MyDataConsentPage() {
   const navigate = useNavigate()
+  const link = useMydataLink()
 
   /** 전송을 요구할 항목. 기본은 전부 선택 — 빼고 싶은 것만 끄게 한다 */
   const [selected, setSelected] = useState<string[]>(TRANSFER_ITEMS.map((item) => item.id))
@@ -38,18 +40,22 @@ export function MyDataConsentPage() {
       previous.includes(id) ? previous.filter((value) => value !== id) : [...previous, id],
     )
 
+  /*
+   * 응답을 기다리지 않고 넘어간다. 15~40초 걸리는 동기 호출이라 여기서 await 하면
+   * 동의 화면이 그동안 멈춰 있고, 사용자는 눌린 건지 알 수 없다.
+   *
+   * 결과는 수집 화면이 뮤테이션 키로 찾아 읽는다 — 이 컴포넌트는 곧 언마운트되지만
+   * 요청은 취소되지 않는다.
+   */
   const handleLink = () => {
-    // TODO(143): POST /mydata/link
-    //   지금은 동기 1회 호출이라 응답이 `data: null` 이다. 비동기(jobId + 폴링)로
-    //   바뀌면 여기서 jobId 를 받아 수집 화면으로 넘긴다.
-    //   동기로 남으면 이 호출만 timeout 을 60초로 따로 줘야 한다 — 전역이 10초다.
+    link.mutate()
     navigate(ROUTES.MYDATA_COLLECT)
   }
 
   return (
     <>
       <div className="mb-6 text-center">
-        <h1 className="font-heading text-text text-[23px] font-bold tracking-[-0.02em]">
+        <h1 className="text-h2 tracking-[-0.02em]">
           마이데이터를 연동하면 가능한 상품만 보여드려요
         </h1>
         <p className="text-body2 text-text-secondary mt-2.5 leading-[1.7]">

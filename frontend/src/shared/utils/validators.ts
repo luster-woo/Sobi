@@ -7,8 +7,6 @@ import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   PASSWORD_REGEX,
-  PHONE_DIGITS_REGEX,
-  PHONE_REGEX,
   VALIDATION_MESSAGE,
 } from '@/shared/constants/validation'
 
@@ -63,14 +61,6 @@ export function validateAuthCode(value: string): string | null {
   return null
 }
 
-export function validatePhone(value: string): string | null {
-  if (!value.trim()) return VALIDATION_MESSAGE.required
-  if (!PHONE_REGEX.test(value) && !PHONE_DIGITS_REGEX.test(value)) {
-    return VALIDATION_MESSAGE.phoneFormat
-  }
-  return null
-}
-
 /** 개업연월일 — 형식 + 오늘 이전 */
 export function validateOpenedAt(value: string): string | null {
   if (!value.trim()) return VALIDATION_MESSAGE.required
@@ -82,6 +72,30 @@ export function validateOpenedAt(value: string): string | null {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   if (input > today) return VALIDATION_MESSAGE.dateFuture
+
+  return null
+}
+
+/**
+ * 생년월일 — 형식 + 오늘보다 **앞**.
+ *
+ * `validateOpenedAt` 과 따로 두는 이유: 개업연월일은 오늘이 허용되지만(오늘 개업할 수
+ * 있다) 생년월일은 백엔드가 `@Past` 라 오늘을 거부한다. 한 함수로 묶으면 둘 중 하나가
+ * 서버와 어긋난다.
+ *
+ * 나이 상·하한은 두지 않는다. 백엔드가 `@Past` 만 걸고 있어서 프론트가 더 좁히면
+ * 서버는 받아주는 값을 화면이 막는 꼴이 된다.
+ */
+export function validateBirthDate(value: string): string | null {
+  if (!value.trim()) return VALIDATION_MESSAGE.required
+  if (!ISO_DATE_REGEX.test(value)) return VALIDATION_MESSAGE.dateFormat
+
+  const input = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(input.getTime())) return VALIDATION_MESSAGE.dateFormat
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  if (input >= today) return VALIDATION_MESSAGE.birthDateFuture
 
   return null
 }

@@ -14,6 +14,7 @@ import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { isPreOwner } from '@/shared/types'
 import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
+import PageHeading from '@/shared/ui/PageHeading'
 import Skeleton from '@/shared/ui/Skeleton'
 
 /**
@@ -61,8 +62,8 @@ export function LoanRepaymentPage() {
 
   if (preOwner) {
     return (
-      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
-        <h1 className="text-h1">상환 관리</h1>
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
+        <PageHeading title="상환 관리" />
 
         <EmptyState
           title="사업자 등록번호를 입력해야 이용할 수 있어요."
@@ -75,8 +76,8 @@ export function LoanRepaymentPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
-        <h1 className="text-h1">상환 관리</h1>
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
+        <PageHeading title="상환 관리" />
 
         <Skeleton variant="text" width={280} height={36} />
         <Skeleton height={78} className="rounded-md" />
@@ -86,8 +87,8 @@ export function LoanRepaymentPage() {
 
   if (isError) {
     return (
-      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
-        <h1 className="text-h1">상환 관리</h1>
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
+        <PageHeading title="상환 관리" />
 
         <EmptyState
           title="대출 정보를 불러오지 못했어요"
@@ -99,8 +100,8 @@ export function LoanRepaymentPage() {
 
   if (!products || products.length === 0 || !selected) {
     return (
-      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
-        <h1 className="text-h1">상환 관리</h1>
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
+        <PageHeading title="상환 관리" />
 
         <EmptyState
           title="상환 중인 대출이 없어요"
@@ -113,8 +114,8 @@ export function LoanRepaymentPage() {
   const progress = detail ? getRepaymentProgress(detail.records, selected.loanPeriod) : null
 
   return (
-    <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3.5">
-      <h1 className="text-h1">상환 관리</h1>
+    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3.5">
+      <PageHeading title="상환 관리" />
 
       <LoanProductTabs
         products={products}

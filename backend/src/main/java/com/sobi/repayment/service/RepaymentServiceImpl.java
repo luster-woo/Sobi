@@ -5,6 +5,7 @@ import com.sobi.account.entity.Account;
 import com.sobi.account.repository.AccountRepository;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.repayment.calculator.RepaymentSchedule;
 import com.sobi.repayment.client.SsafyRepaymentClient;
 import com.sobi.repayment.clientDto.SsafyInquireLoanAccountDetail;
 import com.sobi.repayment.clientDto.SsafyInquireLoanAccountListResponse;
@@ -45,8 +46,8 @@ public class RepaymentServiceImpl implements RepaymentService {
         List<LoanProductList> loanProductLists = new ArrayList<>();
         for(SsafyInquireLoanAccountDetail detail : ssafyResponse.getDetails()) {
 
-            // dailyDueAmount 계산
-            long dailyDueAmount = calculateDailyDueAmount(detail);
+            // dailyDueAmount 계산 (내일 빠져나갈 금액)
+            long dailyDueAmount = calculateNextDueAmount(detail);
 
             // 출금계좌 은행명 조회
             Account account = accountRepository.findByAccountNo(detail.getWithdrawalAccountNo());
@@ -101,12 +102,12 @@ public class RepaymentServiceImpl implements RepaymentService {
                         .findFirst()
                         .orElseThrow(() -> new RuntimeException("해당 계좌를 찾을 수 없습니다."));
 
-        // 최초 대출 원금
-        long originalPrincipal = Long.parseLong(loanDetail.getLoanBalance());
-
-        // 총 상환 횟수
-        int loanPeriod = Integer.parseInt(loanDetail.getLoanPeriod());
-
+        /*
+         * 금액은 금융망 응답(loanBalance·remainingLoanBalance·paymentBalance)을 쓰지 않고
+         * 원금·이율·기간으로 직접 계산한다. 금융망이 회차마다 전체 기간치 이자를 중복해서
+         * 붙이기 때문이다 — 자세한 내용은 RepaymentSchedule 주석 참고.
+         */
+        RepaymentSchedule schedule = RepaymentSchedule.from(loanDetail);
 
         // 성공한 상환 횟수
         long successCount = ssafyResponseRecord.getRec()
@@ -117,24 +118,24 @@ public class RepaymentServiceImpl implements RepaymentService {
                         )
                         .count();
 
-        // 회차별 원금
-        long principalPerInstallment = originalPrincipal / loanPeriod;
-
-        // 지금까지 상환한 원금
-        long paidPrincipal = principalPerInstallment * successCount;
+        // 남은 상환액(원금 + 이자)
+        long remainingLoanBalance = schedule.getRemainingBalance(successCount);
 
         // 일시납 시 납부해야 하는 금액 = 남은 순수 원금
-        long totalPayoffAmount = originalPrincipal - paidPrincipal;
-
-        // 금융망에서 제공하는 남은 전체 상환금액
-        long remainingLoanBalance = Long.parseLong(ssafyResponseRecord.getRec().getRemainingLoanBalance());
+        long totalPayoffAmount = schedule.getRemainingPrincipal(successCount);
 
         // 일시납으로 아낄 수 있는 이자
-        long interestSaved = Math.max(0, remainingLoanBalance - totalPayoffAmount);
+        long interestSaved = schedule.getInterestSaved(successCount);
 
         //response 생성
 
-        RecordResponse response = RecordResponse.from(ssafyResponseRecord, totalPayoffAmount, interestSaved);
+        RecordResponse response = RecordResponse.from(
+                ssafyResponseRecord,
+                schedule,
+                remainingLoanBalance,
+                totalPayoffAmount,
+                interestSaved
+        );
 
 
 
@@ -154,12 +155,17 @@ public class RepaymentServiceImpl implements RepaymentService {
 
     }
 
-    // dailyDueAmount 계산
-    private long calculateDailyDueAmount(SsafyInquireLoanAccountDetail detail) {
-
-        long loanBalance = Long.parseLong(detail.getLoanBalance());
-        int loanPeriod = Integer.parseInt(detail.getLoanPeriod());
-        double interestRate = Double.parseDouble(detail.getInterestRate());
+    /**
+     * '다음 날 상환액' 계산.
+     *
+     * 금융망은 실행 다음 날 08:30부터 하루에 한 회차씩 출금한다. 그래서 오늘이 아니라
+     * '내일 빠질 회차'의 금액을 보여준다 — 실행 당일에도 1회차 금액이 보여야 한다.
+     *
+     * 회차는 실제 상환 기록이 아니라 날짜로 센다. 목록에 있는 계좌마다 상환 내역 API를
+     * 한 번씩 더 부르지 않기 위해서다. 연체가 쌓이면 실제 회차와 어긋날 수 있지만,
+     * 회차별 금액이 균등해서 보여줄 금액 자체는 달라지지 않는다.
+     */
+    private long calculateNextDueAmount(SsafyInquireLoanAccountDetail detail) {
 
         LocalDate loanDate = LocalDate.parse(
                 detail.getLoanDate(),
@@ -173,46 +179,17 @@ public class RepaymentServiceImpl implements RepaymentService {
 
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
 
-        // 대출 실행일에는 아직 상환하지 않음
-        if (!today.isAfter(loanDate)) {
+        // 만기가 지났으면 더 빠져나갈 회차가 없다
+        if (!today.isBefore(maturityDate)) {
             return 0L;
         }
 
-        // 만기 이후
-        if (today.isAfter(maturityDate)) {
-            return 0L;
-        }
+        // 내일이 몇 번째 상환일인지 계산 (실행 당일이면 1회차)
+        long nextInstallmentNumber =
+                ChronoUnit.DAYS.between(loanDate, today) + 1;
 
-        // 오늘이 몇 번째 상환일인지 계산
-        int installmentNumber =
-                (int) ChronoUnit.DAYS.between(loanDate, today);
-
-        // 회차 범위 제한
-        installmentNumber = Math.min(installmentNumber, loanPeriod);
-
-        // 기본적으로 매일 갚는 원금
-        long principalPerDay = loanBalance / loanPeriod;
-
-        // 오늘 상환 전 남아 있는 원금
-        long remainingPrincipal =
-                loanBalance - (principalPerDay * (installmentNumber - 1));
-
-        // 마지막 회차에는 나머지 원금을 모두 상환
-        long principalDue;
-
-        if (installmentNumber == loanPeriod) {
-            principalDue = remainingPrincipal;
-        } else {
-            principalDue = principalPerDay;
-        }
-
-        // 하루치 이자
-        long interest = Math.round(
-                remainingPrincipal
-                        * (interestRate / 100.0)
-                        * (1.0 / 365.0)
-        );
-
-        return principalDue + interest;
+        // 회차 범위를 벗어나면 0을 돌려준다
+        return RepaymentSchedule.from(detail)
+                .getInstallmentAmount(nextInstallmentNumber);
     }
 }

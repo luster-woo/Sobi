@@ -29,13 +29,7 @@ interface TableProps<T> {
   skeletonRows?: number
   /** rows 가 비었을 때 그릴 것. 안 주면 기본 문구가 나간다 */
   empty?: ReactNode
-  /**
-   * 행마다 다른 클래스. 특정 행을 강조할 때 쓴다 (상권 비교표에서 조회한 행정동).
-   *
-   * cn 은 tailwind-merge 가 아니라 뒤에 이어 붙이기만 한다. 기본 클래스와 겹치는
-   * 유틸리티를 넣으면 CSS 에서 나중에 선언된 쪽이 우선되므로, 배경색처럼 겹치는 것을
-   * 넘길 때는 결과를 눈으로 확인해야 한다.
-   */
+  /** 행마다 다른 클래스. 기본 클래스와 겹치면 이쪽이 이긴다 (상권 비교표의 조회한 행정동) */
   rowClassName?: (row: T) => string | undefined
   onRowClick?: (row: T) => void
   /**
@@ -45,7 +39,7 @@ interface TableProps<T> {
   bordered?: boolean
   /**
    * 행 높이를 관심 목록(FavoritesPage)과 같게 한다 — 셀 여백이 `px-4 py-3` 대신
-   * `px-[15px] py-2.5` 가 된다.
+   * `px-card py-2.5` 가 된다.
    *
    * 기본값으로 만들지 않은 이유: 상권 비교표·상환 기록표는 지금 밀도가 맞고, 공용
    * 컴포넌트에서 기본을 바꾸면 손대지 않은 화면의 줄 높이가 같이 움직인다.
@@ -89,7 +83,7 @@ export default function Table<T>({
 }: TableProps<T>) {
   const isClickable = Boolean(onRowClick)
   // 헤더와 본문이 같은 값을 써야 열이 어긋나지 않는다
-  const cellPadding = dense ? 'px-[15px] py-2.5' : 'px-4 py-3'
+  const cellPadding = dense ? 'px-card py-2.5' : 'px-4 py-3'
 
   const handleKeyDown = (row: T) => (event: KeyboardEvent<HTMLTableRowElement>) => {
     if (!onRowClick) return

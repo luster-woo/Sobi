@@ -10,5 +10,5 @@ import lombok.Setter;
 public class BatchItem {
 
     private String type;
-    private String id;
+    private Long id;
 }

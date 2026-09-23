@@ -2,6 +2,9 @@ package com.sobi.funding.service;
 
 
 
+import com.sobi.application.entity.Application;
+import com.sobi.application.repository.ApplicationRepository;
+import com.sobi.application.service.ApplicationService;
 import com.sobi.business.entity.BusinessInfo;
 import com.sobi.business.repository.BusinessReporitory;
 import com.sobi.funding.domain.FundingCandidate;
@@ -17,6 +20,7 @@ import com.sobi.global.exception.ErrorCode;
 import com.sobi.loan.entity.Loan;
 import com.sobi.loan.entity.SuggestLoan;
 import com.sobi.loan.repository.SuggestLoanRepository;
+import com.sobi.support.entity.JudgementStatus;
 import com.sobi.support.entity.SuggestSupportProgram;
 import com.sobi.support.entity.SupportProgram;
 import com.sobi.support.repository.SuggestSupportProgramRepository;
@@ -37,15 +41,23 @@ public class FundingService {
     private final SuggestSupportProgramRepository suggestSupportProgramRepository;
     private final FundingRecommendationEngine recommendationEngine;
     private final BusinessReporitory businessReporitory;
+    private final ApplicationService applicationService;
+    private final ApplicationRepository applicationRepository;
 
+    @Transactional
     public void application(Long userId, BatchRequest batchRequest) {
 
         for (BatchItem batchItem : batchRequest.getItem()) {
+            // 신청 현황에 있는 상품인지 검사
+//            Application application = applicationRepository.findByIdAndUser_Id(userId, batchItem.getId()).orElse(null);
+//
+//            if (application != null) {
+//                continue;
+//            }
             // 신청 메서드로 신청
 
-
+            applicationService.create(userId, batchItem.getType(), batchItem.getId());
         }
-
     }
 
 
@@ -71,7 +83,7 @@ public class FundingService {
         }
 
         // 해당 사업자가 신청가능한 대출상품, 지원사업을 하나의 FundingCandidate으로 변경, 리스트 생성
-        List<FundingCandidate> candidates = getFundingCandidates(businessId);
+        List<FundingCandidate> candidates = getFundingCandidates(businessId, userId);
 
         // 해당 리스트 기반으로 추천 알고리즘 돌림
         // candidates가 비어있으면 비즈니스 에러를 발생시키는 것 보다는 빈 리스트를 내려주기로함.
@@ -86,25 +98,29 @@ public class FundingService {
 
 
     // 사업자 기반으로 추천 테이블들에 있는 대출 상품, 지원사업을 FundingCandidate 타입으로 변경후 하나의 리스트로 통합
-    public List<FundingCandidate> getFundingCandidates(Long businessId) {
+    public List<FundingCandidate> getFundingCandidates(Long businessId, Long userId) {
 
         List<FundingCandidate> candidates = new ArrayList<>();
 
-        addLoanCandidates(businessId, candidates);
+        addLoanCandidates(businessId, candidates, userId);
 
-        addSupportProgramCandidates(businessId, candidates);
+        addSupportProgramCandidates(businessId, candidates,  userId);
 
         return candidates;
     }
 
     // 대출 상품을 FundingCandidate로 변환 후 리스트에 추가
-    private void addLoanCandidates(Long businessId, List<FundingCandidate> candidates) {
+    private void addLoanCandidates(Long businessId, List<FundingCandidate> candidates, Long userId) {
 
         List<SuggestLoan> suggestLoans = suggestLoanRepository.findAllWithLoanByBusinessId(businessId);
 
         for (SuggestLoan suggestLoan : suggestLoans) {
 
             Loan loan = suggestLoan.getLoan();
+
+            // 신청 목록에 해당 사업이 있으면 넘김
+            Application application = applicationRepository.findByUser_IdAndLoan_Id(userId, loan.getId());
+            if (application != null) continue;
 
             FundingCandidate candidate =
                     new FundingCandidate(
@@ -124,13 +140,22 @@ public class FundingService {
     }
 
     // 지원 사업을 FundingCandidate로 변환후 리스트에 추가
-    private void addSupportProgramCandidates(Long businessId, List<FundingCandidate> candidates) {
+    private void addSupportProgramCandidates(Long businessId, List<FundingCandidate> candidates, Long userId) {
 
         List<SuggestSupportProgram> suggestPrograms = suggestSupportProgramRepository.findAllWithSupportProgramByBusinessId(businessId);
 
         for (SuggestSupportProgram suggest : suggestPrograms) {
 
+            // 적격 판정을 못받았으면 넘김
+            if(!suggest.getStatus().equals(JudgementStatus.ELIGIBLE)) continue;
+
             SupportProgram program = suggest.getSupportProgram();
+
+            // 신청 목록에 해당 사업이 있으면 넘김
+
+            Application application = applicationRepository.findByUser_IdAndSupportProgram_Id(userId, program.getId());
+            if(application != null) continue;
+
 
             FundingCandidate candidate = convertSupportProgram(program);
 

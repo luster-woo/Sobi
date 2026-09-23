@@ -10,7 +10,7 @@ import { useAuthStore } from '@/shared/lib/store/useAuthStore'
  * 업체 등록.
  *
  * 등록만으로는 화면이 바뀌지 않는다. 서버가 `user.role` 을 ENTREPRENEUR 로 바꾸지만
- * 손에 든 accessToken 은 발급 시점의 role(null 또는 PREENTREPRENEUR)을 그대로 담고
+ * 손에 든 accessToken 은 발급 시점의 role(PREENTREPRENEUR)을 그대로 담고
  * 있어서, 사이드바 카드도 대시보드도 여전히 예비 창업자로 본다. 그래서 등록 직후
  * 재발급을 한 번 태워 새 role 이 담긴 토큰으로 갈아끼운다.
  *
@@ -44,6 +44,7 @@ export function useBusinessRegister() {
     onSuccess: () => {
       // 등록 전에 404 로 굳은 캐시가 남아 있으면 사이드바가 계속 '업체 등록하기' 다
       void queryClient.invalidateQueries({ queryKey: queryKeys.business.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
     },
   })
 }

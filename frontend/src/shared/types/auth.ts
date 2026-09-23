@@ -1,3 +1,4 @@
+import type { ISODate } from '@/shared/types/common'
 import type { UserRole } from '@/shared/types/user'
 
 /**
@@ -14,13 +15,21 @@ export interface LoginRequest {
 }
 
 /**
- * 명세가 받는 필드는 셋뿐이다. `role` 은 가입 시점에 정해지지 않고
+ * 백엔드 `SignupRequest` 와 1:1. `role` 은 가입 시점에 정해지지 않고
  * `POST /business` 로 업체를 등록하면 ENTREPRENEUR 가 된다.
  */
 export interface SignUpRequest {
   email: string
   password: string
   name: string
+  /**
+   * 생년월일 'YYYY-MM-DD'. 백엔드 `SignupRequest.birthDate` 는 `@NotNull @Past` 라
+   * **필수이고 오늘은 안 된다** — 오늘을 보내면 400 COMMON_001 이다.
+   *
+   * ⚠️ `users.birth_date` 컬럼 자체는 nullable 이다. 소셜 가입은 구글이 생일을 안 줘서
+   *    비워 두기로 했고(V23 마이그레이션 주석), 로컬 가입만 필수다.
+   */
+  birthDate: ISODate
 }
 
 export interface TokenResponse {
@@ -35,12 +44,12 @@ export interface TokenResponse {
 }
 
 /**
- * 로그인 응답에 실려오는 사용자 정보. **네 필드뿐이다.**
+ * 로그인 응답에 실려오는 사용자 정보. 백엔드 `LoginResponse.UserInfo` 와 1:1.
  *
- * `shared/types/user.ts` 의 `User`(테이블 전체)와 다르다. 신용등급·가입 경로·알림 설정
- * 같은 나머지는 `GET /user/me` 가 주기로 되어 있는데 백엔드에 아직 없다.
+ * `shared/types/user.ts` 의 `User`(테이블 전체)와 다르다. 가입 경로는 `GET /user/me` 가
+ * 같이 주지만 이 타입은 안 담는다 — 필요한 화면(마이페이지)이 `GET /user/mypage` 를
+ * 따로 보기 때문이다. 신용등급·알림 설정도 그쪽에 있다.
  *
- * 화면이 세션에서 실제로 읽는 값은 `role` 과 `name` 뿐이라 이 네 개로 충분하다.
  * 키가 `id` 가 아니라 **`userId`** 다.
  */
 export interface SessionUser {
@@ -48,12 +57,24 @@ export interface SessionUser {
   email: string
   name: string
   /**
-   * ⚠️ **null 일 수 있다.** 백엔드 `LoginResponse.UserInfo.from()` 이
-   * `user.getRole() != null ? ... : null` 로 넣는다.
+   * 생년월일 'YYYY-MM-DD'.
    *
-   * 로컬 가입은 `PREENTREPRENEUR` 로 시작하지만(`AuthServiceImpl.signup`) 구글 신규
-   * 가입은 role 을 넣지 않아 null 로 온다. **null 은 예비 창업자로 본다** — 직접
-   * 비교하지 말고 `isPreOwner()` 를 쓸 것.
+   * ⚠️ **구글 가입자는 null 이다.** 구글이 생일을 주지 않아 가입 시점에 채울 수 없다
+   *    (V23 마이그레이션 주석: '소셜 가입 시 null, 온보딩에서 입력'). 로그인 직후
+   *    `PATCH /user/birth-date` 로 받아 채운다 — `ProfileSetupModal` 참고.
+   *
+   *    로컬 가입은 `SignupRequest.birthDate` 가 `@NotNull` 이라 항상 값이 있다.
+   */
+  birthDate: ISODate | null
+  /**
+   * ⚠️ 타입상 null 이 가능하다. 백엔드 `LoginResponse.UserInfo.from()` 이
+   * `user.getRole() != null ? ... : null` 로 넣기 때문이다.
+   *
+   * **다만 실제로 null 이 오는 경로는 현재 없다.** 로컬 가입(`AuthServiceImpl.signup`)
+   * 과 구글 신규 가입(`oauthLogin`) 둘 다 `PREENTREPRENEUR` 를 넣는다 — 예전에는
+   * 구글 쪽이 비어 있었으나 지금은 채운다.
+   *
+   * null 은 예비 창업자로 본다. 직접 비교하지 말고 `isPreOwner()` 를 쓸 것.
    */
   role: UserRole | null
 }

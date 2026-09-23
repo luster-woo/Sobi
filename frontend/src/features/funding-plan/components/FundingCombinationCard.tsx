@@ -18,15 +18,21 @@ interface FundingCombinationCardProps {
    * 가져다 쓰는 자리다.
    */
   onOpenItem: (item: FundingItem) => void
+  /**
+   * '이 조합으로 진행'. 확인 모달은 페이지가 띄운다 — onOpenItem 과 같은 이유다.
+   * 신청 건이 한 번에 여러 개 생겨서 되돌리려면 하나씩 취소해야 한다.
+   */
+  onApply: () => void
+  isApplying: boolean
 }
 
 function Summary({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
     <div className="border-border-subtle border-r border-b p-3.5 last:border-r-0">
-      <p className="text-text-muted text-[11.5px]">{label}</p>
+      <p className="text-text-muted text-caption">{label}</p>
       <p className="text-text mt-1 text-[19px] font-bold tracking-tight tabular-nums">
         {value}
-        <small className="text-text-secondary text-[11.5px] font-normal">{unit}</small>
+        <small className="text-text-secondary text-caption font-normal">{unit}</small>
       </p>
     </div>
   )
@@ -41,17 +47,16 @@ function Summary({ label, value, unit }: { label: string; value: string; unit: s
  * 무상 지원금은 금리 자리에 '무상' 이 들어간다. 금리 0 으로 판별한다 — type 이
  * SUPPORT 여도 융자성(이자 있는) 상품이 섞여 있다.
  *
- * ⚠️ '이 조합으로 진행' 과 '구성 상품 보기' 는 아직 눌리지 않는다.
- *    진행    /funding/batch 가 application 테이블에 행을 만드는데 그 테이블에
- *            support_program_id 가 없어서 지원사업 항목을 저장할 수 없다.
- *    구성 보기 이동할 화면이 정해지지 않았다. 상품별 상세를 펼치는 형태가 자연스러운데
- *            items 에 은행명·기간이 없어 보여줄 내용이 부족하다.
+ * ⚠️ '구성 상품 보기' 는 아직 눌리지 않는다. 이동할 화면이 정해지지 않았다 — 상품별
+ *    상세를 펼치는 형태가 자연스러운데 items 에 은행명·기간이 없어 보여줄 내용이 부족하다.
  */
 export default function FundingCombinationCard({
   combination,
   order,
   targetAmount,
   onOpenItem,
+  onApply,
+  isApplying,
 }: FundingCombinationCardProps) {
   const total = splitMoneyShort(combination.totalFinancingAmount)
   const monthly = splitMoneyShort(combination.monthlyRepaymentAmount)
@@ -77,7 +82,7 @@ export default function FundingCombinationCard({
                   aria-label={`${item.name} 상세 보기`}
                   className="hover:bg-surface-muted focus-visible:outline-primary -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-sm px-2 py-2.5 text-left transition-colors focus-visible:outline focus-visible:-outline-offset-2"
                 >
-                  <span className="bg-bg-canvas text-text-secondary grid size-5 shrink-0 place-items-center rounded-full text-[11px] tabular-nums">
+                  <span className="bg-bg-canvas text-text-secondary text-caption grid size-5 shrink-0 place-items-center rounded-full tabular-nums">
                     {index + 1}
                   </span>
 
@@ -90,8 +95,8 @@ export default function FundingCombinationCard({
                   <span
                     className={
                       isGrant(item)
-                        ? 'text-primary w-[72px] shrink-0 text-right text-[12px] font-medium'
-                        : 'text-text-secondary w-[72px] shrink-0 text-right text-[12px] tabular-nums'
+                        ? 'text-primary text-caption w-[72px] shrink-0 text-right font-medium'
+                        : 'text-text-secondary text-caption w-[72px] shrink-0 text-right tabular-nums'
                     }
                   >
                     {formatItemRate(item)}
@@ -102,7 +107,7 @@ export default function FundingCombinationCard({
           </ol>
 
           {excess > 0 && (
-            <p className="text-text-secondary text-[11.5px] leading-relaxed">
+            <p className="text-text-secondary text-caption leading-relaxed">
               필요 금액보다 {formatMoneyShort(excess)} 더 조달돼요. 상품마다 최소 신청 금액이 있어
               딱 맞추기 어려운 경우예요.
             </p>
@@ -124,7 +129,7 @@ export default function FundingCombinationCard({
             총 이자는 여기로 옮겼다 — 상환액 안에 포함된 값이라 타일로 나란히 두면
             두 번 세는 것처럼 읽힌다.
           */}
-          <p className="text-text-secondary border-border-subtle border-t px-3.5 pt-3 text-[11.5px] leading-relaxed">
+          <p className="text-text-secondary border-border-subtle text-caption border-t px-3.5 pt-3 leading-relaxed">
             {combination.grantAmount > 0 && (
               <>
                 무상 지원금{' '}
@@ -137,7 +142,7 @@ export default function FundingCombinationCard({
           </p>
 
           <div className="p-3.5">
-            <Button className="w-full" disabled>
+            <Button className="w-full" onClick={onApply} loading={isApplying}>
               이 조합으로 진행
             </Button>
           </div>

@@ -24,16 +24,6 @@ export interface Insurance {
 }
 
 /**
- * 의무보험은 업체가 아니라 **업종**에 붙는다.
- * 업체의 의무보험 목록은 `business_info.business_code_id` → `code_insurance` 로 찾는다.
- */
-export interface CodeInsurance {
-  /** minor_code.id */
-  codeId: ID
-  insuranceId: ID
-}
-
-/**
  * `V1__init.sql` 의 `chk_insurance_checklist_status` 제약값이다.
  *   CHECK (status IN ('COMPLETED', 'NEEDS_VERIFICATION', 'REQUIRED', 'EXEMPT'))
  */
@@ -51,9 +41,4 @@ export interface InsuranceChecklist {
   businessId: ID
   insuranceId: ID
   status: InsuranceStatus
-}
-
-/** 체크리스트 화면은 보험 정보까지 같이 필요하다. 서버가 조인해 주는 형태를 가정 */
-export interface InsuranceChecklistItem extends InsuranceChecklist {
-  insurance: Insurance
 }

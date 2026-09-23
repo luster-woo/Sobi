@@ -151,9 +151,12 @@ public class LoanServiceImpl implements LoanService {
         return !condition.isBookmarked() || loan.isBookmarked();
     }
 
-    // 1차 정렬이 같으면 다른 기준으로 한 번 더 정렬해 순서를 고정한다
+    // 불가 상품을 뒤로 보낸 뒤 정렬 기준을 적용하고, 같으면 다른 기준으로 한 번 더 정렬해 순서를 고정한다
     private Comparator<LoanSummaryResponse> comparator(LoanSortType sort) {
 
+        // 불가만 뒤로 보낸다. 작성중·심사중 등 신청 진행 상품은 가능 상품과 함께 앞에 둔다
+        Comparator<LoanSummaryResponse> ineligibleLast =
+                Comparator.comparing(loan -> loan.getStatus() == LoanStatus.INELIGIBLE);
         Comparator<LoanSummaryResponse> byRate =
                 Comparator.comparing(LoanSummaryResponse::getInterestRate);
         Comparator<LoanSummaryResponse> byMaxBalanceDesc =
@@ -161,9 +164,9 @@ public class LoanServiceImpl implements LoanService {
 
         // 한도 높은 순 (한도가 같으면 금리 낮은 순)
         if (sort == LoanSortType.MAX_BALANCE) {
-            return byMaxBalanceDesc.thenComparing(byRate);
+            return ineligibleLast.thenComparing(byMaxBalanceDesc).thenComparing(byRate);
         }
         // 기본: 금리 낮은 순 (금리가 같으면 한도 높은 순). sort 파라미터가 null 이어도 여기로 온다
-        return byRate.thenComparing(byMaxBalanceDesc);
+        return ineligibleLast.thenComparing(byRate).thenComparing(byMaxBalanceDesc);
     }
 }

@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -26,6 +27,9 @@ public class User {
 
     @Column(name = "name", length = 100, nullable = false)
     private String name;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", length = 20)
@@ -59,11 +63,12 @@ public class User {
 
     // 가입 시 필요한 값들만 builder로 노출
     @Builder
-    private User(String email, String password, String name, Role role,
+    private User(String email, String password, String name, LocalDate birthDate, Role role,
                  Provider provider, String providerId, String userKey) {
         this.email = email;
         this.password = password;
         this.name = name;
+        this.birthDate = birthDate;
         this.role = role;
         this.provider = provider;
         this.providerId = providerId;
@@ -73,6 +78,11 @@ public class User {
 
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
+    }
+
+    public void updateProfile(String name, LocalDate birthDate) {
+        this.name = name;
+        this.birthDate = birthDate;
     }
 
     // 로컬 계정 → 소셜 계정 완전 전환. 이후 이메일+비밀번호 로그인 불가
@@ -97,6 +107,11 @@ public class User {
     // 롤 변경
     public void changeRole(Role newRole) {
         this.role = newRole;
+    }
+
+    // 마이데이터 연동 시 금융망에서 조회한 신용등급 반영
+    public void changeCreditRating(CreditRating creditRating) {
+        this.creditRating = creditRating;
     }
 
     // INSERT 직전 JPA가 자동 호출 -> 가입일 자동 기록

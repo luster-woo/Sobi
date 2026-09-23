@@ -58,20 +58,38 @@ export function formatPeopleText(count: number): string {
   return `${value}${unit}`
 }
 
+const EOK = 100_000_000
+/** 이 아래로는 자리수를 밝히지 않는다 */
+const MIN_SHOWN_WON = 1_000_000
+
 /**
-
- * 억 단위로 굵게 자른 문자열. 14142455534 → '141억 원'
-
+ * 상권 규모의 금액을 한 줄로. 14142455534 → '141억 원' · 48000000 → '4,800만 원'
  *
-
- * 상권 전체 매출은 백억 대라 만 원 단위까지 쓰면 '141억 4,245만 원' 이 되어 좁은
-
- * 자리에 들어가지 않는다. 점포당 매출(formatWonText)과 달리 억에서 끊는다.
-
+ * 규모에 따라 남기는 자리를 바꾼다. 상권 전체 매출은 백억 대라 만 원까지 쓰면
+ * '141억 4,245만 원' 이 되어 좁은 자리에 안 들어가고, 반대로 작은 동·업종의 주말
+ * 매출은 억 미만이라 억에서 끊으면 통째로 사라진다.
+ *
+ *   10억 이상   141억 원      천만 원 자리는 전체의 1% 미만이라 적지 않는다
+ *   1~10억      4.8억 원      4억과 4.8억은 규모가 다르다
+ *   100만 이상  4,800만 원
+ *   100만 미만  100만 원 이하
+ *
+ * ⚠️ 예전에는 전 구간을 `Math.round(won / 1억)` 으로 처리했다. 5천만 원 미만이 전부
+ *    '0억 원' 이 되어, 데이터는 멀쩡한데 매출이 없는 것처럼 보였다. 0 은 '집계되지
+ *    않음' 과 구분되지 않아서 제일 나쁜 표시였다.
  */
+export function formatBigWonText(won: number): string {
+  if (!Number.isFinite(won) || won < 0) return '-'
 
-export function formatEokText(won: number): string {
-  const eok = Math.round(won / 100_000_000)
+  if (won < MIN_SHOWN_WON) return '100만 원 이하'
 
-  return `${eok.toLocaleString('ko-KR')}억 원`
+  if (won >= 10 * EOK) return `${Math.round(won / EOK).toLocaleString('ko-KR')}억 원`
+
+  if (won >= EOK) {
+    // 천만 원 단위까지만 남긴다
+    const eok = Math.round(won / (EOK / 10)) / 10
+    return `${eok.toLocaleString('ko-KR')}억 원`
+  }
+
+  return `${Math.round(won / TEN_THOUSAND).toLocaleString('ko-KR')}만 원`
 }

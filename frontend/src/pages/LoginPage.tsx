@@ -73,7 +73,7 @@ export function LoginPage() {
   return (
     <>
       <div className="border-border bg-surface w-full max-w-[424px] rounded-md border px-7 pt-6.5 pb-7">
-        <h1 className="font-heading text-text mb-6 text-[20px] font-bold">로그인</h1>
+        <h1 className="text-h2 mb-6 tracking-[-0.02em]">로그인</h1>
 
         <form onSubmit={handleSubmit} noValidate>
           <Input

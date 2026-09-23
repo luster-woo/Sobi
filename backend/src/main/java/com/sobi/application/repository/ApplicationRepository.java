@@ -2,6 +2,8 @@ package com.sobi.application.repository;
 
 import com.sobi.application.entity.Application;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +22,37 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     // 대출 상품 목록에서 상품별 최근 신청 상태를 한 번에 판단하기 위한 내 대출 신청 (최신순)
     List<Application> findAllByUser_IdAndLoanIsNotNullOrderByIdDesc(Long userId);
 
+    // 신청 현황 목록. 상품명을 함께 쓰므로 대출 상품·지원사업을 한 번에 가져온다 (N+1 방지)
+    @Query("""
+            SELECT a
+            FROM Application a
+            LEFT JOIN FETCH a.loan
+            LEFT JOIN FETCH a.supportProgram
+            WHERE a.user.id = :userId
+            ORDER BY a.id DESC
+            """)
+    List<Application> findAllWithProgramByUserId(@Param("userId") Long userId);
+
+    /** 지원사업 신청 이력 전체. 최신순이라 앞의 것이 최근이다 */
+    @Query("""
+            SELECT a FROM Application a
+            WHERE a.user.id = :userId AND a.supportProgram IS NOT NULL
+            ORDER BY a.id DESC
+            """)
+    List<Application> findAllSupportApplicationsByUserId(@Param("userId") Long userId);
+
+    /** 대상 공고가 정해졌을 때. 검색은 결과가 한 자릿수라 전건을 읽을 이유가 없다 */
+    @Query("""
+            SELECT a FROM Application a
+            WHERE a.user.id = :userId AND a.supportProgram.id IN :programIds
+            ORDER BY a.id DESC
+            """)
+    List<Application> findSupportApplicationsByUserIdAndProgramIds(
+            @Param("userId") Long userId,
+            @Param("programIds") List<Long> programIds
+    );
+
     // 내 신청만 조회 (남의 신청이면 없는 것으로 취급)
     Optional<Application> findByIdAndUser_Id(Long id, Long userId);
+
 }

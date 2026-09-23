@@ -28,9 +28,13 @@ interface SalesSparklineProps {
 /**
  * 최근 6개월 매출 막대 (시안의 .spark).
  *
- * 축도 격자도 없다. 여기서 읽을 것은 금액이 아니라 오르는지 내리는지이고, 정확한
- * 금액은 아래위 눈금 두 개(최저·최고)로 범위만 알려준다. 차트 라이브러리를 넣지 않은
- * 이유도 같다 — 툴팁·축·범례가 필요하면 상권 분석 화면의 차트를 쓸 자리다.
+ * 축도 격자도 없다. 대신 달마다 금액을 그 아래 적는다 — 막대 높이는 최저를 바닥으로
+ * 잡아 비율이 아니라서(barHeight 주석) 숫자가 없으면 아무것도 확정할 수 없다.
+ * 예전에는 최저·최고만 양 끝에 적었는데, 그 자리가 첫 달·마지막 달 칸이라 그 달의
+ * 매출로 읽혀 '최근 월 매출' 과 다르다는 오해를 샀다.
+ *
+ * 차트 라이브러리를 넣지 않은 이유는 따로다 — 툴팁·축·범례가 필요하면 상권 분석
+ * 화면의 차트를 쓸 자리다.
  *
  * 마지막 달만 진하다. 6개 막대가 같은 색이면 어느 쪽이 최근인지 알 수 없고, 왼쪽부터
  * 시간순이라는 것을 아는 사람만 읽을 수 있다.
@@ -44,7 +48,10 @@ export default function SalesSparkline({ points }: SalesSparklineProps) {
 
   return (
     <div>
-      <p className="text-text-muted mb-[5px] text-[11px]">최근 {points.length}개월 매출</p>
+      {/* 단위는 여기 한 번만. 막대마다 '만' 을 붙이면 6칸에 글자가 안 들어간다 */}
+      <p className="text-text-muted text-caption mb-[5px]">
+        최근 {points.length}개월 매출 <span className="text-text-disabled">(만 원)</span>
+      </p>
 
       <div className="flex items-end gap-[5px]">
         {points.map((point, index) => (
@@ -61,15 +68,17 @@ export default function SalesSparkline({ points }: SalesSparklineProps) {
             <span className="text-text-muted text-[9px] tabular-nums">
               {toMonthLabel(point.month)}
             </span>
+            <span
+              className={cn(
+                'text-[9px] tabular-nums',
+                index === points.length - 1 ? 'text-text-secondary font-medium' : 'text-text-muted',
+              )}
+            >
+              {toManwon(point.amount).value}
+            </span>
           </div>
         ))}
       </div>
-
-      {/* 막대에 값을 붙이지 않는 대신 범위를 적는다. 6개 다 적으면 9px 글자가 겹친다 */}
-      <p className="text-text-muted flex justify-between text-[10px] tabular-nums">
-        <span>{toManwon(min).value}만</span>
-        <span>{toManwon(max).value}만</span>
-      </p>
     </div>
   )
 }

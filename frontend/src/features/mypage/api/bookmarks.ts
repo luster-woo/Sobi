@@ -6,7 +6,7 @@ import {
 } from '@/features/mypage/model/types'
 import { api } from '@/shared/api/client'
 import { endpoints } from '@/shared/api/endpoints'
-import { PRODUCT_STATUS, type ProductStatus } from '@/shared/constants/productStatus'
+import { SUPPORT_STATUS, type SupportStatus } from '@/shared/constants/productStatus'
 import type { ISODate } from '@/shared/types'
 
 /**
@@ -24,7 +24,7 @@ interface BookmarkLoanResponse {
   interestRate: number
   maxLoanBalance: number
   minLoanBalance: number
-  /** 대출 기간(개월) */
+  /** ⚠️ 대출 기간(**일**). 개월이 아니다 — 백엔드 `LoanDetailResponse` 가 '대출 기간(일)' 이다 */
   period: number
   status: string
 }
@@ -50,37 +50,21 @@ interface BookmarkListResponse {
 }
 
 /**
- * 관심 목록의 status 를 화면이 쓰는 `ProductStatus` 로 맞춘다.
+ * 서버가 준 status 문자열을 `SupportStatus` 로 좁힌다.
  *
- * ⚠️ 이 API 만 값이 다르다. 백엔드 `LoanStatus` enum 은 `ELIGIBLE` · `INELIGIBLE` 인데
- *    `BookmarkServiceImpl` 만 enum 을 안 쓰고 `"POSSIBLE"` · `"IMPOSSIBLE"` 문자열을
- *    직접 박아 뒀다. `/loan` · `/support` 목록은 enum 그대로 주므로 프론트 상수를
- *    바꾸면 그쪽이 깨진다 — 그래서 여기서만 되돌린다.
- *
- *    백엔드가 `LoanStatus` 를 쓰도록 고치면 이 매핑 테이블을 지우면 된다.
- */
-const STATUS_ALIAS: Record<string, ProductStatus> = {
-  POSSIBLE: PRODUCT_STATUS.ELIGIBLE,
-  IMPOSSIBLE: PRODUCT_STATUS.INELIGIBLE,
-}
-
-/**
- * 서버가 준 status 문자열을 `ProductStatus` 로 좁힌다.
- *
- * 신청이 있는 항목은 `application.status` 가 그대로 실려 온다. 대부분 `ProductStatus`
- * 와 같은 값이지만 `REJECTED` 는 프론트에 없다 — 반려는 재신청할 수 있어서 배지로
- * 쓰지 않기로 했고(`productStatus.ts`), `/loan` 쪽은 서버가 `LoanStatus.of` 에서
- * 판정 결과로 되돌려 준다. 관심 목록은 그 처리를 안 하고 보내므로 여기서 받는다.
+ * `BookmarkServiceImpl` 이 `LoanStatus.of(...).name()` · `SupportStatus.of(...).name()` 을
+ * 실어 주므로 값은 `/loan` · `/support` 목록과 같다 — 한동안 이 API 만 `POSSIBLE` ·
+ * `IMPOSSIBLE` 을 준다고 보고 되돌리는 표를 뒀었는데, 백엔드가 enum 을 쓰도록 고쳐서
+ * 그 표는 지웠다.
  *
  * 모르는 값은 `ELIGIBLE` 로 둔다. 판정을 다시 할 근거가 응답에 없는데, 눌러볼 수 있는
  * 쪽이 덜 위험하다 — 상세 모달이 제 상태를 다시 받아오므로 잘못된 '가능' 은 한 번
  * 열어보면 바로잡히지만, 잘못된 '불가' 는 흐리게 깔려서 아예 안 눌러보게 된다.
  */
-function toProductStatus(raw: string): ProductStatus {
-  if (raw in STATUS_ALIAS) return STATUS_ALIAS[raw]
-  if (raw in PRODUCT_STATUS) return raw as ProductStatus
+function toSupportStatus(raw: string): SupportStatus {
+  if (raw in SUPPORT_STATUS) return raw as SupportStatus
 
-  return PRODUCT_STATUS.ELIGIBLE
+  return SUPPORT_STATUS.ELIGIBLE
 }
 
 function toFavoriteLoan(loan: BookmarkLoanResponse): FavoriteLoan {
@@ -89,7 +73,7 @@ function toFavoriteLoan(loan: BookmarkLoanResponse): FavoriteLoan {
     id: loan.loanId,
     title: loan.accountName,
     organization: loan.bankName,
-    status: toProductStatus(loan.status),
+    status: toSupportStatus(loan.status),
     interestRate: loan.interestRate,
     maxLoanBalance: loan.maxLoanBalance,
     period: loan.period,
@@ -102,7 +86,7 @@ function toFavoriteSupportProgram(program: BookmarkSupportProgramResponse): Favo
     id: program.supportProgramId,
     title: program.pblancNm,
     organization: program.jrsdInsttNm,
-    status: toProductStatus(program.status),
+    status: toSupportStatus(program.status),
     maxBalance: program.maxBalance,
     endDate: program.endDate,
     interestRate: program.interestRateOfSP,

@@ -43,4 +43,14 @@ public class SuggestLoan {
             updatable = false
     )
     private LocalDateTime createdAt;
+
+
+    public static SuggestLoan of(BusinessInfo business, Loan loan) {
+        SuggestLoan entity = new SuggestLoan();
+        // @MapsId 가 채워주려면 복합키 객체가 미리 있어야 한다. null 이면 세터 호출에서 NPE 가 난다.
+        entity.id = new SuggestLoanId(business.getId(), loan.getId());
+        entity.business = business;
+        entity.loan = loan;
+        return entity;
+    }
 }

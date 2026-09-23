@@ -33,10 +33,52 @@ export const endpoints = {
     social: (provider: string) => `/auth/social/${provider}`,
   },
 
-  /** ⚠️ 백엔드 `com.sobi.user` 에 controller 가 없다. 목으로만 돈다 (S15P21D101-377) */
   user: {
-    /** 로그인한 본인 정보. 세션 복구에서 재발급 직후 호출한다 */
+    /**
+     * 로그인한 본인 정보. 세션 복구에서 재발급 직후 호출한다.
+     *
+     * **가볍다.** `userId`·`email`·`name`·`birthDate`·`role`·`provider` 여섯 개뿐이다
+     * (백엔드 `UserMeResponse`). 사업자 정보·계좌처럼 여러 도메인을 모아야 하는 값은
+     * 아래 `mypage` 가 맡는다 — 이쪽은 앱 진입마다 불려서 무겁게 만들 수 없다.
+     */
     me: '/user/me',
+    /**
+     * 마이페이지 한 화면 분량. 사업자 정보·마이데이터·계좌를 한 번에 준다.
+     *
+     * ⚠️ 잔액은 DB 가 아니라 **조회 시점에 금융망에서** 받아온다
+     *    (`UserServiceImpl.fetchDepositAccounts`). 그래서 이 요청만 1~2초 더 걸리고,
+     *    금융망이 실패하면 예외 대신 **전부 0** 이 온다 — 계좌 없음과 구분되지 않는다.
+     */
+    mypage: '/user/mypage',
+    /**
+     * 회원 탈퇴. 되돌릴 수 없다.
+     *
+     * 서버가 `deleted_at` 을 채우고 refreshToken 을 지운 뒤, 응답에 쿠키 만료 헤더를
+     * 실어 보낸다 — 프론트는 메모리에 남은 세션만 치우면 된다.
+     */
+    withdraw: '/user/me',
+    /**
+     * 비밀번호 변경. body 는 `{ password }` — **새 비밀번호 하나뿐이다.**
+     *
+     * ⚠️ 현재 비밀번호를 받지 않는다. 백엔드 `PasswordChangeReqeust` 에 필드가 없어서
+     *    로그인만 돼 있으면 바로 바뀐다. 화면에서 현재 비밀번호를 물어도 서버로 보낼
+     *    곳이 없어 검증되지 않으므로, 묻는 척하지 않기로 했다 (S15P21D101-379).
+     *    백엔드에 `currentPassword` 가 생기면 그때 입력칸을 되살린다.
+     */
+    password: '/user/password',
+    /**
+     * 새 공고 알림 수신 토글. body 가 없다 — 서버가 현재 값을 뒤집고 결과를 준다.
+     */
+    notification: '/user/notification',
+    /**
+     * 구글 가입자의 이름·생년월일 저장. body·응답 모두 `{ name, birthDate }`.
+     *
+     * ⚠️ 경로 이름과 달리 **이름도 같이 받는다.** 생년월일만 받던 엔드포인트에 백엔드가
+     *    `name` 을 더한 것이라 이름이 안 맞는다 — `BirthDateRequest` 참고.
+     *
+     * 검증은 `name` 이 `@NotBlank @Size(max = 100)`, `birthDate` 가 `@NotNull @Past`.
+     */
+    birthDate: '/user/birth-date',
   },
 
   business: {
@@ -47,7 +89,7 @@ export const endpoints = {
      * 성공하면 서버가 role 을 ENTREPRENEUR 로 바꾼다 — 새 토큰을 받아야 반영된다.
      */
     register: '/business',
-    /** 사이드바 하단 카드에 쓰는 내 업체 정보. 미등록이면 404 BUSINESS_O04 */
+    /** 사이드바 하단 카드에 쓰는 내 업체 정보. 미등록이면 404 BUSINESS_004 */
     me: '/business/me',
   },
 
@@ -76,6 +118,19 @@ export const endpoints = {
   },
 
   /**
+   * 마이데이터 수집 + 자격 판정. 둘 다 본문이 없다.
+   *
+   * ⚠️ 동기 호출이고 응답까지 15~40초 걸린다(`MydataController` 주석). 전역 timeout 이
+   *    10초라 이 둘만 따로 늘려 쓴다 — `features/mydata/api/mydata.ts`.
+   */
+  mydata: {
+    /** 최초 연동. 온보딩 동의 화면에서 한 번 부른다 */
+    link: '/mydata/link',
+    /** 수동 갱신. 쿨다운(기본 24시간)에 걸리면 429 MYDATA_002 */
+    refresh: '/mydata/refresh',
+  },
+
+  /**
    * 신청. 생성은 쿼리로 대상을 받고, 나머지는 applicationId 로 가리킨다.
    *
    * 명세에는 경로 변수가 {programId} 로 적혀 있지만 예시 응답의 path 가
@@ -85,12 +140,20 @@ export const endpoints = {
     create: '/application',
     detail: (applicationId: number) => `/application/${applicationId}`,
     cancel: (applicationId: number) => `/application/${applicationId}`,
-    /** 최종 신청. body 에 applicationId·applyAmount·accountNo */
-    submit: '/application/finan',
-    /** 서류 업로드. multipart. 작성 서류도 같은 곳으로 올리고 검증만 안 한다 */
+    /** 최종 신청. 본문에 amount·accountId */
+    submit: (applicationId: number) => `/application/${applicationId}/submit`,
+    /** 서류 업로드. multipart 로 applicationDocumentId · file */
     uploadDocument: '/document',
-    /** 작성 서류 초안 생성. 비동기로 돌고 상세 조회로 결과를 받는다 */
-    requestDraft: '/document/draft',
+    /**
+     * 초안 생성. 만들고 **바로 파일을 준다** — 생성과 다운로드가 한 번이다.
+     *
+     * ⚠️ applicationDocumentId 가 아니라 programDocumentId 다. 신청 건이 아니라 공고의
+     *    서식을 가리킨다. 대출 서류는 전부 제출 서류라 부를 일이 없다(V20 시드).
+     * ⚠️ 최대 300초. 성공은 봉투 없는 HWPX 바이트고 실패만 JSON 봉투다.
+     * ⚠️ 배포에서는 nginx proxy_read_timeout(기본 60초)을 이 경로에도 늘려야 한다.
+     *    마이데이터와 같은 문제다 — 안 늘리면 로컬은 되고 배포만 504 다.
+     */
+    writeDraft: (programDocumentId: number) => `/document/write/${programDocumentId}`,
     /** 내 신청 목록. 신청 현황 화면이 쓴다 */
     list: '/application',
   },
@@ -119,10 +182,27 @@ export const endpoints = {
     loanBalanceInFull: '/repayment/finan/loanBalanceInFull',
   },
 
+  /**
+   * 공고가 배포하는 빈 서식.
+   *
+   * 지원사업 전용이다. 대출 서류(loan_document)는 전부 제출 서류라 내려받을 양식이
+   * 없다 — 시드가 url 을 전부 NULL 로 넣는다(V20). 성공은 봉투 없는 파일 바이트다.
+   */
+  programDocument: {
+    download: (programDocumentId: number) => `/program-documents/${programDocumentId}/download`,
+  },
+
   supportProgram: {
     /** 지원사업 목록. 필터·정렬·페이징은 쿼리 파라미터로 붙인다 */
     list: '/support',
     detail: (supportProgramId: number) => `/support/${supportProgramId}`,
+    /**
+     * 판정 사유 설명. 상세와 일부러 나뉘어 있다.
+     *
+     * 처음 만들 때 AI 가 2~3초를 쓴다. 상세에 합치면 공고를 누르는 순간
+     * 화면이 멈추므로 따로 부르고 늦게 채운다. 두 번째부터는 서버가 캐시한다.
+     */
+    explanation: (supportProgramId: number) => `/support/${supportProgramId}/explanation`,
     /** 자연어 검색. GET 이 아니라 POST 다 (193) */
     search: '/support/search',
   },
@@ -138,9 +218,9 @@ export const endpoints = {
    *    `"LOAN"` · `"SUPPORT"` 두 문자열만 받고 나머지는 400 을 준다.
    */
   bookmark: {
-    /** query `type`. 이미 담긴 것을 또 담으면 400 BOOKMARK_ALREADY_EXISTS */
+    /** query `type`. 이미 담긴 것을 또 담으면 409 BOOKMARK_003 */
     add: (programId: number) => `/bookmark/${programId}`,
-    /** query `type`. 담기지 않은 것을 빼면 404 BOOKMARK_NOT_FOUND */
+    /** query `type`. 담기지 않은 것을 빼면 404 BOOKMARK_005 */
     remove: (programId: number) => `/bookmark/${programId}`,
     /**
      * 내 관심 목록. 대출과 지원사업을 `{ loanList, supportProgramList }` 두 배열로 나눠 준다.

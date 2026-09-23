@@ -11,6 +11,7 @@ import lombok.Getter;
 public class ApplicationDocumentResponse {
 
     private final Long applicationDocumentId;   // 업로드 시 이 id 로 채울 행을 지정
+    private final Long programDocumentId;
     private final String documentName;          // 없으면 null → 프론트에서 기본 문구 표시
     private final String documentType;          // SUBMIT / WRITE
     private final String validationStatus;      // NOT_SUBMITTED / PENDING / VALIDATING / PASSED / FAILED
@@ -21,6 +22,9 @@ public class ApplicationDocumentResponse {
     public static ApplicationDocumentResponse from(ApplicationDocument document) {
         return new ApplicationDocumentResponse(
                 document.getId(),
+                document.getProgramDocument() == null
+                        ? null
+                        : document.getProgramDocument().getId(),
                 resolveDocumentName(document),
                 document.getDocumentType(),
                 document.getValidationStatus(),

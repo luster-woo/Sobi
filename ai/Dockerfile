@@ -4,7 +4,19 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     TZ=Asia/Seoul \
-    HF_HOME=/models
+    HF_HOME=/models \
+    PADDLE_PDX_CACHE_HOME=/models/paddlex
+
+# 문서 정규화: HWP -> HWPX(Java), DOC -> DOCX(LibreOffice), 한글 폰트
+# OCR: PaddleX 가 쓰는 OpenCV 는 libGL·libglib 가 없으면 import 에서 죽는다(slim 에 없음). Paddle 추론은 libgomp
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    default-jre-headless \
+    libreoffice-writer \
+    fonts-nanum \
+    libgl1 \
+    libglib2.0-0 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 

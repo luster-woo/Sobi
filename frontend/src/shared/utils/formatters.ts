@@ -16,18 +16,6 @@ export function formatBizNo(value: string): string {
   return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`
 }
 
-/** '01012345678' → '010-1234-5678' (10~11자리가 아니면 원본 그대로) */
-export function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '')
-  if (digits.length === 11) {
-    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
-  }
-  if (digits.length === 10) {
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
-  }
-  return value
-}
-
 /** '20230410' → '2023-04-10' (8자리가 아니면 원본 그대로) */
 export function formatIsoDate(value: string): string {
   const digits = value.replace(/\D/g, '')
@@ -49,7 +37,13 @@ export function formatCountdown(seconds: number): string {
  *
  * 만 원 미만은 버립니다. 상품 한도에 1원 단위가 의미 있는 경우가 없습니다.
  */
-export function formatMoneyShort(won: number): string {
+export function formatMoneyShort(won: number | null | undefined): string {
+  /*
+   * null 을 받는다. 지원사업 금액은 공고 원문에 안 적혀 있으면 서버가 필드를 아예
+   * 빼고 준다(`@JsonInclude(NON_NULL)`) — 부르는 쪽마다 `?? 0` 을 붙이면 '0원' 이라는
+   * 없는 사실을 그리게 된다. 여기서 '-' 로 받는 편이 낫다.
+   */
+  if (won === null || won === undefined) return '-'
   if (!Number.isFinite(won) || won < 0) return '-'
 
   const eok = Math.floor(won / HUNDRED_MILLION)
@@ -78,6 +72,8 @@ export function formatMoneyShort(won: number): string {
  */
 export function formatDeadlineDate(endDate: string | null): string {
   if (!endDate) return '상시 접수'
+  // Number('') 는 0 이라 자른 뒤 isNaN 으로만 막으면 '~ 0. 0' 이 나온다
+  if (!/^\d{4}-\d{2}-\d{2}/.test(endDate)) return '-'
 
   const month = Number(endDate.slice(5, 7))
   const day = Number(endDate.slice(8, 10))
@@ -118,4 +114,58 @@ export function splitMoneyShort(won: number | null): MoneyParts {
     value: `${eok.toLocaleString('ko-KR')}억 ${rest.toLocaleString('ko-KR')}`,
     unit: '만 원',
   }
+}
+
+/** 한 자리 숫자의 한글. 0 은 읽지 않는다 */
+const KOREAN_DIGITS = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구']
+/** 네 자리 안에서의 자리 이름 */
+const KOREAN_PLACES = ['', '십', '백', '천']
+/** 네 자리씩 끊었을 때의 단위 */
+const KOREAN_GROUPS = ['', '만', '억', '조']
+
+/** 네 자리 이하를 읽는다. 1000 → '일천' */
+function readKoreanGroup(group: number): string {
+  let text = ''
+
+  for (let place = KOREAN_PLACES.length - 1; place >= 0; place -= 1) {
+    const digit = Math.floor(group / 10 ** place) % 10
+    if (digit === 0) continue
+    text += KOREAN_DIGITS[digit] + KOREAN_PLACES[place]
+  }
+
+  return text
+}
+
+/**
+ * 원 단위 금액 → 한글 병기. 10_000_000 → '일천만 원'
+ *
+ * 입력한 금액 옆에 적어 자릿수를 잘못 센 것을 바로 알아채게 한다. 대출 한도가
+ * '500만 ~ 8,000만' 이라 0 하나가 더 붙거나 빠지면 천만과 억을 오가는데, 콤마만으로는
+ * 그 차이가 눈에 잘 안 들어온다.
+ *
+ * 수표 표기 관행대로 앞자리 일을 살린다 — '천만' 이 아니라 '일천만' 이다. 한 글자를
+ * 덧대는 것만으로 앞에 숫자가 더 있었는지 확인할 수 있다.
+ *
+ * formatMoneyShort 와 달리 1원 단위까지 읽는다. 저쪽은 상품 한도를 어림으로 보여주는
+ * 자리지만, 이쪽은 사용자가 방금 친 값을 되읽어 주는 자리라 버리면 안 된다.
+ *
+ * 0 이하와 조 단위를 넘는 값은 빈 문자열이다. 병기는 거들 뿐이라 읽을 수 없으면
+ * 아무것도 안 적는 편이 낫다.
+ */
+export function toKoreanMoney(won: number | null | undefined): string {
+  if (won === null || won === undefined) return ''
+  if (!Number.isFinite(won) || won <= 0) return ''
+
+  const parts: string[] = []
+  let rest = Math.floor(won)
+
+  for (let group = 0; group < KOREAN_GROUPS.length && rest > 0; group += 1) {
+    const chunk = rest % 10_000
+    if (chunk > 0) parts.unshift(readKoreanGroup(chunk) + KOREAN_GROUPS[group])
+    rest = Math.floor(rest / 10_000)
+  }
+
+  if (rest > 0) return ''
+
+  return `${parts.join(' ')} 원`
 }

@@ -4,18 +4,20 @@ import { supportColumns } from '@/features/support-program/components/supportCol
 import SupportFilterBar from '@/features/support-program/components/SupportFilterBar'
 import { useSupportPrograms } from '@/features/support-program/hooks/useSupportPrograms'
 import { useSupportProgramSearch } from '@/features/support-program/hooks/useSupportProgramSearch'
-import { PRODUCT_STATUS, type ProductStatus } from '@/shared/constants/productStatus'
+import { SUPPORT_STATUS, type SupportStatus } from '@/shared/constants/productStatus'
 import { routeTo } from '@/shared/constants/routes'
 import { useListParams } from '@/shared/hooks/useListParams'
 import type { SupportProgramType } from '@/shared/types'
+import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
+import PageHeading from '@/shared/ui/PageHeading'
 import Pagination from '@/shared/ui/Pagination'
 import Panel from '@/shared/ui/Panel'
 import SearchBar from '@/shared/ui/SearchBar'
 import Table from '@/shared/ui/Table'
 import { toServerPage } from '@/shared/utils/pagination'
 
-const FILTER_KEYS = ['q', 'type', 'jrsdInsttNm', 'judgement', 'isBookmark', 'sort'] as const
+const FILTER_KEYS = ['keyword', 'region', 'type', 'judgement', 'isBookmark', 'sort'] as const
 const PAGE_SIZE = 20
 
 /**
@@ -29,11 +31,13 @@ const PAGE_SIZE = 20
  * 대출(188)은 keyword 가 필터와 같이 걸려서 같은 화면에 검색창만 얹었다 — 다른 구조다.
  */
 export function SupportProgramListPage() {
-  const { page, values, setPage, setValues } = useListParams({ keys: FILTER_KEYS })
+  const { page, values, setPage, setValues, activeCount, reset } = useListParams({
+    keys: FILTER_KEYS,
+  })
   const navigate = useNavigate()
   const location = useLocation()
 
-  const q = values.q
+  const q = values.keyword
   const isSearchMode = Boolean(q)
 
   const listQuery = useSupportPrograms(
@@ -41,8 +45,8 @@ export function SupportProgramListPage() {
       page: toServerPage(page),
       size: PAGE_SIZE,
       type: (values.type as SupportProgramType) || undefined,
-      jrsdInsttNm: values.jrsdInsttNm || undefined,
-      judgement: (values.judgement as ProductStatus) || undefined,
+      region: values.region || undefined,
+      judgement: (values.judgement as SupportStatus) || undefined,
       isBookmark: values.isBookmark === 'true' ? true : undefined,
       sort: values.sort || undefined,
     },
@@ -55,7 +59,7 @@ export function SupportProgramListPage() {
   )
 
   // 훅은 조건부로 호출할 수 없어 둘 다 부르고 enabled 로 하나만 켠다
-  const { data, isLoading, isFetching, isError } = isSearchMode ? searchQuery : listQuery
+  const { data, isLoading, isFetching, isError, refetch } = isSearchMode ? searchQuery : listQuery
 
   const programs = data?.programs ?? []
   const totalElements = data?.page.totalElements ?? 0
@@ -63,18 +67,20 @@ export function SupportProgramListPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
-      <h1 className="text-h1">지원사업</h1>
+      <PageHeading title="지원사업" />
 
       <Panel>
         <div className="px-4 pt-4">
           <SearchBar
             value={q}
-            onSubmit={(keyword) =>
+            /* 백엔드 `SupportSearchTextRequest` 가 `@Size(max = 200)` 이다 */
+            maxLength={200}
+            onSubmit={(next) =>
               setValues({
-                q: keyword || null,
+                keyword: next || null,
                 // 검색 모드로 들어가면 필터를 함께 지운다 (위 주석 참고)
                 type: null,
-                jrsdInsttNm: null,
+                region: null,
                 judgement: null,
                 isBookmark: null,
                 sort: null,
@@ -88,11 +94,13 @@ export function SupportProgramListPage() {
         {!isSearchMode && (
           <SupportFilterBar
             type={values.type}
-            jrsdInsttNm={values.jrsdInsttNm}
+            region={values.region}
             judgement={values.judgement}
             isBookmark={values.isBookmark === 'true'}
             sort={values.sort}
             onChange={setValues}
+            activeCount={activeCount}
+            onReset={reset}
           />
         )}
 
@@ -133,13 +141,18 @@ export function SupportProgramListPage() {
           dense
           // 자격이 안 되는 줄은 흐리게. 관심 목록과 같은 처리다
           rowClassName={(program) =>
-            program.status === PRODUCT_STATUS.INELIGIBLE ? 'bg-surface-muted' : undefined
+            program.status === SUPPORT_STATUS.INELIGIBLE ? 'bg-surface-muted' : undefined
           }
           empty={
             isError ? (
               <EmptyState
                 title="목록을 불러오지 못했어요"
                 description="잠시 후 다시 시도해주세요."
+                action={
+                  <Button variant="outline" size="sm" onClick={() => refetch()}>
+                    다시 시도
+                  </Button>
+                }
               />
             ) : isSearchMode ? (
               <EmptyState

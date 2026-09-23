@@ -1,16 +1,17 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import { useCreateApplication } from '@/features/application/hooks/useApplication'
+import { startApplicationErrorMessage } from '@/features/application/model/applicationError'
 import { APPLICATION_SOURCE } from '@/features/application/model/types'
 import { useLoanDetail } from '@/features/loan/hooks/useLoanDetail'
 import { describeConditions } from '@/features/loan/model/conditions'
-import type { ProductStatus } from '@/shared/constants/productStatus'
-import { LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
+import type { LoanStatus } from '@/shared/constants/productStatus'
+import { canApply, LOAN_STATUS_LABEL } from '@/shared/constants/productStatus'
 import { ROUTES, routeTo } from '@/shared/constants/routes'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
-import BookmarkButton from '@/shared/ui/BookmarkButton'
+import { BOOKMARK_TARGET } from '@/shared/types'
+import BookmarkToggle from '@/shared/ui/BookmarkToggle'
 import Button from '@/shared/ui/Button'
 import Modal from '@/shared/ui/Modal'
 import ProductStatusBadge from '@/shared/ui/ProductStatusBadge'
@@ -39,7 +40,7 @@ import { formatMoneyShort } from '@/shared/utils/formatters'
  *
  * INELIGIBLE 만 계속 비활성이다. 갈 곳이 없다.
  */
-const FOOTER_LABEL: Record<ProductStatus, string> = {
+const FOOTER_LABEL: Record<LoanStatus, string> = {
   ELIGIBLE: '신청하기',
   PREPARING: '이어서 작성하기',
   SUBMITTED: '신청 내역 보기',
@@ -84,35 +85,22 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
    */
   const createApplication = useCreateApplication()
 
-  const canApply = data?.status === 'ELIGIBLE' || data?.status === 'PREPARING'
+  const canApplyNow = data ? canApply(data.status) : false
   /*
    * 제출 이후 상태는 그 상품의 신청 건으로 보낸다. applicationId 는 상태가 신청에서
    * 온 경우에만 오므로 값 유무로 가른다.
    */
-  const trackedApplicationId = canApply ? null : (data?.applicationId ?? null)
+  const trackedApplicationId = canApplyNow ? null : (data?.applicationId ?? null)
 
   const handleApply = () => {
     createApplication.mutate(
       { type: APPLICATION_SOURCE.LOAN, programId: loanId },
       {
         onSuccess: (application) => navigate(routeTo.loanApply(application.applicationId)),
-        onError: () => showToast('신청을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+        onError: (error) => showToast(startApplicationErrorMessage(error), 'danger'),
       },
     )
   }
-
-  /*
-   * ⚠️ 즐겨찾기를 화면 안에서만 기억한다. `POST`/`DELETE /bookmark/{programId}` 가
-   *    붙으면 이 state 를 지우고 useMutation + invalidateQueries 로 바꾼다.
-   *
-   * 서버 값을 그대로 읽지 않는 이유: 토글 API 가 없어 눌러도 응답이 바뀌지 않는다.
-   * 눌리는 느낌이 없으면 버튼이 고장난 것으로 보인다.
-   *
-   * 누르기 전에는 서버 값, 누른 뒤에는 override 가 이긴다. effect 로 동기화하면
-   * react-hooks/set-state-in-effect 에 걸리고 렌더가 한 번 더 돈다.
-   */
-  const [override, setOverride] = useState<boolean | null>(null)
-  const bookmarked = override ?? data?.bookmarked ?? false
 
   const handleFooterClick = () => {
     if (trackedApplicationId !== null) {
@@ -134,9 +122,15 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
       headerRight={data && <ProductStatusBadge status={data.status} labels={LOAN_STATUS_LABEL} />}
       headerAction={
         data && (
-          <BookmarkButton
-            bookmarked={bookmarked}
-            onToggle={() => setOverride(!bookmarked)}
+          /*
+           * 관심 목록 담기·빼기 (367). 요청이 도는 동안 방금 누른 값을 보여주고
+           * 끝나면 무효화가 돌아 서버 값이 이긴다 — 그 처리는 BookmarkToggle 안에 있다.
+           * 목록의 표도 같은 컴포넌트를 쓴다.
+           */
+          <BookmarkToggle
+            programId={loanId}
+            type={BOOKMARK_TARGET.LOAN}
+            bookmarked={data.bookmarked}
             label={data.accountName}
           />
         )
@@ -145,7 +139,7 @@ export default function LoanDetailModal({ loanId, onClose }: LoanDetailModalProp
         data && (
           <Button
             className="w-full"
-            disabled={!canApply && trackedApplicationId === null}
+            disabled={!canApplyNow && trackedApplicationId === null}
             loading={createApplication.isPending}
             onClick={handleFooterClick}
           >

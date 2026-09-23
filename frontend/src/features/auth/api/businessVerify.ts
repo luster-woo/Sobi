@@ -27,11 +27,8 @@ export interface BizVerifyData {
 
 /**
  * 국세청 사업자 진위확인.
- *
- * 실패는 두 갈래다 — 404 BUSINESS_001(번호 없음) · 400 BUSINESS_002(대표자명·개업일 불일치).
- * 어느 쪽인지 알려줘야 사용자가 무엇을 고칠지 알 수 있어 여기서 삼키지 않고 그대로 던진다.
- *
- * 휴·폐업(`isClose`)은 실패가 아니라 200 으로 온다. 판단은 화면이 한다.
+ * 실패는 404 BUSINESS_001(번호 없음) · 400 BUSINESS_002(대표자명·개업일 불일치).
+ * 휴·폐업(`isClose`)은 실패가 아니라 200 으로 온다.
  */
 export async function verifyBusiness(body: BizVerifyRequest) {
   const { data } = await api.post<BizVerifyData>(endpoints.business.verify, body)
@@ -41,8 +38,7 @@ export async function verifyBusiness(body: BizVerifyRequest) {
 /**
  * 업체 등록. 진위확인을 통과한 사업자등록번호로만 부른다.
  *
- * 응답은 비어 있다(`data: null`). 서버는 `verify` 행을 그대로 베껴 `business_info` 를
- * 만들고 role 을 ENTREPRENEUR 로 바꾸는데, 그 결과를 돌려주지 않아서 호출한 쪽이
+ * 응답은 비어 있다(`data: null`). 서버가 role 을 ENTREPRENEUR 로 바꾸므로
  * 토큰을 다시 받아야 바뀐 role 을 알 수 있다.
  *
  * 실패는 404 BUSINESS_001(번호 없음) · 404 BUSINESS_003(업종 코드 없음) · 404 U001.

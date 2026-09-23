@@ -30,12 +30,13 @@ function hasSession() {
 /** 다른 도메인 핸들러가 '인증 필요' 를 흉내 낼 때 쓴다 */
 export const hasMockSession = hasSession
 
-/** 실제 로그인 응답이 주는 네 필드뿐이다 */
+/** 실제 로그인 응답(`LoginResponse.UserInfo`)이 주는 것과 같은 필드다 */
 const ENTREPRENEUR_USER: SessionUser = {
   userId: 1,
   email: 'owner@sogong.com',
   name: '김소상',
   role: USER_ROLE.ENTREPRENEUR,
+  birthDate: '1988-04-12',
 }
 
 const PREENTREPRENEUR_USER: SessionUser = {
@@ -43,6 +44,7 @@ const PREENTREPRENEUR_USER: SessionUser = {
   email: 'pre@sogong.com',
   name: '박예비',
   role: USER_ROLE.PREENTREPRENEUR,
+  birthDate: '1995-11-03',
 }
 
 interface MockAccount {
@@ -98,12 +100,12 @@ function findAccount(email: string): MockAccount | undefined {
  * role 은 `PREENTREPRENEUR` 다. 백엔드 `AuthServiceImpl.signup()` 이 그렇게 넣는다 —
  * 사업자가 되려면 `POST /business` 로 업체를 등록해야 한다.
  */
-function addAccount(email: string, password: string, name: string) {
+function addAccount(email: string, password: string, name: string, birthDate: string) {
   const accounts = loadAccounts()
 
   accounts[email] = {
     password,
-    user: { userId: Date.now(), email, name, role: USER_ROLE.PREENTREPRENEUR },
+    user: { userId: Date.now(), email, name, role: USER_ROLE.PREENTREPRENEUR, birthDate },
   }
 
   sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
@@ -132,6 +134,117 @@ export function promoteToOwner() {
   sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
 }
 
+/* ---------- 내 정보 조회 (S15P21D101-377) ---------- */
+
+/** 알림 수신 여부. ERD 기본값이 true 라 기록이 없으면 켜진 것으로 본다 */
+const NOTIFICATION_KEY = 'msw:notification:'
+
+function isNotificationOn(email: string) {
+  return sessionStorage.getItem(NOTIFICATION_KEY + email) !== 'false'
+}
+
+/** 서버처럼 현재 값을 뒤집고 바뀐 값을 돌려준다 */
+function flipNotification(email: string) {
+  const next = !isNotificationOn(email)
+  sessionStorage.setItem(NOTIFICATION_KEY + email, String(next))
+  return next
+}
+
+const DAY_MS = 86_400_000
+
+function daysAgo(days: number) {
+  return new Date(Date.now() - days * DAY_MS).toISOString().slice(0, 19)
+}
+
+/**
+ * 사업자 계정이 보는 값. 백엔드 `MyPageResponse` 와 같은 모양이다.
+ *
+ * ⚠️ `myData` · `accountSummary` 는 **null 이 아니다.** 연동 전인지는 `linked` 와
+ *    0 으로 표현한다 — 서버가 그렇게 준다. 목이 null 을 주면 화면의 분기가 실서버에서
+ *    다르게 돈다.
+ */
+const OWNER_EXTRA = {
+  business: {
+    businessName: '한상차림',
+    brn: '123-45-67890',
+    ownerName: '김소상',
+    industryName: '한식음식점',
+    address: '대구광역시 북구 산격동 1287-1',
+    openDate: '2023-04-10',
+  },
+  myData: { linked: true, updatedAt: daysAgo(1) },
+  accountSummary: {
+    totalBalance: 21_700_000,
+    totalLoanBalance: 55_200_000,
+    accountCount: 5,
+    institutionCount: 2,
+  },
+  payoutAccount: { bankName: '대구은행', accountNo: '0324003842123412' },
+}
+
+/**
+ * 예비창업자.
+ *
+ * 사업자등록이 없으면 마이데이터를 연동할 근거가 없고, 연동이 없으면 계좌도 없다.
+ * '연동 전' 이 아니라 '연동할 수 없음' 이다.
+ */
+const PRE_OWNER_EXTRA = {
+  business: null,
+  myData: { linked: false, updatedAt: null },
+  accountSummary: {
+    totalBalance: 0,
+    totalLoanBalance: 0,
+    accountCount: 0,
+    institutionCount: 0,
+  },
+  payoutAccount: null,
+}
+
+/**
+ * 소셜로 전환된 계정. `POST /auth/social/google` 이 여기 적는다.
+ *
+ * 서버는 `users.provider` 를 GOOGLE 로 바꾸고 password 를 지운다. 목도 저장해야
+ * 새로고침 후에도 '연결됨' 이 유지되는지 확인할 수 있다 — 응답만 돌려주면 화면이
+ * 잠깐 바뀌었다가 조회 한 번에 되돌아간다.
+ */
+const SOCIAL_KEY = 'msw:social:'
+
+function markSocialLinked(email: string) {
+  sessionStorage.setItem(SOCIAL_KEY + email, 'GOOGLE')
+}
+
+/** 목 계정의 가입 경로. 구글로 가입했거나 전환한 계정이 GOOGLE 이다 */
+function providerOf(email: string) {
+  if (email === GOOGLE_EMAIL) return 'GOOGLE'
+  return sessionStorage.getItem(SOCIAL_KEY + email) === 'GOOGLE' ? 'GOOGLE' : 'LOCAL'
+}
+
+/**
+ * `GET /user/me` 응답. 백엔드 `UserMeResponse` 와 1:1 이다.
+ *
+ * ⚠️ **가볍다.** 여섯 필드뿐이고 사업자 정보·계좌는 없다. 그쪽은 `/user/mypage` 가
+ *    맡는다 — 이 엔드포인트는 앱 진입마다 불려서 무겁게 만들 수 없다.
+ */
+function meResponse(user: SessionUser) {
+  return { ...user, provider: providerOf(user.email) }
+}
+
+/** `GET /user/mypage` 응답. 백엔드 `MyPageResponse` 와 1:1 이다 */
+function myPageResponse(user: SessionUser) {
+  const extra = user.role === USER_ROLE.ENTREPRENEUR ? OWNER_EXTRA : PRE_OWNER_EXTRA
+
+  return {
+    userId: user.userId,
+    name: user.name,
+    email: user.email,
+    birthDate: user.birthDate,
+    role: user.role,
+    provider: providerOf(user.email),
+    notification: isNotificationOn(user.email),
+    ...extra,
+  }
+}
+
 /** 비밀번호 재설정. 시드 계정도 덮어쓸 수 있게 저장본에 기록한다 */
 function updatePassword(email: string, password: string) {
   const accounts = loadAccounts()
@@ -145,6 +258,10 @@ function updatePassword(email: string, password: string) {
 function currentUser(): SessionUser | null {
   const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
   return email ? (findAccount(email)?.user ?? null) : null
+}
+
+export function currentMockRole() {
+  return currentUser()?.role ?? null
 }
 
 /**
@@ -215,7 +332,7 @@ const usedResetTokens = new Set<string>()
  *
  * ⚠️ 남은 계약 불일치
  *    - 로그인 응답이 `refreshToken` 을 바디로 준다. 실제로는 httpOnly 쿠키다
- *    - `/user/me` 는 백엔드 미구현이라 목이 유일한 구현이다 — S15P21D101-377
+ *    - 프론트가 부르는 엔드포인트는 전부 백엔드에 있다. 실서버가 뜨면 목이 비켜선다
  *
  * 가입 흐름은 목에서도 순서를 지켜야 통과한다.
  *    중복 확인 → 발송(쿨다운) → 검증(123456) → 가입
@@ -376,14 +493,27 @@ export const authHandlers = [
    * 응답에 토큰이 없다. 서버가 인증 완료 여부를 따로 들고 있다가 확인한다.
    */
   http.post('/api/v1/auth/signup', async ({ request }) => {
-    const { email, password, name } = (await request.json()) as {
+    const { email, password, name, birthDate } = (await request.json()) as {
       email?: string
       password?: string
       name?: string
+      birthDate?: string
     }
     const path = '/api/v1/auth/signup'
 
-    if (!email || !password || !name) {
+    if (!email || !password || !name || !birthDate) {
+      return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
+    }
+
+    /*
+     * 백엔드 `@Past` 를 흉내 낸다. 오늘·미래 생년월일은 400 이다.
+     *
+     * 목에서 이걸 빼면 화면 검증이 느슨해져도 목에서는 통과해서, 실서버로 바꾼 뒤에야
+     * 가입이 안 되는 것을 알게 된다.
+     */
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (!(new Date(`${birthDate}T00:00:00`) < today)) {
       return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
     }
 
@@ -396,7 +526,7 @@ export const authHandlers = [
     }
 
     // 가입한 계정으로 바로 로그인할 수 있어야 흐름이 이어진다
-    addAccount(email, password, name)
+    addAccount(email, password, name, birthDate)
 
     clearVerified(email)
     return ok(null, '회원가입 성공', { path })
@@ -456,7 +586,11 @@ export const authHandlers = [
     })
   }),
 
-  // GET /api/v1/user/me — 백엔드 미구현이라 목이 유일한 구현이다
+  /*
+   * GET /api/v1/user/me — 백엔드에 구현돼 있다(S15P21D101-262). 실서버가 뜨면 목이 비켜선다.
+   *
+   * 세션 복구(`useSession`)가 쓰는 가벼운 조회다. 사업자 정보·계좌는 아래 `/user/mypage` 다.
+   */
   http.get('/api/v1/user/me', () => {
     const user = hasSession() ? currentUser() : null
 
@@ -464,7 +598,147 @@ export const authHandlers = [
       return fail(401, 'AUTH_010', '인증이 필요합니다.', '/api/v1/user/me')
     }
 
-    return ok(user, '내 정보 조회 성공', { path: '/api/v1/user/me' })
+    return ok(meResponse(user), '내 정보 조회에 성공했습니다.', { path: '/api/v1/user/me' })
+  }),
+
+  /*
+   * GET /api/v1/user/mypage — 백엔드에 구현돼 있다. 실서버가 뜨면 목이 비켜선다.
+   *
+   * 실서버는 잔액을 금융망에서 실시간으로 받아와 1~2초 더 걸린다. 목은 바로 답한다.
+   */
+  http.get('/api/v1/user/mypage', () => {
+    const user = hasSession() ? currentUser() : null
+
+    if (!user) {
+      return fail(401, 'AUTH_010', '인증이 필요합니다.', '/api/v1/user/mypage')
+    }
+
+    return ok(myPageResponse(user), '마이페이지 조회에 성공했습니다.', {
+      path: '/api/v1/user/mypage',
+    })
+  }),
+
+  /*
+   * PATCH /api/v1/user/notification
+   *
+   * ⚠️ 본문이 없다. 켤지 끌지를 받는 것이 아니라 **서버가 현재 값을 뒤집는다**
+   *    (`UserServiceImpl.toggleNotification`). 목도 그래야 화면이 낙관적 갱신을
+   *    잘못 짰을 때 여기서 드러난다.
+   */
+  http.patch('/api/v1/user/notification', () => {
+    const path = '/api/v1/user/notification'
+    const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
+
+    if (!hasSession() || !email) {
+      return fail(401, 'AUTH_010', '인증이 필요합니다.', path)
+    }
+
+    return ok({ notification: flipNotification(email) }, '알림 설정 변경 완료', { path })
+  }),
+
+  /*
+   * PATCH /api/v1/user/password
+   *
+   * ⚠️ body 가 `{ password }` 하나다. **현재 비밀번호를 받지 않는다** —
+   *    백엔드 `PasswordChangeReqeust` 가 그렇다. 목도 똑같이 안 받아야 화면이
+   *    잘못 보내는 것을 실서버로 바꾸기 전에 알 수 있다.
+   *
+   * 바꾼 값을 실제로 저장한다. 그래야 로그아웃 후 새 비밀번호로 다시 들어가 보는
+   * 확인까지 목에서 된다.
+   */
+  http.patch('/api/v1/user/password', async ({ request }) => {
+    const path = '/api/v1/user/password'
+    const { password } = (await request.json()) as { password?: string }
+
+    const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
+    if (!hasSession() || !email) {
+      return fail(401, 'AUTH_010', '인증이 필요합니다.', path)
+    }
+
+    // 백엔드 @Size(min = 8, max = 20)
+    if (!password || password.length < 8 || password.length > 20) {
+      return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
+    }
+
+    updatePassword(email, password)
+
+    return ok(null, '비밀번호 변경 완료', { path })
+  }),
+
+  /*
+   * PATCH /api/v1/user/birth-date
+   *
+   * 구글 가입자가 로그인 직후 이름·생년월일을 채우는 자리다. 저장된 값을 되돌려 준다.
+   *
+   * ⚠️ 경로 이름과 달리 **이름도 받는다.** 백엔드가 생년월일만 받던 엔드포인트에 `name` 을
+   *    더했다 (`BirthDateRequest`).
+   *
+   * ⚠️ `@NotBlank`·`@Past` 를 흉내 낸다. 목에서 느슨하게 두면 화면 검증이 새도 여기서는
+   *    통과해서, 실서버로 바꾼 뒤에야 저장이 안 되는 것을 알게 된다.
+   */
+  http.patch('/api/v1/user/birth-date', async ({ request }) => {
+    const path = '/api/v1/user/birth-date'
+    const { name, birthDate } = (await request.json()) as { name?: string; birthDate?: string }
+
+    const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
+    if (!hasSession() || !email) {
+      return fail(401, 'AUTH_010', '인증이 필요합니다.', path)
+    }
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const nameOk = Boolean(name?.trim()) && (name?.length ?? 0) <= 100
+    const birthOk = Boolean(birthDate) && new Date(`${birthDate}T00:00:00`) < today
+
+    if (!nameOk || !birthOk) {
+      return fail(400, 'COMMON_001', '입력값이 올바르지 않습니다.', path)
+    }
+
+    /*
+     * 실제로 계정에 저장한다. 그래야 로그아웃 후 같은 구글 계정으로 다시 들어왔을 때
+     * 창이 **안 뜨는** 것까지 목에서 확인된다 — 판단 기준이 `birthDate === null` 이라
+     * 저장이 안 되면 매번 다시 묻는 것처럼 보인다.
+     */
+    const saved = { name: name!.trim(), birthDate: birthDate! }
+
+    const accounts = loadAccounts()
+    const account = accounts[email]
+    if (account) {
+      accounts[email] = { ...account, user: { ...account.user, ...saved } }
+      sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
+    }
+
+    return ok(saved, '프로필이 저장되었습니다.', { path })
+  }),
+
+  /*
+   * DELETE /api/v1/user/me
+   *
+   * ⚠️ 경로가 `GET /user/me` 와 같고 메서드만 다르다. 명세에는 POST 로 적혀 있는데
+   *    `UserController` 구현이 DELETE 라 구현을 따랐다.
+   *
+   * 실제로 계정을 지운다. 탈퇴한 이메일로 다시 로그인하면 실패해야 흐름이 맞고,
+   * 같은 주소로 재가입해 보는 것도 목에서 확인된다 (서버는 deleted_at 을 채울 뿐이라
+   * 재가입 가능 여부가 다를 수 있다 — 거기까지는 흉내 내지 않는다).
+   */
+  http.delete('/api/v1/user/me', () => {
+    const path = '/api/v1/user/me'
+    const email = sessionStorage.getItem(SESSION_EMAIL_KEY)
+
+    if (!hasSession() || !email) {
+      return fail(401, 'AUTH_010', '인증이 필요합니다.', path)
+    }
+
+    const accounts = loadAccounts()
+    delete accounts[email]
+    sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
+
+    // 서버도 refreshToken 을 지운다. 목에서는 세션 플래그를 치우는 것이 그 자리다
+    sessionStorage.removeItem(SESSION_KEY)
+    sessionStorage.removeItem(SESSION_EMAIL_KEY)
+
+    return ok(null, '회원 탈퇴 완료', { path })
   }),
 
   // POST /api/v1/auth/oauth/:provider
@@ -496,6 +770,12 @@ export const authHandlers = [
       email: GOOGLE_EMAIL,
       name: '구글가입',
       role: null,
+      /*
+       * ⚠️ **null 이 맞다.** 구글이 생일을 주지 않아 소셜 가입은 비어 있다
+       *    (V23 마이그레이션 주석). 이 값이어야 로그인 직후 생년월일 창이 뜨는 흐름을
+       *    목에서도 볼 수 있다 — 채워 넣으면 그 화면을 영영 못 본다.
+       */
+      birthDate: null,
     }
 
     if (!existing) {
@@ -548,6 +828,9 @@ export const authHandlers = [
     if (code.includes('mismatch')) {
       return fail(400, 'AUTH_016', '계정 이메일과 일치하는 구글 계정만 연결할 수 있습니다.', path)
     }
+
+    // 실제로 바꿔 둔다. 새로고침해도 '연결됨' 이 유지되는지까지 목에서 확인된다
+    markSocialLinked(user.email)
 
     return ok(
       { userId: user.userId, email: user.email, provider: 'GOOGLE' },

@@ -6,8 +6,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core import db
+from app.ocr import engine as ocr_engine
+from app.ocr.router import router as ocr_router
+from app.rag import search
 from app.rag.embedding import koe5
 from app.rag.router import router as rag_router
+from app.agent.documents.preprocessing_batch.router import router as preprocessing_batch_router
+from app.agent.documents.drafts.router import router as drafts_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,6 +29,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     await db.open_pool()
     koe5.get_model()
+    ocr_engine.load()  # 첫 요청에서 올리면 그 요청만 늦어진다. 캐시(/models/paddlex)가 있으면 1초 안쪽
     logger.info("기동 완료")
     yield
     await db.close_pool()
@@ -31,6 +37,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="지원사업 AI 서버", lifespan=lifespan)
 app.include_router(rag_router)
+app.include_router(ocr_router)
+app.include_router(preprocessing_batch_router)
+app.include_router(drafts_router)
 
 
 @app.get("/health")
@@ -38,5 +47,6 @@ async def health():
     return {
         "status": "ok",
         "model_loaded": koe5.is_loaded(),
+        "ocr_loaded": ocr_engine.is_loaded(),
         "db": await db.ping(),
     }

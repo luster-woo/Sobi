@@ -2,21 +2,28 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 
+import { useApplications } from '@/features/application/hooks/useApplication'
 import { buildAuthorizeUrl, isGoogleOAuthConfigured } from '@/features/auth/model/googleOAuth'
+import { useLoanProducts } from '@/features/loan-repayment/hooks/useRepayment'
+import RefreshResultModal from '@/features/mydata/components/RefreshResultModal'
+import { useMydataRefresh } from '@/features/mydata/hooks/useMydata'
 import LinkRow from '@/features/mypage/components/LinkRow'
 import PanelHead from '@/features/mypage/components/PanelHead'
 import PasswordChangeModal from '@/features/mypage/components/PasswordChangeModal'
 import SocialLinkModal from '@/features/mypage/components/SocialLinkModal'
 import WithdrawModal from '@/features/mypage/components/WithdrawModal'
-import { MOCK_MYPAGE, MOCK_MYPAGE_PRE_OWNER } from '@/features/mypage/model/mock'
+import { useBookmarks } from '@/features/mypage/hooks/useBookmarks'
+import { useMyPage } from '@/features/mypage/hooks/useMyPage'
 import { ROUTES } from '@/shared/constants/routes'
-import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { AUTH_PROVIDER, isPreOwner } from '@/shared/types'
+import { APPLICATION_STATUS } from '@/shared/types/application'
 import Badge from '@/shared/ui/Badge'
 import Button from '@/shared/ui/Button'
+import EmptyState from '@/shared/ui/EmptyState'
 import Panel from '@/shared/ui/Panel'
-import Switch from '@/shared/ui/Switch'
+import Skeleton from '@/shared/ui/Skeleton'
 import { formatMoneyShort } from '@/shared/utils/formatters'
+import { maskBizNo } from '@/shared/utils/mask'
 
 /** '2026-09-11T14:20:00' → '2026. 9. 11 갱신' */
 function toUpdatedLabel(iso: string | null) {
@@ -48,7 +55,6 @@ function SmallLink({ to, children }: { to: string; children: ReactNode }) {
  *
  * 라벨 폭을 고정한다. '상호'(두 글자)와 '사업자등록번호'(일곱 글자)가 섞여 있어서,
  * 폭을 내용에 맡기면 값이 줄마다 다른 자리에서 시작해 세로로 훑을 수가 없다.
- * 제일 긴 라벨에 맞춘 값이다.
  */
 function Field({ term, description }: { term: string; description: string }) {
   return (
@@ -63,50 +69,82 @@ function Field({ term, description }: { term: string; description: string }) {
  * 마이페이지 (S15P21D101-18) — 시안 18.
  *
  * 왼쪽은 '내 정보' 다 — 계정·사업자·마이데이터·계좌. 오른쪽은 '설정과 이동' 이다 —
- * 알림, 출금 계좌, 바로가기, 탈퇴. 읽는 것과 누르는 것을 나눠 둔다.
+ * 알림, 탈퇴. 읽는 것과 누르는 것을 나눠 둔다.
  *
  * 탈퇴를 맨 아래 오른쪽에 두는 이유: 되돌릴 수 없는 동작이라 눈에 먼저 들어오면 안
  * 되지만, 찾을 수 없을 만큼 숨기면 그것대로 불친절하다.
- *
- * ⚠️ 값은 전부 목이다(features/mypage/model/mock.ts). `GET /user/me` 가 붙으면
- *    여기서 useQuery 로 바꾸고 로딩·에러를 넣는다.
  */
 export function MyPage() {
-  /*
-   * role 로 목을 고른다. 목의 business 만 보고 갈랐더니 예비창업자로 로그인해도
-   * 사업자 화면이 떴다 — 목이 하나뿐이었기 때문이다.
-   *
-   * ⚠️ `GET /user/me` 가 붙으면 이 분기가 사라진다. 서버가 role 에 맞는 응답을
-   *    주고 화면은 business 가 null 인지만 보면 된다.
-   */
-  const role = useAuthStore((s) => s.user?.role)
-  const data = isPreOwner(role ?? null) ? MOCK_MYPAGE_PRE_OWNER : MOCK_MYPAGE
-  const { profile, business, myData, accountSummary, shortcut } = data
+  const { data, isLoading, isError, refetch } = useMyPage()
+  const refresh = useMydataRefresh()
 
   /*
-   * 가입 경로는 스토어를 먼저 본다. 소셜 전환에 성공하면 `useSocialLink` 가 여기에
-   * 넣어주므로 돌아오자마자 화면이 '연결됨' 으로 바뀐다.
-   *
-   * ⚠️ 새로고침하면 스토어가 비어 목 값(LOCAL)으로 되돌아간다. 로그인 응답에 가입
-   *    경로가 없어서 복구할 방법이 없다 — `GET /user/me` 가 붙으면 해결된다 (BE-02).
+   * 탈퇴 전에 보여줄 숫자들. 마이페이지 응답에 없어서 각자 제 API 에서 가져온다.
+   * 탈퇴 모달을 열어야 필요한 값이지만, 모달 안에서 조회하면 열자마자 빈 숫자가
+   * 잠깐 보인다 — 어차피 가벼운 조회라 화면에서 미리 받아둔다.
    */
-  const linkedProvider = useAuthStore((s) => s.provider)
-  const provider = linkedProvider ?? profile.provider
+  const { data: favorites } = useBookmarks()
+  const { data: applications } = useApplications()
+  const { data: loans } = useLoanProducts({ enabled: !isPreOwner(data?.profile.role ?? null) })
 
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [withdrawOpen, setWithdrawOpen] = useState(false)
   const [socialLinkOpen, setSocialLinkOpen] = useState(false)
-  // ⚠️ PATCH /user/notification 이 붙기 전까지 화면 안에서만 기억한다
-  const [notification, setNotification] = useState(data.notification)
+
+  if (isLoading) {
+    return (
+      <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-3.5">
+          <Skeleton className="h-[72px] w-full" />
+          <Skeleton className="h-[92px] w-full" />
+          <Skeleton className="h-[160px] w-full" />
+        </div>
+        <Skeleton className="h-[110px] w-full" />
+      </div>
+    )
+  }
+
+  if (isError || !data) {
+    return (
+      <EmptyState
+        title="내 정보를 불러오지 못했어요"
+        description="잠시 후 다시 시도해 주세요."
+        action={
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            다시 시도
+          </Button>
+        }
+      />
+    )
+  }
+
+  const { profile, business, myData, accountSummary } = data
+
+  /*
+   * 회원 유형은 **role 로 가른다.** `business` 가 있는지로 가르면 안 된다 —
+   * 사업자인데 응답의 businessInfo 가 비어 오는 경우(백엔드 오류, 조회 실패)에
+   * 화면이 '예비 창업자' 로 바뀌고 '사업자 인증하기' 버튼을 띄운다. 이미 등록한
+   * 사람을 등록 화면으로 보내는 셈인데, 거기서 같은 사업자번호를 다시 넣으면
+   * unique 제약에 걸려 500 이 나고 다른 번호로는 행이 둘 생긴다. 그러면
+   * `findByUserId` 가 단건을 못 골라 `/business/me` 와 `/insurance` 가 영구 500 이 된다
+   * (`SidebarBusinessCard` 주석에 같은 사고가 적혀 있다).
+   *
+   * 그래서 '누구인가' 는 role 이, '무엇을 그릴 수 있나' 는 business 가 정한다.
+   */
+  const preOwner = isPreOwner(profile.role)
+
+  const inProgressCount = (applications ?? []).filter(
+    (application) => application.status !== APPLICATION_STATUS.PAID,
+  ).length
 
   return (
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-w-0 flex-col gap-3.5">
-        <Panel className="flex flex-wrap items-center justify-between gap-3 px-[15px] py-3.5">
+        <Panel className="px-card flex flex-wrap items-center justify-between gap-3 py-3.5">
           <span className="min-w-0">
             <b className="text-text text-body1 block font-semibold">{profile.name}</b>
             <span className="text-text-muted text-caption block truncate">
-              {profile.email} · {business ? '사업자' : '예비 창업자'} 회원
+              {profile.email} · {preOwner ? '예비 창업자' : '사업자'} 회원
             </span>
           </span>
 
@@ -114,7 +152,7 @@ export function MyPage() {
            * 로컬 가입은 비밀번호를 바꿀 수 있고 구글로 전환할 수 있다.
            * 소셜 가입은 둘 다 해당 없다 — 비밀번호가 없고 이미 전환된 상태다.
            */}
-          {provider === AUTH_PROVIDER.LOCAL ? (
+          {profile.provider === AUTH_PROVIDER.LOCAL ? (
             <span className="flex shrink-0 items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setPasswordOpen(true)}>
                 비밀번호 수정
@@ -140,7 +178,19 @@ export function MyPage() {
          * 연동할 수 없고, 연동이 없으면 계좌도 없다. 빈 패널을 '연동 전' 으로
          * 남겨두면 할 수 있는데 안 한 것처럼 보인다 — 할 수 없는 것이다.
          */}
-        {business ? (
+        {preOwner ? (
+          <Panel>
+            <PanelHead title="사업자 정보" aside={<Badge variant="outline">미인증</Badge>} />
+            <div className="px-card flex flex-wrap items-center justify-between gap-3 py-3.5">
+              <p className="text-text-secondary text-body2 leading-[1.7]">
+                사업자 인증을 하면 매출·신용 기준으로 자격을 판정하고
+                <br />
+                마이데이터 연동과 계좌 관리를 쓸 수 있어요.
+              </p>
+              <SmallLink to={ROUTES.BUSINESS_VERIFY}>사업자 인증하기</SmallLink>
+            </div>
+          </Panel>
+        ) : (
           <>
             {accountSummary && (
               <Panel>
@@ -150,22 +200,22 @@ export function MyPage() {
                 />
                 <dl className="divide-border-subtle grid grid-cols-3 divide-x">
                   <div className="px-3.5 py-3">
-                    <dt className="text-text-muted text-[11px]">입출금 잔액</dt>
-                    <dd className="text-text mt-0.5 text-[17px] font-bold tracking-tight tabular-nums">
+                    <dt className="text-text-muted text-caption">입출금 잔액</dt>
+                    <dd className="text-text text-h4 mt-0.5 font-bold tracking-tight tabular-nums">
                       {formatMoneyShort(accountSummary.totalBalance)}
                     </dd>
                   </div>
                   <div className="px-3.5 py-3">
-                    <dt className="text-text-muted text-[11px]">대출 잔액</dt>
-                    <dd className="text-text mt-0.5 text-[17px] font-bold tracking-tight tabular-nums">
+                    <dt className="text-text-muted text-caption">대출 잔액</dt>
+                    <dd className="text-text text-h4 mt-0.5 font-bold tracking-tight tabular-nums">
                       {formatMoneyShort(accountSummary.totalLoanBalance)}
                     </dd>
                   </div>
                   <div className="px-3.5 py-3">
-                    <dt className="text-text-muted text-[11px]">연결 계좌</dt>
-                    <dd className="text-text mt-0.5 text-[17px] font-bold tracking-tight tabular-nums">
+                    <dt className="text-text-muted text-caption">연결 계좌</dt>
+                    <dd className="text-text text-h4 mt-0.5 font-bold tracking-tight tabular-nums">
                       {accountSummary.accountCount}
-                      <span className="text-text-secondary text-[11.5px] font-normal">개</span>
+                      <span className="text-text-secondary text-caption font-normal">개</span>
                     </dd>
                   </div>
                 </dl>
@@ -174,15 +224,31 @@ export function MyPage() {
 
             <Panel>
               <PanelHead title="사업자 정보" aside={<Badge variant="success">인증됨</Badge>} />
-              {/* 여섯 줄을 세로로 쌓으면 왼쪽 열만 길어진다. 값이 짧아 2열이 낫다 */}
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-2 px-[15px] py-3">
-                <Field term="상호" description={business.businessName} />
-                <Field term="사업자등록번호" description={business.brn} />
-                <Field term="대표자" description={business.ownerName} />
-                <Field term="업종" description={business.industryName} />
-                <Field term="사업장" description={business.region} />
-                <Field term="개업일" description={business.openDate.replaceAll('-', '. ')} />
-              </dl>
+
+              {/*
+               * ⚠️ 사업자인데 내용이 비어 올 수 있다. 그때도 '미인증' 으로 그리지 않는다 —
+               * 등록 화면으로 보내면 같은 번호로 중복 등록을 시도하게 되고, 그게
+               * `/business/me` 를 영구 500 으로 만드는 경로다. 못 불러왔다고만 알린다.
+               */}
+              {business ? (
+                <dl className="px-card grid grid-cols-2 gap-x-6 gap-y-2 py-3">
+                  <Field term="상호" description={business.businessName} />
+                  {/*
+                   * 등록번호를 가린다. 상호·대표자·개업일이 한 화면에 같이 떠 있어서,
+                   * 전체를 보여주면 국세청 진위확인을 그대로 통과하는 조합이 된다
+                   * (`/business/verify` 가 셋을 받는다).
+                   */}
+                  <Field term="사업자등록번호" description={maskBizNo(business.brn)} />
+                  <Field term="대표자" description={business.ownerName} />
+                  <Field term="업종" description={business.industryName} />
+                  <Field term="사업장" description={business.address} />
+                  <Field term="개업일" description={business.openDate.replaceAll('-', '. ')} />
+                </dl>
+              ) : (
+                <p className="text-text-muted text-body2 px-card py-3.5">
+                  업체 정보를 불러오지 못했어요. 잠시 후 새로고침해 주세요.
+                </p>
+              )}
             </Panel>
 
             <Panel>
@@ -190,55 +256,54 @@ export function MyPage() {
                 title="마이데이터 연동"
                 aside={
                   <span className="flex items-center gap-2">
-                    <Badge variant={myData.linked ? 'success' : 'outline'}>
-                      {myData.linked ? '연동 중' : '연동 전'}
+                    <Badge variant={myData ? 'success' : 'outline'}>
+                      {myData ? '연동 중' : '연동 전'}
                     </Badge>
-                    {/* TODO: POST /mydata/refresh — 비동기라 진행률 화면이 필요하다 */}
-                    <Button variant="outline" size="sm">
+
+                    {/* 서버 쿨다운이 남아 있으면 눌러도 429 라 미리 잠근다 */}
+                    {refresh.remaining && (
+                      <span className="text-text-muted text-caption">
+                        {refresh.remaining} 갱신 가능
+                      </span>
+                    )}
+
+                    {/* 응답까지 수십 초 걸린다. 화면을 옮기지 않고 버튼에서 기다린다 */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      loading={refresh.isPending}
+                      disabled={refresh.remaining !== null}
+                      onClick={refresh.refresh}
+                    >
                       지금 갱신
                     </Button>
                   </span>
                 }
               />
-              {myData.links.map((link) => (
-                <LinkRow
-                  key={link.label}
-                  label={link.label}
-                  value={toUpdatedLabel(link.updatedAt)}
-                />
-              ))}
+
+              {/*
+               * 항목별 갱신 시각은 서버가 주지 않는다. 응답에 있는 건 마지막 판정 시각
+               * 하나뿐이라 두 줄이 같은 값을 쓴다 — 항목마다 다른 시각을 보여주려면
+               * 백엔드가 수집원별 시각을 나눠 줘야 한다.
+               */}
+              <LinkRow label="금융 거래 정보" value={toUpdatedLabel(myData?.linkedAt ?? null)} />
+              <LinkRow label="신용 정보" value={toUpdatedLabel(myData?.linkedAt ?? null)} />
             </Panel>
           </>
-        ) : (
-          <Panel>
-            <PanelHead title="사업자 정보" aside={<Badge variant="outline">미인증</Badge>} />
-            <div className="flex flex-wrap items-center justify-between gap-3 px-[15px] py-3.5">
-              <p className="text-text-secondary text-body2 leading-[1.7]">
-                사업자 인증을 하면 매출·신용 기준으로 자격을 판정하고
-                <br />
-                마이데이터 연동과 계좌 관리를 쓸 수 있어요.
-              </p>
-              <SmallLink to={ROUTES.BUSINESS_VERIFY}>사업자 인증하기</SmallLink>
-            </div>
-          </Panel>
         )}
       </div>
 
+      {/*
+       * 알림 설정 패널을 두지 않는다.
+       *
+       * 토글 API(`PATCH /user/notification`)는 있지만 알림을 보내거나 보여주는
+       * 기능이 통째로 없다 — 백엔드에 `/notifications` 매핑이 하나도 없어서
+       * 상단바 벨도 꺼 둔 상태다(`Topbar.tsx` 의 SHOW_NOTIFICATION_BELL).
+       * 켜도 아무 일이 일어나지 않는 스위치라 오해만 만든다.
+       * 알림 도메인이 생기면 되살린다.
+       */}
       <div className="flex flex-col gap-3.5">
-        <Panel className="flex flex-col gap-2.5 px-[15px] py-3">
-          <h3 className="text-text text-body2 font-bold">알림 설정</h3>
-          <div className="flex items-center justify-between gap-2.5">
-            <span className="text-text text-body2">새 공고 알림</span>
-            <Switch label="새 공고 알림" checked={notification} onChange={setNotification} />
-          </div>
-        </Panel>
-
-        {/*
-         * 출금·실행 계좌와 바로가기 패널을 뺐다.
-         * 출금 계좌는 연동 계좌 화면에서 '출금 계좌' 배지로 이미 보이고, 바로가기는
-         * 신청 현황·관심 목록·상환 관리가 전부 사이드바에 있어 같은 링크를 두 벌 두는 셈이었다.
-         */}
-        <Panel className="px-[15px] py-2.5">
+        <Panel className="px-card py-2.5">
           <button
             type="button"
             onClick={() => setWithdrawOpen(true)}
@@ -251,9 +316,16 @@ export function MyPage() {
 
       <PasswordChangeModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
 
+      <RefreshResultModal result={refresh.result} onClose={refresh.closeResult} />
+
       <SocialLinkModal
         open={socialLinkOpen}
         onClose={() => setSocialLinkOpen(false)}
+        /*
+         * ⚠️ 백엔드 `AuthServiceImpl.linkSocial` 이 계정 이메일과 구글 이메일이 같은지
+         *    보고 다르면 AUTH_016 을 던진다. 안내에 쓰는 주소가 실제 계정 주소여야
+         *    사용자가 엉뚱한 계정으로 맞추려다 계속 실패하지 않는다.
+         */
         email={profile.email}
         onConfirm={() => {
           window.location.assign(buildAuthorizeUrl('link'))
@@ -263,9 +335,9 @@ export function MyPage() {
       <WithdrawModal
         open={withdrawOpen}
         onClose={() => setWithdrawOpen(false)}
-        applicationInProgress={shortcut.applicationInProgress}
-        repayingLoans={2}
-        favoriteCount={shortcut.favoriteCount}
+        applicationInProgress={inProgressCount}
+        repayingLoans={loans?.length ?? 0}
+        favoriteCount={favorites?.length ?? 0}
       />
     </div>
   )

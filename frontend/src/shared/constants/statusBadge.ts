@@ -1,5 +1,5 @@
 import type { SubmitDocumentStatus, WriteDocumentStatus } from '@/shared/constants/documentStatus'
-import type { ProductStatus } from '@/shared/constants/productStatus'
+import type { SupportStatus } from '@/shared/constants/productStatus'
 import type { ApplicationStatus } from '@/shared/types/application'
 import type { InsuranceStatus } from '@/shared/types/insurance'
 import type { BadgeVariant } from '@/shared/ui/Badge'
@@ -15,11 +15,12 @@ import type { BadgeVariant } from '@/shared/ui/Badge'
  */
 
 export const APPLICATION_STATUS_VARIANT: Record<ApplicationStatus, BadgeVariant> = {
-  PREPARING: 'outline', // 서류를 채우는 중. 아직 제출 안 함
+  // 서류를 채우는 중. 내가 이어서 써야 한다 — 상품 목록의 '작성 중' 과 같은 색이다
+  PREPARING: 'todo',
   SUBMITTED: 'neutral', // 접수됨. 할 일 없음
   REVIEWING: 'progress', // 기관이 심사 중
-  APPROVED: 'success',
-  PAID: 'success', // 돈이 오갔다. 승인과 같은 끈난 상태라 같은 색이다
+  APPROVED: 'positive', // 좋은 소식이지만 아직 돈은 안 왔다. 완료보다 한 단계 연하다
+  PAID: 'success', // 돈이 오갔다. 마지막 단계라 대표색으로 꽉 채운다
   REJECTED: 'danger',
 }
 
@@ -45,15 +46,18 @@ export const INSURANCE_STATUS_VARIANT: Record<InsuranceStatus, BadgeVariant> = {
 }
 
 /**
- * 대출·지원사업이 같은 값 집합을 쓴다. 색은 도메인이 아니라 "지금 누가 무엇을 해야
- * 하는가" 로 정해져서, 문구와 달리 갈릴 이유가 없다.
+ * 지원사업 값이 대출을 포함하므로(UNKNOWN 만 더 있다) 한 표로 둘 다 덮는다.
+ * 색은 도메인이 아니라 "지금 누가 무엇을 해야 하는가" 로 정해져서 갈릴 이유가 없다.
  */
-export const PRODUCT_STATUS_VARIANT: Record<ProductStatus, BadgeVariant> = {
-  ELIGIBLE: 'success',
-  INELIGIBLE: 'outline', // 오류가 아니라 자격 미달이라 danger 가 아니다
-  PREPARING: 'warning', // 사용자가 이어서 작성해야 한다
+export const PRODUCT_STATUS_VARIANT: Record<SupportStatus, BadgeVariant> = {
+  ELIGIBLE: 'ready', // 내가 신청할 수 있다. 지급 완료의 진초록보다 한 단계 연하다
+  // 조건을 확인하지 못했을 뿐 신청은 된다. 막는 INELIGIBLE 과 색을 달리한다
+  UNKNOWN: 'warning',
+  INELIGIBLE: 'danger', // 신청해도 안 되는 상태다. 목록에서 먼저 걸러 보여야 한다
+  // 내가 이어서 써야 한다. '확인 필요' 와 같은 주황이지만 테두리라 한눈에 갈린다
+  PREPARING: 'todo',
   SUBMITTED: 'neutral',
   REVIEWING: 'progress',
-  APPROVED: 'success',
-  PAID: 'success', // 돈이 오갔다. 승인과 같이 끝난 상태다
+  APPROVED: 'positive', // 선정·승인. 좋은 소식이지만 지급 전이라 연초록이다
+  PAID: 'success', // 돈이 오갔다. 마지막 단계라 대표색으로 꽉 채운다
 }

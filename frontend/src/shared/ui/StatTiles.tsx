@@ -36,11 +36,11 @@ export default function StatTiles({ items, columns = 4, className }: StatTilesPr
     >
       {items.map((item) => (
         <div key={item.label} className="bg-surface px-3.5 py-3">
-          <dt className="text-text-muted text-[11px]">{item.label}</dt>
+          <dt className="text-text-muted text-caption">{item.label}</dt>
           <dd className="text-text mt-[3px] text-[19px] font-bold tracking-tight tabular-nums">
             {item.value}
             {item.unit && (
-              <small className="text-text-secondary text-[11.5px] font-normal">{item.unit}</small>
+              <small className="text-text-secondary text-caption font-normal">{item.unit}</small>
             )}
           </dd>
         </div>

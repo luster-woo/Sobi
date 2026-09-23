@@ -1,13 +1,32 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 
 import ApplicationCard from '@/features/application/components/ApplicationCard'
 import ApplicationProgressStepper from '@/features/application/components/ApplicationProgressStepper'
 import ApplicationStatusTabs from '@/features/application/components/ApplicationStatusTabs'
 import { useApplications } from '@/features/application/hooks/useApplication'
 import type { ApplicationFilter } from '@/features/application/model/filter'
-import { filterApplications } from '@/features/application/model/filter'
+import { filterApplications, toApplicationFilter } from '@/features/application/model/filter'
+import Button from '@/shared/ui/Button'
 import EmptyState from '@/shared/ui/EmptyState'
+import PageHeading from '@/shared/ui/PageHeading'
 import Skeleton from '@/shared/ui/Skeleton'
+import { cn } from '@/shared/utils/cn'
+
+/**
+ * 본문 폭.
+ *
+ * 목록 화면(대출·지원사업·관심 목록·계좌)이 전부 1120px 로 묶여 있다. 여기만 상한이
+ * 없어서 넓은 모니터에서 카드가 화면 끝까지 늘어났다 — 메뉴를 옮길 때마다 본문 폭이
+ * 달라져 화면이 흔들려 보인다.
+ *
+ * 상한이 없는 대시보드·마이페이지와는 경우가 다르다. 그쪽은 2열 그리드라 폭을
+ * 나눠 쓰지만, 이 화면은 카드 한 줄이 그대로 늘어난다.
+ *
+ * 세 상태(로딩·오류·목록)에 모두 붙인다. 목록에만 주면 로딩 중에는 넓다가 데이터가
+ * 오는 순간 폭이 줄어 한 번 덜컹거린다.
+ */
+const PAGE_WIDTH = 'mx-auto flex w-full max-w-[1120px] flex-col'
 
 /**
  * 신청 현황 (S15P21D101-202)
@@ -24,14 +43,24 @@ import Skeleton from '@/shared/ui/Skeleton'
  * 진행 사항 스텝퍼는 174 에서 이 카드 안으로 들어온다.
  */
 export function ApplicationListPage() {
-  const { data: applications, isLoading, isError } = useApplications()
-  const [filter, setFilter] = useState<ApplicationFilter>('ONGOING')
+  const { data: applications, isLoading, isError, refetch } = useApplications()
+
+  /*
+   * 탭을 주소에 둔다. 자금 조합으로 신청을 만들면 전부 준비 중이라 그 탭을 지목해서
+   * 보내야 하는데, 컴포넌트 안의 상태로는 밖에서 가리킬 수가 없다.
+   *
+   * replace 로 바꾼다. 탭은 조회 조건이라 뒤로가기가 탭을 되돌리면, 들어올 때 지목된
+   * 탭으로 돌아가려다 한 번 더 눌러야 화면을 벗어나게 된다.
+   */
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filter = toApplicationFilter(searchParams.get('tab'))
+  const setFilter = (next: ApplicationFilter) => setSearchParams({ tab: next }, { replace: true })
   /** 한 번에 하나만 펼친다. 여러 개가 열려 있으면 화면이 길어져 비교가 어렵다 */
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className={cn(PAGE_WIDTH, 'gap-4')}>
         <Skeleton className="h-9 w-40" />
         {[0, 1, 2].map((row) => (
           <Skeleton key={row} className="h-24 w-full" />
@@ -42,24 +71,26 @@ export function ApplicationListPage() {
 
   if (isError || !applications) {
     return (
-      <EmptyState title="신청 현황을 불러오지 못했어요" description="잠시 후 다시 시도해 주세요." />
+      <div className={PAGE_WIDTH}>
+        <EmptyState
+          title="신청 현황을 불러오지 못했어요"
+          description="잠시 후 다시 시도해 주세요."
+          action={
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              다시 시도
+            </Button>
+          }
+        />
+      </div>
     )
   }
 
-  /* 탭과 같은 함수로 센다. 규칙이 갈라지면 머리말과 탭의 숫자가 어긋난다 */
-  const preparing = filterApplications(applications, 'PREPARING').length
-  const ongoing = filterApplications(applications, 'ONGOING').length
-  const settled = filterApplications(applications, 'SETTLED').length
   const visible = filterApplications(applications, filter)
 
   return (
-    <div className="flex flex-col gap-5">
-      <header>
-        <p className="text-body2 text-text-secondary">
-          준비 중 {preparing}건 · 진행 중 {ongoing}건 · 완료 {settled}건
-        </p>
-        <h1 className="text-h2 text-text mt-1 font-bold">신청 현황</h1>
-      </header>
+    <div className={cn(PAGE_WIDTH, 'gap-5')}>
+      {/* 건수 요약을 제목 위에 따로 두지 않는다. 바로 아래 탭이 같은 숫자를 이미 말한다 */}
+      <PageHeading title="신청 현황" />
 
       <ApplicationStatusTabs applications={applications} value={filter} onChange={setFilter} />
 

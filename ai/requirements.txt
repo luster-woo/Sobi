@@ -4,13 +4,16 @@
 fastapi==0.141.1
 uvicorn[standard]==0.53.0
 pydantic==2.13.5
+python-multipart==0.0.32  # FastAPI 파일 업로드(Form·UploadFile). /ocr/verify
 
-# 임베딩
+# 임베딩 / 검색
+rank-bm25==0.2.2  # 어휘 검색. 직접 구현과 동률이라 표준 구현을 쓴다
 sentence-transformers==6.0.1
 transformers==5.17.0
-numpy==2.4.6
+numpy==2.3.5  # paddlex 3.7.x 가 numpy<2.4 를 요구한다. RAG 쪽(sentence-transformers·transformers)은 2.4 를 요구하지 않음
 
 # LLM / 설정
+typesafe-sdk==0.7.1  # Jev 판정. app/rag/jev.py 가 최상단에서 import 하므로 없으면 기동 실패
 openai==3.13.0
 python-dotenv==1.2.3
 httpx==0.28.1
@@ -18,3 +21,13 @@ httpx==0.28.1
 # DB 설정
 psycopg[binary,pool]==3.3.5
 pgvector==0.5.0
+
+# 문서 정규화 CLI (Java Runtime은 Dockerfile에서 설치)
+hwp2hwpx==1.0.1
+
+# OCR (제출 서류 검증)
+# 3.3.x 는 oneDNN/PIR 회귀로 enable_mkldnn 을 못 켠다 (Paddle #77340) → 가속을 쓰려고 3.2.0 고정.
+# 3.2.0 + oneDNN 실측: 인식 13.3s → 2.6s (PDF), 19.8s → 4.3s (2480×3508 JPG), 신뢰도·추출 결과 동일
+paddlepaddle==3.2.0
+paddleocr==3.7.0
+pymupdf==1.28.2

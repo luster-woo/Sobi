@@ -1,6 +1,7 @@
-import type { SelectHTMLAttributes } from 'react'
+import type { Ref, SelectHTMLAttributes } from 'react'
 import { useId } from 'react'
 
+import { CONTROL_HEIGHT } from '@/shared/ui/controlSize'
 import { cn } from '@/shared/utils/cn'
 
 interface Option {
@@ -9,20 +10,23 @@ interface Option {
 }
 
 const sizeClass = {
-  lg: 'text-h4 h-14 px-4 pr-11',
-  md: 'text-body1 h-[42px] px-3 pr-10',
-  sm: 'text-body2 h-[30px] px-3 pr-8',
+  sm: `text-body2 ${CONTROL_HEIGHT.sm} px-3 pr-8`,
+  md: `text-body1 ${CONTROL_HEIGHT.md} px-3 pr-10`,
+  lg: `text-body1 ${CONTROL_HEIGHT.lg} px-4 pr-10`,
+  xl: `text-h4 ${CONTROL_HEIGHT.xl} px-4 pr-11`,
 } as const
 
 interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children' | 'size'> {
   label?: string
   options: Option[]
-  /** lg 56 · md 42 · sm 30 (px). sm 은 필터 바의 칩, lg 는 큰 창의 폼 */
-  size?: 'lg' | 'md' | 'sm'
+  /** sm 34 · md 42 · lg 48 · xl 56 (px). Button·Input 과 같은 높이입니다 */
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   placeholder?: string
   helperText?: string
   error?: string
   className?: string
+  /** select 요소에 연결됩니다. 검증 실패 시 포커스를 옮길 때 씁니다 */
+  ref?: Ref<HTMLSelectElement>
 }
 
 /**
@@ -41,6 +45,7 @@ export default function Select({
   required,
   id,
   className,
+  ref,
   ...rest
 }: SelectProps) {
   const autoId = useId()
@@ -61,6 +66,7 @@ export default function Select({
 
       <div className="relative">
         <select
+          ref={ref}
           id={selectId}
           disabled={disabled}
           required={required}

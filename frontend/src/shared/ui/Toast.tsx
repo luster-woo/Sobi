@@ -4,11 +4,16 @@ import type { ToastVariant } from '@/shared/lib/store/useUiStore'
 import { cn } from '@/shared/utils/cn'
 
 interface ToastProps {
+  id: string
   message: string
   variant?: ToastVariant
   /** 자동으로 닫히기까지 ms. 넘기지 않으면 variant 기본값을 씁니다 */
   duration?: number
-  onDismiss: () => void
+  /**
+   * 스토어의 dismissToast 를 그대로 넘깁니다.
+   * 인라인 화살표를 넘기면 렌더마다 함수가 새로 생겨 자동 닫힘 타이머가 처음부터 다시 갑니다.
+   */
+  onDismiss: (id: string) => void
 }
 
 const variantClass: Record<ToastVariant, string> = {
@@ -56,7 +61,13 @@ function VariantIcon({ variant }: { variant: ToastVariant }) {
  *
  * 큐 구독·화면 배치는 ToastViewport 의 몫입니다. 이 컴포넌트는 스토어를 모릅니다.
  */
-export default function Toast({ message, variant = 'success', duration, onDismiss }: ToastProps) {
+export default function Toast({
+  id,
+  message,
+  variant = 'success',
+  duration,
+  onDismiss,
+}: ToastProps) {
   // 마운트 직후 한 프레임 뒤에 보이게 만들어 나타나는 전환을 줍니다.
   // index.css 에 keyframes 를 추가하지 않으려고 transition 유틸리티만 씁니다.
   const [shown, setShown] = useState(false)
@@ -67,14 +78,14 @@ export default function Toast({ message, variant = 'success', duration, onDismis
   }, [])
 
   useEffect(() => {
-    const timer = setTimeout(onDismiss, duration ?? defaultDuration[variant])
+    const timer = setTimeout(() => onDismiss(id), duration ?? defaultDuration[variant])
     return () => clearTimeout(timer)
-  }, [duration, variant, onDismiss])
+  }, [id, duration, variant, onDismiss])
 
   return (
     <div
-      // 에러는 즉시 읽혀야 해서 alert, 나머지는 진행을 방해하지 않는 status
-      role={variant === 'danger' ? 'alert' : 'status'}
+      // 에러만 즉시 끼어들게 alert. 나머지는 ToastViewport 의 상시 live region 이 읽는다
+      role={variant === 'danger' ? 'alert' : undefined}
       className={cn(
         'shadow-dropdown pointer-events-auto flex w-[320px] items-start gap-3 rounded-md border px-4 py-3',
         'transition-all duration-200 motion-reduce:transition-none',
@@ -88,7 +99,7 @@ export default function Toast({ message, variant = 'success', duration, onDismis
       <button
         type="button"
         aria-label="알림 닫기"
-        onClick={onDismiss}
+        onClick={() => onDismiss(id)}
         className="-mr-1 shrink-0 rounded-sm p-1 opacity-60 transition-opacity hover:opacity-100"
       >
         <svg

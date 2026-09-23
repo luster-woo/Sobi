@@ -20,9 +20,9 @@ interface MiniPanelProps {
 export default function MiniPanel({ title, headerRight, children, className }: MiniPanelProps) {
   return (
     <Panel className={className}>
-      <div className="flex flex-col gap-2.5 px-[15px] py-3.5">
+      <div className="px-card flex flex-col gap-2.5 py-3.5">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-text text-[13px] font-bold">{title}</h3>
+          <h3 className="text-text text-body2 font-bold">{title}</h3>
           {headerRight}
         </div>
 

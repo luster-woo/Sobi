@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import type { BizVerifyData } from '@/features/auth/api/businessVerify'
 import BizVerifyResult from '@/features/auth/components/BizVerifyResult'
-import PhoneVerifyPopup from '@/features/auth/components/PhoneVerifyPopup'
 import PreOwnerBranchCard from '@/features/auth/components/PreOwnerBranchCard'
 import { useBusinessRegister } from '@/features/auth/hooks/useBusinessRegister'
 import { useBusinessVerify } from '@/features/auth/hooks/useBusinessVerify'
+import { useBusinessSummary } from '@/features/business/hooks/useBusinessSummary'
 import { ERROR_CODE, getErrorCode, getErrorMessage, getErrorStatus } from '@/shared/api/errors'
 import { ROUTES } from '@/shared/constants/routes'
+import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import Button from '@/shared/ui/Button'
 import DatePicker from '@/shared/ui/DatePicker'
@@ -79,9 +80,6 @@ export function BusinessVerifyPage() {
    */
   const [verifiedBrn, setVerifiedBrn] = useState<string | null>(null)
 
-  /** 본인확인 팝업. 실제 본인확인처럼 페이지를 옮기지 않고 이 화면 위에 띄운다 */
-  const [identityOpen, setIdentityOpen] = useState(false)
-
   /**
    * 휴·폐업 사업자는 정책자금 신청 대상이 아니라 사업자로 시작할 수 없다.
    * 재조회 중에도 막는다 — 직전 결과가 화면에 남아 있어 그대로 두면 곧 뒤집힐 값으로 등록된다.
@@ -146,33 +144,73 @@ export function BusinessVerifyPage() {
     )
   }
 
-  const handleStartAsOwner = () => {
-    if (verifiedBrn === null) return
-    setIdentityOpen(true)
-  }
-
   /**
-   * 본인확인을 마친 시점에 업체를 등록한다.
+   * 이미 업체가 등록된 계정인지.
    *
-   * 버튼을 누를 때 바로 부르지 않는 이유는 순서다. 본인확인을 중간에 닫으면 등록만
-   * 되어 있는 계정이 남고, 같은 번호로 다시 등록하면 유니크 제약에 걸려 500 이 난다.
+   * ⚠️ **두 번 등록되면 계정을 못 쓰게 된다.** 백엔드 `BusinessServiceImpl.business()`
+   *    에 user 당 1건 제약이 없어서, 다른 사업자번호로 등록하면 `business_info` 행이
+   *    둘 생긴다. 그러면 `BusinessReporitory.findByUserId` 가 단건을 못 골라
+   *    `GET /business/me` 와 `GET /insurance` 가 **영구 500** 이 된다.
    *
-   * 명세에는 `bsn` 으로 적혀 있지만 실제 `BusinessRequest` 필드는 `brn` 이다.
+   *    같은 번호면 unique 제약(500)에 걸려 되돌릴 수는 있지만, 다른 번호는 되돌릴
+   *    방법이 없다. 서버가 막아주지 않으므로 화면에서 먼저 막는다.
+   *
+   *    토큰 role 로는 판단할 수 없다. 등록 직후 재발급이 실패하면 role 이
+   *    PREENTREPRENEUR 로 남은 채 이 화면에 다시 올 수 있고, 그게 정확히 두 번째
+   *    등록이 일어나는 경로다 — 서버에 직접 물어본다(`useBusinessSummary`).
    */
-  const handleIdentityVerified = () => {
-    if (verifiedBrn === null) return
+  const {
+    data: registeredBusiness,
+    isLoading: isCheckingBusiness,
+    error: businessError,
+  } = useBusinessSummary()
 
+  /*
+   * 404 는 '미등록' 이라는 정상 응답이라 통과시킨다. 이걸 막으면 정작 등록해야 할
+   * 사람이 전부 막힌다. 그 외의 실패(500·타임아웃)는 등록 여부를 모르는 상태라
+   * 막는다 — 모르는 채로 보내면 두 번째 업체가 생겨 계정이 영구 500 이 된다.
+   */
+  const businessUnknown = businessError !== null && getErrorStatus(businessError) !== 404
+
+  const handleStartAsOwner = () => {
+    if (verifiedBrn === null || isCheckingBusiness) return
+
+    if (businessUnknown) {
+      showToast('등록된 업체가 있는지 확인하지 못했어요. 잠시 후 다시 시도해 주세요.', 'danger')
+      return
+    }
+
+    if (registeredBusiness) {
+      showToast('이미 등록된 업체가 있어요. 변경이 필요하면 문의해 주세요.', 'warning')
+      return
+    }
+
+    /* 명세에는 `bsn` 으로 적혀 있지만 실제 `BusinessRequest` 필드는 `brn` 이다 */
     register(verifiedBrn, {
-      onSuccess: () => {
-        setIdentityOpen(false)
-        navigate(ROUTES.MYDATA_CONSENT)
-      },
+      onSuccess: () => navigate(ROUTES.MYDATA_CONSENT),
       onError: (error) => {
-        // 팝업은 열어둔다. 인증번호가 그대로 있어 '인증 완료' 를 다시 누르면 재시도된다
+        /*
+         * 500 은 여기서 직접 띄운다 — 인터셉터의 일반 문구('서버에 문제가 생겼습니다')
+         * 보다 `REGISTER_CONFLICT_MESSAGE`(이미 등록된 번호) 가 훨씬 구체적이라, 이
+         * 자리에서는 중복이 아깝지 않다. 같은 파일 `handleVerify` 가 5xx 를 거르는 것과
+         * 다른 판단이고, 그 이유가 이것이다.
+         */
         showToast(getErrorMessage(error, { 500: REGISTER_CONFLICT_MESSAGE }), 'danger')
       },
     })
   }
+
+  /*
+   * 가입 흐름이 여기로 보내려고 남겨둔 예약을 거둔다. 도착했으니 볼일이 끝났다.
+   *
+   * 안 지우면 나중에 로그아웃 없이 로그인 화면이나 랜딩에 들렀을 때 PublicOnlyRoute 가
+   * 대시보드 대신 여기로 또 보낸다. 이미 인증을 마친 사람에게는 엉뚱한 화면이다.
+   */
+  const setPostAuthRedirect = useAuthStore((s) => s.setPostAuthRedirect)
+
+  useEffect(() => {
+    setPostAuthRedirect(null)
+  }, [setPostAuthRedirect])
 
   const handleStartAsPreOwner = () => {
     // 업체를 등록하지 않는 것이 곧 예비 창업자다. 호출할 API 가 없다
@@ -186,9 +224,7 @@ export function BusinessVerifyPage() {
        * 바로 아래 필수 표시 세 개가 이미 하고 있어서, 따로 두면 45px 을 쓰고
        * 같은 말을 반복한다.
        */}
-      <h1 className="font-heading text-text mb-4 text-[20px] font-bold tracking-[-0.02em]">
-        사업자 인증 정보를 입력해 주세요
-      </h1>
+      <h1 className="text-h2 mb-4 tracking-[-0.02em]">사업자 인증 정보를 입력해 주세요</h1>
 
       <div className="border-border bg-surface w-full max-w-[560px] rounded-md border px-7 py-5">
         <Input
@@ -256,21 +292,18 @@ export function BusinessVerifyPage() {
           errorMessage={VERIFY_ERROR[errorKind].message}
         />
 
-        <Button disabled={!canStartAsOwner} onClick={handleStartAsOwner} className="mt-3.5 w-full">
+        {/* 등록 여부를 아직 모르는 동안 누르면 가드가 통과해 버린다 */}
+        <Button
+          disabled={!canStartAsOwner || isCheckingBusiness || businessUnknown}
+          loading={isRegistering}
+          onClick={handleStartAsOwner}
+          className="mt-3.5 w-full"
+        >
           사업자로 시작하기
         </Button>
 
         <PreOwnerBranchCard variant="inline" onStart={handleStartAsPreOwner} />
       </div>
-
-      {/* 조건부 렌더라 닫으면 언마운트된다 — 다시 열면 1단계부터 시작한다 */}
-      {identityOpen && (
-        <PhoneVerifyPopup
-          onClose={() => setIdentityOpen(false)}
-          onVerified={handleIdentityVerified}
-          submitting={isRegistering}
-        />
-      )}
     </>
   )
 }

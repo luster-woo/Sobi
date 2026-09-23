@@ -35,14 +35,15 @@ export default function ComparisonBar({
   const percent = Math.max(0, Math.min(1, ratio)) * 100
 
   return (
-    <div className="flex items-center gap-2.5 text-[12px]">
+    <div className="text-caption flex items-center gap-2.5">
       <span className="text-text-secondary shrink-0 truncate" style={{ width: labelWidth }}>
         {label}
       </span>
 
       <span className="bg-surface-muted h-2.5 flex-1 overflow-hidden rounded-[2px]">
+        {/* 최종 너비는 style 이 정하고, 애니메이션은 0 → 1 배율만 움직인다 */}
         <span
-          className={cn('block h-full', highlight ? 'bg-primary' : 'bg-[#cfd6d3]')}
+          className={cn('animate-grow-bar block h-full', highlight ? 'bg-primary' : 'bg-[#cfd6d3]')}
           style={{ width: `${percent}%` }}
         />
       </span>

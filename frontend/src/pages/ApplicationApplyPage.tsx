@@ -4,16 +4,27 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import ApplicationChecklist from '@/features/application/components/ApplicationChecklist'
 import ApplicationDocumentList from '@/features/application/components/ApplicationDocumentList'
 import ApplicationSubmitForm from '@/features/application/components/ApplicationSubmitForm'
+import DraftWritingModal from '@/features/application/components/DraftWritingModal'
+import OcrScanModal from '@/features/application/components/OcrScanModal'
 import {
   useApplicationDetail,
   useCancelApplication,
-  useRequestDraft,
+  useDownloadProgramDocument,
   useSubmitApplication,
   useUploadDocument,
+  useWriteDraft,
 } from '@/features/application/hooks/useApplication'
+import { useLocalPreviews } from '@/features/application/hooks/useLocalPreviews'
 import { usePayoutAccounts } from '@/features/application/hooks/usePayoutAccounts'
-import { describeProduct } from '@/features/application/model/summary'
-import { UPLOAD_ACCEPT_LABEL, UPLOAD_MAX_SIZE_MB } from '@/features/application/model/upload'
+import { submitApplicationErrorMessage } from '@/features/application/model/applicationError'
+import { downloadErrorMessage } from '@/features/application/model/downloadError'
+import { productName, productSummary } from '@/features/application/model/summary'
+import {
+  SUBMIT_ACCEPT_LABEL,
+  UPLOAD_MAX_SIZE_MB,
+  WRITE_ACCEPT_LABEL,
+} from '@/features/application/model/upload'
+import { uploadErrorMessage } from '@/features/application/model/uploadError'
 import { ROUTES } from '@/shared/constants/routes'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import { APPLICATION_STATUS_LABEL } from '@/shared/types/application'
@@ -23,6 +34,8 @@ import EmptyState from '@/shared/ui/EmptyState'
 import Modal from '@/shared/ui/Modal'
 import Panel from '@/shared/ui/Panel'
 import Skeleton from '@/shared/ui/Skeleton'
+import { formatMoneyShort } from '@/shared/utils/formatters'
+import { maskAccountNo } from '@/shared/utils/mask'
 
 /**
  * 대출·지원사업 신청 · 서류 제출 (S15P21D101-189 · 194)
@@ -46,24 +59,20 @@ export function ApplicationApplyPage() {
   const { data: detail, isLoading, isError } = useApplicationDetail(applicationId)
   const { data: accounts } = usePayoutAccounts()
   const upload = useUploadDocument(applicationId)
-  const draft = useRequestDraft(applicationId)
-  const submit = useSubmitApplication()
+  const { previews, setPreview } = useLocalPreviews()
+  const draft = useWriteDraft()
+  const downloadOriginal = useDownloadProgramDocument()
+  const submit = useSubmitApplication(applicationId)
   const cancel = useCancelApplication()
 
   const [amount, setAmount] = useState('')
-  const [accountNo, setAccountNo] = useState('')
+  const [accountId, setAccountId] = useState<number | null>(null)
   const [cancelOpen, setCancelOpen] = useState(false)
-
   /*
-   * 서버가 이미 들고 있는 값으로 폼을 채운다. useEffect 로 하면 한 번 더 그려지고
-   * set-state-in-effect 규칙에도 걸려서, 렌더 중에 비교해 맞춘다.
+   * 제출 확인 모달. 누르는 순간 실제로 대출이 실행되고 계좌가 열려서, 취소와 마찬가지로
+   * 한 번 확인받는다. 같은 모달이 확인 → 진행 중 → 결과 세 모습을 갖는다.
    */
-  const [seededId, setSeededId] = useState<number | null>(null)
-  if (detail && seededId !== detail.applicationId) {
-    setSeededId(detail.applicationId)
-    setAmount(detail.applyAmount ? String(detail.applyAmount) : '')
-    setAccountNo(detail.accountNo ?? '')
-  }
+  const [submitOpen, setSubmitOpen] = useState(false)
 
   /*
    * 데이터가 오기 전에도 '목록으로' 를 그려야 해서 경로로 판단한다.
@@ -98,35 +107,71 @@ export function ApplicationApplyPage() {
     )
   }
 
-  const { product, documents, status } = detail
-  const summary = describeProduct(product)
+  const { documents, status } = detail
+  const name = productName(detail)
+  const summary = productSummary(detail)
+  /* 금액·계좌는 대출에서만 받는다. 지원사업은 유형과 무관하게 돈이 오가지 않는다 */
+  const isLoan = detail.loan !== null
+
+  /*
+   * 제출 결과. 있으면 모달이 결과 화면으로 바뀐다.
+   *
+   * 갈 곳이 결과마다 다르다. 실행됐으면 다음 할 일이 상환이고, 거절이면 신청 현황에
+   * 사유가 남는다. 성공한 사람을 신청 현황으로 보내면 할 일이 없는 화면을 본다.
+   */
+  const submitResult = submit.data ?? null
+  const submitResultTitle = (() => {
+    if (submitResult?.status !== 'PAID') return '심사에서 거절됐어요'
+    return isLoan ? '대출이 실행됐어요' : '지급이 완료됐어요'
+  })()
+
+  /*
+   * 다음에 할 일이 있는 곳으로 보낸다. 대출이 실행됐으면 그게 상환이고, 나머지는 전부
+   * 신청 현황이다 — 지원사업은 상환이 없고, 거절이면 사유가 신청 현황에 남는다.
+   */
+  const submitDoneTo =
+    isLoan && submitResult?.status === 'PAID' ? ROUTES.LOAN_REPAYMENTS : ROUTES.APPLICATIONS
   // 제출하고 나면 서류도 금액도 더 손댈 수 없다
   const isEditable = status === 'PREPARING'
-  const selectedAccount = accounts?.find((account) => account.accountNo === accountNo)
+  const selectedAccount = accounts?.find((account) => account.accountId === accountId)
 
   const handleUpload = (applicationDocumentId: number, file: File) => {
     upload.mutate(
       { applicationDocumentId, file },
       {
-        onSuccess: () => showToast('올렸어요. 검증이 시작됩니다.'),
-        onError: () => showToast('업로드에 실패했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+        /*
+         * 작성 서류는 검증을 타지 않아 올리는 즉시 끝난다. 제출 서류만 AI 검증이 뒤에서 돌고,
+         * 그 결과는 상세 폴링으로 받는다.
+         */
+        onSuccess: (result) => {
+          setPreview(applicationDocumentId, file)
+          showToast(
+            result.validationStatus === 'PASSED' ? '올렸어요.' : '올렸어요. 검증이 시작됩니다.',
+          )
+        },
+        onError: (error) => showToast(uploadErrorMessage(error), 'danger'),
       },
     )
   }
 
-  const handleRequestDraft = (applicationDocumentId: number) => {
-    draft.mutate(applicationDocumentId, {
-      onSuccess: () => showToast('초안을 만들고 있어요. 잠시만 기다려 주세요.'),
-      onError: () => showToast('초안 작성에 실패했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+  /**
+   * AI 초안 받기.
+   *
+   * 만들기와 받기가 한 번이라 성공하면 훅이 그대로 파일을 저장한다. 최대 5분이라
+   * 진행 모달을 띄운다 — 버튼만 잠그면 사용자가 멈춘 줄 알고 떠난다.
+   */
+  const handleWriteDraft = (programDocumentId: number) => {
+    draft.mutate(programDocumentId, {
+      onSuccess: () => showToast('초안을 받았어요. 내용을 확인하고 올려주세요.'),
+      onError: (error) => void downloadErrorMessage(error).then((m) => showToast(m, 'danger')),
     })
   }
 
-  /*
-   * 새 탭으로 열어 브라우저가 받게 한다. a[download] 를 쓰면 다른 출처의 파일에는
-   * 속성이 무시되어 내려받기 대신 이동이 되는데, 그럴 바엔 처음부터 열어 주는 편이 낫다.
-   */
-  const handleDownload = (url: string) => {
-    window.open(url, '_blank', 'noopener')
+  /** 기관이 배포하는 빈 서식 받기 */
+  const handleDownloadOriginal = (programDocumentId: number) => {
+    downloadOriginal.mutate(programDocumentId, {
+      onError: (error) => void downloadErrorMessage(error).then((m) => showToast(m, 'danger')),
+    })
   }
 
   /**
@@ -146,17 +191,26 @@ export function ApplicationApplyPage() {
     })
   }
 
+  /**
+   * 최종 신청.
+   *
+   * 되돌릴 수 없다. 서버가 이 한 번의 요청에서 심사·계좌개설·입금까지 끝낸다 —
+   * 접수만 하고 기다리는 구간이 없다. 그래서 결과도 응답으로 바로 온다.
+   *
+   * 거절도 200 이라 onError 가 아니라 결과 화면에서 status 로 가른다.
+   */
   const handleSubmit = () => {
     submit.mutate(
       {
-        applicationId,
-        // 지원사업은 금액을 입력받지 않는다
-        applyAmount: detail.loanId !== null ? Number(amount) : null,
-        accountNo,
+        // 지원사업은 둘 다 안 보낸다
+        amount: isLoan ? Number(amount) : null,
+        accountId: isLoan ? accountId : null,
       },
       {
-        onSuccess: () => showToast('신청이 완료됐어요.'),
-        onError: () => showToast('신청에 실패했어요. 잠시 후 다시 시도해 주세요.', 'danger'),
+        onError: (error) => {
+          setSubmitOpen(false)
+          showToast(submitApplicationErrorMessage(error, { isLoan }), 'danger')
+        },
       },
     )
   }
@@ -175,7 +229,7 @@ export function ApplicationApplyPage() {
           ← 목록으로
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-h2 text-text font-bold break-keep">{product.name}</h1>
+          <h1 className="text-h2 text-text font-bold break-keep">{name}</h1>
           {!isEditable && <Badge variant="neutral">{APPLICATION_STATUS_LABEL[status]}</Badge>}
         </div>
         {/* 금리도 금액도 없는 공고가 있어서, 요약이 비면 줄 자체를 안 그린다 */}
@@ -189,9 +243,11 @@ export function ApplicationApplyPage() {
               documents={documents}
               onUpload={handleUpload}
               onFileError={(message) => showToast(message, 'warning')}
-              onRequestDraft={handleRequestDraft}
-              onDownload={handleDownload}
+              onWriteDraft={handleWriteDraft}
+              draftingDocumentId={draft.isPending ? (draft.variables ?? null) : null}
+              onDownloadOriginal={handleDownloadOriginal}
               readOnly={!isEditable}
+              previews={previews}
             />
 
             {isEditable ? (
@@ -201,10 +257,10 @@ export function ApplicationApplyPage() {
                   accounts={accounts ?? []}
                   amount={amount}
                   onAmountChange={setAmount}
-                  accountNo={accountNo}
-                  onAccountNoChange={setAccountNo}
+                  accountId={accountId}
+                  onAccountIdChange={setAccountId}
                   isSubmitting={submit.isPending}
-                  onSubmit={handleSubmit}
+                  onSubmit={() => setSubmitOpen(true)}
                 />
 
                 {/*
@@ -228,26 +284,37 @@ export function ApplicationApplyPage() {
         </Panel>
 
         <div className="flex flex-col gap-5">
-          <ApplicationChecklist documents={documents} />
+          {/*
+            서류가 없으면 체크리스트도 업로드 제한도 할 말이 없다. '0 / 0 완료' 와 받지도
+            않을 확장자 목록만 남아서, 빈 칸을 채우려고 둔 것처럼 보인다.
+          */}
+          {documents.length > 0 && <ApplicationChecklist documents={documents} />}
 
-          <Panel title="업로드 제한">
-            <dl className="text-body2 flex flex-col gap-2 px-[15px] py-4">
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary">형식</dt>
-                <dd className="text-text">{UPLOAD_ACCEPT_LABEL}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary">용량</dt>
-                <dd className="text-text">파일당 {UPLOAD_MAX_SIZE_MB}MB 이하</dd>
-              </div>
-            </dl>
-          </Panel>
+          {documents.length > 0 && (
+            <Panel title="업로드 제한">
+              <dl className="text-body2 px-card flex flex-col gap-2 py-4">
+                {/* 제출 서류는 AI 가 OCR 로 읽어야 해서 형식이 좁다 */}
+                <div className="flex justify-between gap-4">
+                  <dt className="text-text-secondary shrink-0">제출 서류</dt>
+                  <dd className="text-text text-right">{SUBMIT_ACCEPT_LABEL}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-text-secondary shrink-0">작성 서류</dt>
+                  <dd className="text-text text-right">{WRITE_ACCEPT_LABEL}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-text-secondary">용량</dt>
+                  <dd className="text-text">파일당 {UPLOAD_MAX_SIZE_MB}MB 이하</dd>
+                </div>
+              </dl>
+            </Panel>
+          )}
 
           {selectedAccount && (
             <Panel title="승인되면 출금 계좌로">
-              <div className="px-[15px] py-4">
+              <div className="px-card py-4">
                 <p className="text-body1 text-text font-semibold">
-                  {selectedAccount.bankName} {selectedAccount.accountNo}
+                  {selectedAccount.bankName} {maskAccountNo(selectedAccount.accountNo)}
                 </p>
                 <p className="text-body2 text-text-secondary mt-1 break-keep">
                   신청 화면에서 고른 출금 계좌예요. 실행금 입금과 자동상환에 사용돼요.
@@ -262,7 +329,7 @@ export function ApplicationApplyPage() {
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
         title="신청을 취소할까요?"
-        description={product.name}
+        description={name}
         footer={
           <>
             <Button
@@ -283,6 +350,113 @@ export function ApplicationApplyPage() {
           올려야 합니다.
         </p>
       </Modal>
+
+      {/*
+        제출 모달. 한 모달이 세 모습을 갖는다 — 확인 → 진행 중 → 결과.
+        열고 닫기를 반복하면 어수선하고, 무엇보다 진행 중 구간에 창이 비면 사용자가
+        한 번 더 누르거나 떠난다. 그 사이에 돈은 이미 나가고 있다.
+
+        결과(submit.data)가 있으면 결과 화면이 이긴다. 거절도 200 이라 여기서 가른다.
+      */}
+      <Modal
+        open={submitOpen}
+        onClose={() => {
+          // 진행 중에는 닫히지 않는다. 금융망 호출이 도는 중이다
+          if (submit.isPending) return
+          setSubmitOpen(false)
+          // X 로 닫든 버튼으로 닫든 같은 곳으로 간다
+          if (submit.data) navigate(submitDoneTo)
+        }}
+        title={
+          submitResult
+            ? submitResultTitle
+            : isLoan
+              ? `${formatMoneyShort(Number(amount))}을 신청할까요?`
+              : '신청할까요?'
+        }
+        description={submitResult ? undefined : name}
+        footer={
+          submitResult ? (
+            <Button
+              onClick={() => {
+                setSubmitOpen(false)
+                navigate(submitDoneTo)
+              }}
+            >
+              {submitDoneTo === ROUTES.LOAN_REPAYMENTS ? '상환 관리로' : '신청 현황으로'}
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setSubmitOpen(false)}
+                disabled={submit.isPending}
+              >
+                돌아가기
+              </Button>
+              <Button onClick={handleSubmit} loading={submit.isPending}>
+                신청하기
+              </Button>
+            </>
+          )
+        }
+      >
+        {submitResult ? (
+          <div className="text-body2 text-text-secondary flex flex-col gap-2 break-keep">
+            {submitResult.status === 'PAID' ? (
+              isLoan ? (
+                <>
+                  {submitResult.amount !== null && (
+                    <p className="text-body1 text-text font-semibold">
+                      {formatMoneyShort(submitResult.amount)}
+                    </p>
+                  )}
+                  {selectedAccount && (
+                    <p>
+                      {selectedAccount.bankName} {selectedAccount.accountNo} 로 입금됩니다.
+                    </p>
+                  )}
+                  {submitResult.loanAccountNo && (
+                    <p>
+                      대출 계좌 {submitResult.loanAccountNo} · 내일부터 같은 계좌에서 자동이체로
+                      상환됩니다.
+                    </p>
+                  )}
+                </>
+              ) : (
+                /*
+                 * 지원사업은 금액도 계좌도 대출 계좌번호도 없어서, 대출 쪽 가지를 그대로
+                 * 태우면 본문이 통째로 빈다. 다음에 무엇을 보면 되는지만 남긴다.
+                 */
+                <p>신청이 끝났어요. 진행 내역은 신청 현황에서 볼 수 있어요.</p>
+              )
+            ) : (
+              <p>{submitResult.rejectReason ?? '사유가 확인되지 않았어요.'}</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-body2 text-text-secondary break-keep">
+            {isLoan && selectedAccount
+              ? `${selectedAccount.bankName} ${selectedAccount.accountNo} 로 입금되고, 다음 날부터 같은 계좌에서 자동이체로 상환됩니다. `
+              : ''}
+            신청 후에는 취소할 수 없어요.
+          </p>
+        )}
+      </Modal>
+
+      {/*
+        초안 진행 모달. 닫을 수 없다 — 창을 닫아도 요청은 계속 돌고, 다 만든 파일을
+        받을 자리가 사라진다. AI 가 한 번 도는 비용이 그대로 버려진다.
+      */}
+      <DraftWritingModal
+        status={draft.status}
+        documentName={
+          documents.find((doc) => doc.programDocumentId === draft.variables)?.documentName ??
+          '신청 서류'
+        }
+      />
+
+      <OcrScanModal documents={documents} previews={previews} />
     </div>
   )
 }

@@ -107,6 +107,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
+                .birthDate(request.getBirthDate())      // ← 추가
                 .provider(Provider.LOCAL)
                 .role(Role.PREENTREPRENEUR)
                 .userKey(userKey)
@@ -149,6 +150,7 @@ public class AuthServiceImpl implements AuthService {
                     .name(googleUser.getName())
                     .provider(Provider.GOOGLE)
                     .providerId(googleUser.getProviderId())
+                    .role(Role.PREENTREPRENEUR)
                     .userKey(ssafyMemberClient.getOrCreateUserKey(googleUser.getEmail()))
                     .build();
             return issueTokens(userRepository.save(newUser), true);

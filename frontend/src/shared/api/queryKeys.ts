@@ -19,6 +19,18 @@ export const queryKeys = {
     me: ['auth', 'me'] as const,
   },
 
+  /**
+   * 마이페이지 한 화면 분량(`GET /user/mypage`).
+   *
+   * `auth.me` 와 다르다. 저쪽은 세션 복구용 `GET /user/me` 로 여섯 필드뿐이고 앱 진입
+   * 시 한 번 돌고 끝이다(`staleTime: Infinity`). 이쪽은 사업자 정보·계좌까지 모아
+   * 받고 마이페이지를 열 때마다 최신을 본다.
+   */
+  user: {
+    all: ['user'] as const,
+    mypage: ['user', 'mypage'] as const,
+  },
+
   business: {
     all: ['business'] as const,
     /** 사이드바 하단 업체 요약. 업체 정보를 수정하면 여기를 무효화한다 */
@@ -35,6 +47,8 @@ export const queryKeys = {
   bookmark: {
     all: ['bookmark'] as const,
     me: ['bookmark', 'me'] as const,
+    /** 대시보드 리본용 id 집합. 같은 엔드포인트지만 쓰는 모양이 달라 키를 나눈다 */
+    ids: ['bookmark', 'ids'] as const,
   },
 
   /**
@@ -48,6 +62,11 @@ export const queryKeys = {
     /** ⚠️ 경로 변수와 같다 — insurance.id 가 아니라 insurance_checklist.id */
     detail: (insuranceChecklistId: number) =>
       ['insurance', 'detail', insuranceChecklistId] as const,
+  },
+
+  dashboard: {
+    all: ['dashboard'] as const,
+    me: ['dashboard', 'me'] as const,
   },
 
   notification: {
@@ -64,6 +83,8 @@ export const queryKeys = {
     /** 업종·지역 목록. 정적 데이터라 파라미터가 없다 */
     businesses: ['market', 'businesses'] as const,
     regions: ['market', 'regions'] as const,
+    /** 행정동 경계. public 의 정적 파일이라 배포 전에는 바뀌지 않는다 */
+    boundaries: ['market', 'boundaries'] as const,
   },
 
   /**
@@ -80,6 +101,18 @@ export const queryKeys = {
   account: {
     all: ['account'] as const,
     list: ['account', 'list'] as const,
+  },
+
+  /**
+   * 마이데이터. 조회 API 가 없어 `link` 는 쿼리 키가 아니라 **뮤테이션 키**로도 쓴다.
+   *
+   * 연동은 동의 화면에서 쏘고 결과는 수집·판정 화면이 읽는다. 화면이 갈려 있어
+   * 뮤테이션 상태를 키로 찾아야 하고(`useMutationState`), 결과 요약은 같은 키로
+   * 캐시에 얹어 판정 화면이 꺼내 쓴다.
+   */
+  mydata: {
+    all: ['mydata'] as const,
+    link: ['mydata', 'link'] as const,
   },
 
   application: {
@@ -110,6 +143,9 @@ export const queryKeys = {
     all: ['supportProgram'] as const,
     list: (params: object) => ['supportProgram', 'list', params] as const,
     detail: (supportProgramId: number) => ['supportProgram', 'detail', supportProgramId] as const,
+    /** 판정 사유 설명. 상세와 따로 부르므로 키도 따로 둔다 */
+    explanation: (supportProgramId: number) =>
+      ['supportProgram', 'explanation', supportProgramId] as const,
     /** 자연어 검색 (193). 목록과 엔드포인트·메서드가 달라 키도 나눈다 */
     search: (params: object) => ['supportProgram', 'search', params] as const,
   },

@@ -28,8 +28,11 @@ export const INSURANCE_STATUS_LABEL: Record<InsuranceStatus, string> = {
 /**
  * 자격 판정 요약. 대출 20개 + 지원사업 32개를 한 번에 센 수다.
  *
- * urgent 는 possible 의 부분집합이다 — 신청할 수 있는데 마감이 임박한 건수.
- * possible + impossible = total 이고 urgent 는 그 합에 들어가지 않는다.
+ * possible + needsCheck + impossible + inProgress = total 이 항상 성립해야 한다.
+ *
+ * urgent 는 그 합에 들어가지 않는 별개 수다. '신청할 수 있는 것 중 마감이 임박한 수'
+ * 이고, 신청할 수 있는 것은 possible 과 needsCheck 둘 다다(`canApply`). 예비창업자는
+ * possible 이 0 이고 전부 needsCheck 라, 0건 옆에 urgent 가 붙는 것이 정상이다.
  */
 export interface JudgementSummary {
   /**
@@ -40,8 +43,17 @@ export interface JudgementSummary {
    */
   updatedAt: ISODate | null
   possible: number
+  /**
+   * 판정하지 못한 건수(지원사업 UNKNOWN).
+   *
+   * 예비창업자는 판정 자체가 없어 전부 여기로 온다. 신청은 열려 있지만(`canApply`)
+   * '가능' 으로 세면 안 된다 — 조건을 사람이 확인해야 하는 건수다.
+   */
+  needsCheck: number
   urgent: number
   impossible: number
+  /** 이미 신청해 판정 밖으로 나간 건수(PREPARING~PAID) */
+  inProgress: number
   total: number
 }
 
@@ -73,11 +85,13 @@ export interface DashboardLoan {
   minLoanBalance: number
   /** 대출 한도 상한(원) */
   maxLoanBalance: number
-  /** 상환 기간(개월). 월납이라 납입 횟수와 같은 값이다 */
+  /**
+   * 대출 기간(**일**). 개월이 아니다 — 백엔드 `LoanDetailResponse` 가 '대출 기간(일)' 이고
+   * 금융망도 2~365일을 받는다. 매일 한 회차씩 갚아 회차 수와 값이 같을 뿐이다.
+   */
   period: number
   /** 접수 마감일. null 이면 상시 */
   endDate: ISODate | null
-  isBookmark: boolean
 }
 
 export interface DashboardSupportProgram {
@@ -88,17 +102,13 @@ export interface DashboardSupportProgram {
   jrsdInsttNm: string
   type: SupportProgramType
   /**
-   * 지원 금액(원).
+   * 지원 금액(원). 공고문에 없으면 null 이고 카드에는 '금액 미정' 이 붙는다.
    *
-   * 목록 타입(SupportProgramListItem)에서는 ETC 에 금액이 없어 판별 유니온이지만
-   * 여기서는 필수다. 카드 아래 금액 줄이 비면 카드 높이가 어긋나 비교할 수가 없어서,
-   * 금액 없는 사업은 스트립에 올리지 않는다. 표를 쓰는 목록 화면은 상관없다.
-   *
-   * ⚠️ 판정 결과에 금액 없는 사업이 섞여 올 때 서버가 걸러 줄지 프론트가 걸러야 할지
-   *    확인 필요.
+   * 금액이 없다고 카드를 버리지 않는다. 버리면 헤더 건수와 카드 수가 어긋나
+   * '31건 신청 가능' 옆에 빈 스트립이 남는다.
    */
-  minBalance: number
-  maxBalance: number
+  minBalance: number | null
+  maxBalance: number | null
   /**
    * 연 이율(%). 지원대출(type LOAN)에만 있고 지원금·기타는 null 이다.
    * null 이면 금리 알약을 그리지 않는다 — '금리 -' 는 정보가 아니다.
@@ -106,7 +116,6 @@ export interface DashboardSupportProgram {
   interestRate: number | null
   /** 접수 마감일. null 이면 상시 */
   endDate: ISODate | null
-  isBookmark: boolean
 }
 
 export interface RepaymentSummary {
@@ -142,14 +151,14 @@ export interface SalesPoint {
 }
 
 export interface BusinessSnapshot {
-  /** 마이데이터 갱신일 */
-  updatedAt: ISODate
+  /** 마이데이터 갱신일. null 이면 갱신 문구를 뺀다 */
+  updatedAt: ISODate | null
   /** 최근 월 매출(원) */
   monthlySales: number
-  /** 전월 대비 매출 증감(%). 음수면 감소 */
-  salesChangeRate: number
-  /** 현금 흐름 증감(%). 음수면 악화 */
-  cashFlowChangeRate: number
+  /** 전월 대비 매출 증감(%). 음수면 감소, null 이면 칸을 뺀다 */
+  salesChangeRate: number | null
+  /** 현금 흐름 증감(%). 음수면 악화, null 이면 칸을 뺀다 */
+  cashFlowChangeRate: number | null
   /** 총 대출 잔액(원) */
   totalLoanBalance: number
   /** 최근 6개월 매출. 오래된 달이 앞이다 */
@@ -194,7 +203,11 @@ export interface StoreCondition {
  * 상태를 바꾸면 그 목록만 다시 받으면 되고, 대시보드 전체를 무효화할 이유가 없다.
  */
 export interface OwnerDashboardData {
-  judgement: JudgementSummary
+  /**
+   * 판정 요약. 대출·지원사업 목록 조회로 따로 세는 값이라 그쪽이 실패하면 null 이다.
+   * 그때는 패널만 빼고 나머지를 그린다 — 숫자 하나 때문에 화면을 통째로 버리지 않는다.
+   */
+  judgement: JudgementSummary | null
   loans: StripSummary<DashboardLoan>
   supportPrograms: StripSummary<DashboardSupportProgram>
   /** 대출이 없으면 null — 상환 패널을 그리지 않는다 */

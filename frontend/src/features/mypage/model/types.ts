@@ -1,97 +1,100 @@
-import type { ProductStatus } from '@/shared/constants/productStatus'
-import type { AuthProvider, ID, ISODate, ISODateTime } from '@/shared/types'
+import type { SupportStatus } from '@/shared/constants/productStatus'
+import type { AuthProvider, ID, ISODate, ISODateTime, UserRole } from '@/shared/types'
 
 /**
- * 마이페이지가 화면에 그리는 값.
+ * 마이페이지가 화면에 그리는 값. `GET /user/mypage` 응답을 화면 모양으로 바꾼 것이다.
  *
- * 서버 응답 타입이 아니다. `GET /user/me` 가 이 대부분을 주기로 되어 있지만 아직
- * 확정되지 않은 것이 많다 — businessInfo·myData 가 null 일 수 있는지, 필드가
- * snake_case 인지, 계좌가 여기 실리는지 별도 `/account` 인지.
- *
- * 그래서 화면에 필요한 모양으로 먼저 정의하고 값은 mock.ts 가 채운다.
+ * 응답을 그대로 쓰지 않는 이유는 표기가 섞여 있어서다 — `business_name` · `business_type`
+ * 은 snake_case 인데 `openDate` · `bsn` 은 아니고, 합계 이름도 `balanceSum` 이다.
+ * 변환은 `api/me.ts` 한 곳에서만 하고 화면은 아래 타입만 본다.
  */
 
+/**
+ * ⚠️ `userId` 는 담지 않는다. 쓰는 곳이 마이데이터 쿨다운 키뿐인데 거기는 세션
+ *    스토어에서 읽고, 세션 복구(`GET /user/me`)가 화면보다 먼저 돈다.
+ */
 export interface MyProfile {
-  userId: ID
   name: string
   email: string
-  /** 소셜 가입이면 비밀번호 변경을 못 한다 */
+  role: UserRole
+  /** 소셜 가입이면 비밀번호를 바꿀 수 없다 */
   provider: AuthProvider
 }
 
 /**
- * 사업자 정보. `business_info` 한 행이다.
+ * 사업자 정보. 예비창업자는 null 이다 — `business_info` 행 자체가 없다.
  *
- * 예비창업자는 null 이다 — 같은 테이블을 쓰지만 brn·상호·주소가 비어 있어
- * 보여줄 것이 없다.
+ * ⚠️ `ownerName` 은 서버가 `users.name` 을 넣어 준다. `business_info` 에 대표자명
+ *    컬럼이 없어서다 — 법인이면 대표자와 계정 주인이 다를 수 있다.
  */
 export interface MyBusinessInfo {
   businessName: string
   /** 하이픈 포함 '123-45-67890' */
   brn: string
   ownerName: string
-  /** '음식점업 (한식)' 처럼 대분류와 소분류를 합친 문구 */
   industryName: string
-  /** 시·군·구까지. 상세 주소는 마이페이지에 필요 없다 */
-  region: string
+  /** 전체 주소. 시·군·구만 필요하면 화면에서 자른다 */
+  address: string
   openDate: ISODate
 }
 
-/** 마이데이터 연동 항목 한 줄 */
-export interface MyDataLink {
-  label: string
-  /** 갱신 시각. 한 번도 연동하지 않았으면 null */
-  updatedAt: ISODateTime | null
-}
-
+/**
+ * 마이데이터 연동 상태. 판정한 적이 없으면 null.
+ *
+ * 서버가 연동 여부를 따로 들고 있지 않아 판정 이력으로 갈음한다 — 연동과 판정이
+ * `MydataServiceImpl.link()` 한 흐름이라 실무상 같다. 계좌 유무와는 상관없다.
+ */
 export interface MyDataStatus {
-  /** 연동 자체를 한 적이 없으면 false — 그때는 '연동하기' 를 보여준다 */
-  linked: boolean
-  links: MyDataLink[]
+  /** 마지막 판정 시각. 서버가 수집 시각 대신 이걸 준다 — 둘이 한 흐름이라 거의 같다 */
+  linkedAt: ISODateTime | null
 }
 
-/** 마이페이지의 계좌 요약. 상세는 연동 계좌 화면(18-3)이 맡는다 */
+/**
+ * 계좌 요약. 계좌가 한 건도 없으면 null 이다.
+ *
+ * 판정·마이데이터 연동 여부와 무관하다 — 서버가 매 요청 금융망에서 실시간으로
+ * 받아오므로, 판정 전이어도 계좌가 있으면 값이 온다.
+ *
+ * ⚠️ 금융망 실시간 조회라 **실패해도 0 으로 온다.** 서버가 예외를 삼키고 화면을
+ *    띄우는 쪽을 택했다(`UserServiceImpl.fetchDepositAccounts`). 그래서 계좌가
+ *    없는 것과 '못 불러옴' 이 구분되지 않고, 둘 다 여기서 null 이 된다.
+ */
 export interface AccountSummary {
   /** 입출금 합계(원) */
   totalBalance: number
   /** 대출 잔액 합계(원) */
   totalLoanBalance: number
-  /** 연동된 계좌 수 */
+  /** 입출금 + 대출 계좌 수 */
   accountCount: number
-  /** 마이데이터 갱신 시각 */
-  updatedAt: ISODateTime
+  /** 입출금 계좌의 은행 수. 한 은행에 계좌가 둘이면 1 이다 */
+  institutionCount: number
 }
 
 /**
- * 출금·실행 계좌. 대출금이 들어오고 자동이체가 빠지는 계좌다.
+ * 대출금이 들어오고 자동이체가 빠지는 계좌. 대출이 없으면 null.
  *
- * ⚠️ `account` 테이블과 `automatic_transfer` 를 조인한 값으로 보인다. 아직 어느
- *    엔드포인트가 주는지 정해지지 않았다.
+ * ⚠️ `accountNo` 는 원본이다. 화면에는 `maskAccountNo` 로 가려서 띄운다 (395).
  */
 export interface PayoutAccount {
   bankName: string
-  /** 마스킹된 계좌번호 '****-3412' */
-  maskedNumber: string
-  autoTransfer: boolean
+  accountNo: string
 }
 
 export interface MyPageData {
   profile: MyProfile
   /** 예비창업자는 null */
   business: MyBusinessInfo | null
-  myData: MyDataStatus
-  /** 마이데이터 연동 전이면 null */
+  /** 연동 전이면 null */
+  myData: MyDataStatus | null
+  /** 연동 전이면 null */
   accountSummary: AccountSummary | null
+  /** 대출이 없으면 null */
   payoutAccount: PayoutAccount | null
-  /** 새 공고 알림 수신 여부. `PATCH /user/notification` */
-  notification: boolean
-  /** 바로가기에 붙는 숫자들 */
-  shortcut: {
-    applicationInProgress: number
-    favoriteCount: number
-    /** 다음 상환일. 대출이 없으면 null */
-    nextRepaymentDate: ISODate | null
-  }
+  /*
+   * 알림 수신 여부는 담지 않는다. 서버는 값을 주고 `PATCH /user/notification` 토글도
+   * 있지만, 알림을 보내거나 보여주는 기능이 통째로 없어(`/notifications` 매핑 부재)
+   * 화면에 스위치를 둘 수 없다. 알림 도메인이 생기면 필드와 훅을 같이 되살린다.
+   */
 }
 
 /* ---------- 18-1 관심 목록 ---------- */
@@ -117,14 +120,15 @@ interface FavoriteBase {
   title: string
   /** 대출은 은행명, 지원사업은 소관기관명 */
   organization: string
-  status: ProductStatus
+  /**
+   * 두 도메인을 한 목록에 담아서 넓은 쪽(지원사업)의 값 집합을 쓴다.
+   * 대출에는 UNKNOWN 이 오지 않는다 — 정량 비교라 '모른다' 가 나올 수 없다.
+   */
+  status: SupportStatus
 }
 
 /**
  * 관심 목록의 대출 한 행.
- *
- * 값은 대출 목록 표(loanColumns)와 같은 것을 보여준다 — 금리와 한도. 같은 상품이
- * 두 화면에서 다른 값으로 읽히면 저장해둔 것과 같은 것인지 확인해야 한다.
  *
  * ⚠️ 마감일이 없다. `loan` 테이블에 end_date 컬럼 자체가 없는 상시 접수 상품이라
  *    서버가 줄 것이 없다. 지원사업에만 있는 필드라 유니온으로 갈라 뒀다 —
@@ -136,7 +140,12 @@ export interface FavoriteLoan extends FavoriteBase {
   interestRate: number
   /** 한도 상한(원) */
   maxLoanBalance: number
-  /** 대출 기간(개월). 보조 문구에 '36개월' 로 붙는다 */
+  /**
+   * 대출 기간(**일**). 보조 문구에 '360일' 로 붙는다.
+   *
+   * ⚠️ 개월이 아니다. 금융망 대출이 일 단위로 매일 한 회차씩 갚는 구조라
+   *    백엔드 `LoanDetailResponse` 도 '대출 기간(일)' 로 적어 뒀다.
+   */
   period: number
 }
 
@@ -152,10 +161,7 @@ export interface FavoriteSupportProgram extends FavoriteBase {
   maxBalance: number | null
   /** 접수 마감일. null 이면 상시 접수 */
   endDate: ISODate | null
-  /**
-   * 연 이율(%). 융자형 공고에만 있고 보조금·바우처면 null 이다.
-   * 값이 있을 때만 보조 문구에 덧붙인다.
-   */
+  /** 연 이율(%). 융자형 공고에만 있고 보조금·바우처면 null */
   interestRate: number | null
 }
 
@@ -168,47 +174,5 @@ export interface FavoriteSupportProgram extends FavoriteBase {
  * 구별 유니온인 이유: 두 유형이 가진 값이 실제로 다르다(대출은 기간, 지원사업은
  * 마감일). 한 인터페이스에 다 넣고 nullable 로 두면 화면에서 `item.endDate` 를
  * 무심코 읽었을 때 대출 행에서 조용히 비어 버린다. 갈라 두면 타입이 먼저 막는다.
- *
- * 라벨(`금리` · `지원 금액`)은 항목이 들고 있지 않다. 유형이 정하는 값이라
- * 항목마다 담으면 같은 대출인데 어떤 줄은 '금리', 어떤 줄은 '이자율' 이 될 수 있다.
- * 화면에서 kind 로 정한다.
  */
 export type FavoriteItem = FavoriteLoan | FavoriteSupportProgram
-
-/* ---------- 18-3 연동 계좌 ---------- */
-
-export interface DepositAccount {
-  accountId: ID
-  bankName: string
-  maskedNumber: string
-  /** '사업자 입출금 · 주거래' */
-  description: string
-  balance: number
-  /** 대출금이 들어오고 자동이체가 빠지는 계좌 */
-  isPayout: boolean
-  autoTransfer: boolean
-}
-
-export interface LoanAccount {
-  accountId: ID
-  /** 상품명 */
-  name: string
-  /** 연 이율(%) */
-  interestRate: number
-  /** '거치 중 · 첫 상환 10. 15' 처럼 상태를 한 줄로 */
-  description: string
-  /** 남은 잔액(원) */
-  balance: number
-}
-
-export interface LinkedAccountsData {
-  updatedAt: ISODateTime
-  /** 입출금 합계(원) */
-  totalBalance: number
-  /** 대출 잔액 합계(원) */
-  totalLoanBalance: number
-  /** 연동 기관 수. 계좌 수가 아니다 — 한 은행에 계좌가 둘일 수 있다 */
-  institutionCount: number
-  deposits: DepositAccount[]
-  loans: LoanAccount[]
-}

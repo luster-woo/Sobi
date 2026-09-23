@@ -32,7 +32,7 @@ export default function ApplicationChecklist({ documents }: ApplicationChecklist
         {documents.map((doc, index) => (
           <li
             key={doc.applicationDocumentId}
-            className="flex items-center gap-3 px-[15px] py-3 first:pt-4 last:pb-4"
+            className="px-card flex items-center gap-3 py-3 first:pt-4 last:pb-4"
           >
             <span
               className={cn(
@@ -44,10 +44,17 @@ export default function ApplicationChecklist({ documents }: ApplicationChecklist
             >
               {index + 1}
             </span>
-            <span className="text-body2 text-text min-w-0 flex-1 break-keep">{doc.docName}</span>
-            {doc.issuer && (
-              <span className="text-caption text-text-secondary shrink-0">{doc.issuer}</span>
-            )}
+            <span className="text-body2 text-text min-w-0 flex-1 break-keep">
+              {doc.documentName ?? '이름 없는 서류'}
+            </span>
+            {/*
+              ⚠️ 원래는 발급처(홈택스 · 인터넷등기소)를 띄웠다. 확정 응답에서 issuer 가
+                 빠져서 종류로 대신한다. 발급처는 상품마다 정해진 값이라 서버가 주는
+                 편이 맞는데, 일부러 뺀 것인지 확인이 필요하다.
+            */}
+            <span className="text-caption text-text-secondary shrink-0">
+              {doc.documentType === 'WRITE' ? '화면에서 작성' : '제출'}
+            </span>
           </li>
         ))}
       </ol>

@@ -4,7 +4,11 @@ import JudgementSummaryPanel from '@/features/dashboard/components/JudgementSumm
 import LoanStrip from '@/features/dashboard/components/LoanStrip'
 import RepaymentMiniPanel from '@/features/dashboard/components/RepaymentMiniPanel'
 import SupportProgramStrip from '@/features/dashboard/components/SupportProgramStrip'
-import { MOCK_OWNER_DASHBOARD } from '@/features/dashboard/model/mock'
+import type { OwnerDashboardData } from '@/features/dashboard/model/types'
+
+interface OwnerDashboardProps {
+  dashboard: OwnerDashboardData
+}
 
 /**
  * 사업자 대시보드 (S15P21D101-176) — 시안 10번.
@@ -21,19 +25,25 @@ import { MOCK_OWNER_DASHBOARD } from '@/features/dashboard/model/mock'
  * 오른쪽 열은 320px 고정이고 lg 미만에서 아래로 내려간다. 좁은 화면에서 두 열을
  * 유지하면 카드 스트립이 한 장도 다 안 보인다.
  *
- * ⚠️ 의무보험을 뺀 나머지는 아직 목이다(model/mock.ts). `GET /dashboard` 가 붙으면
- *    MOCK_OWNER_DASHBOARD 를 useQuery 결과로 바꾸고, 로딩·에러 처리를 여기 넣는다.
- *    의무보험은 자기 엔드포인트(`GET /insurance`)가 따로 있어 패널이 직접 받아온다.
+ * 의무보험은 자기 엔드포인트(`GET /insurance`)가 따로 있어 패널이 직접 받아온다.
  */
-export default function OwnerDashboard() {
-  const { judgement, loans, supportPrograms, repayment, snapshot } = MOCK_OWNER_DASHBOARD
+export default function OwnerDashboard({ dashboard }: OwnerDashboardProps) {
+  const { judgement, loans, supportPrograms, repayment, snapshot } = dashboard
 
   return (
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-w-0 flex-col gap-3.5">
-        <JudgementSummaryPanel summary={judgement} />
-        <LoanStrip loans={loans} />
-        <SupportProgramStrip programs={supportPrograms} />
+        {/*
+         * 판정 조회가 실패하면 패널만 빠진다. 아래 스트립과 오른쪽 열은 그대로.
+         * 다만 그때 스트립에 담기는 건 판정을 거치지 않은 추천 목록이라
+         * '지원 가능한' 이라고 말할 수 없다 — 제목을 바꿔 넘긴다.
+         */}
+        {judgement && <JudgementSummaryPanel summary={judgement} />}
+        <LoanStrip loans={loans} title={judgement ? undefined : '추천 대출'} />
+        <SupportProgramStrip
+          programs={supportPrograms}
+          title={judgement ? undefined : '추천 정부 지원사업'}
+        />
       </div>
 
       <div className="flex flex-col gap-3.5">

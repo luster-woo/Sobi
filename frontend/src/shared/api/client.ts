@@ -1,6 +1,8 @@
 import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 
 import { API_BASE_URL, endpoints, NO_REISSUE_PATHS } from '@/shared/api/endpoints'
+import { getErrorStatus } from '@/shared/api/errors'
+import { clearAuthState } from '@/shared/lib/clearAuthState'
 import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import { useUiStore } from '@/shared/lib/store/useUiStore'
 import type { ApiResponse, TokenResponse } from '@/shared/types'
@@ -13,6 +15,11 @@ const TIMEOUT_MS = 10_000
  *
  * `withCredentials` 는 refreshToken 쿠키를 보내기 위해 필요하다. 서버가 httpOnly 로
  * 내려주므로 프론트가 값을 읽거나 헤더에 실을 수 없고, 브라우저가 자동으로 붙인다.
+ *
+ * ⚠️ 이 값이 true 라고 모든 요청에 쿠키가 실리는 것은 아니다. 쿠키를 어디로 보낼지는
+ *    쿠키 자신의 `path` 가 정하고, 서버가 `path=/api/v1/auth` 로 굽는다
+ *    (`AuthController.createRefreshCookie`). 그래서 대출·신청 같은 요청에는 애초에
+ *    실리지 않는다 — 프론트에서 경로별로 끄고 켤 이유가 없다 (S15P21D101-394 점검).
  */
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -32,12 +39,41 @@ const reissueClient = axios.create({
   withCredentials: true,
 })
 
+/**
+ * CSRF 표식 (S15P21D101-394).
+ *
+ * CSRF 공격은 공격자 페이지의 `<form>` 이 우리 API 로 요청을 쏘는 방식인데, 폼은
+ * **커스텀 헤더를 붙일 수 없다.** 그래서 이 헤더의 유무가 '우리 JS 가 보낸 요청인가'
+ * 를 가르는 표식이 된다.
+ *
+ * ⚠️ **이 헤더를 붙이는 것만으로는 아무것도 막지 못한다.** 막는 것은 서버의
+ *    "이 헤더가 없으면 거부" 검사이고, 프론트는 그 검사를 통과하기 위해 붙일 뿐이다.
+ *    백엔드에 검사를 요청해 둔 상태다.
+ *
+ * 지금 당장 깨질 일은 없다 — 요청이 `/api/v1/...` 상대경로라 브라우저가 같은 출처로
+ * 보고 preflight 를 걸지 않는다. 다만 프론트를 다른 호스트의 API 로 붙이게 되면
+ * 백엔드 `SecurityConfig` 의 CORS `allowedHeaders` 에 이 이름이 있어야 한다.
+ *
+ * 참고로 지금도 대부분의 API 는 CSRF 에 면역이다. 인증을 쿠키가 아니라
+ * `Authorization` 헤더로 하기 때문이다 — 폼은 그 헤더도 못 붙인다. 쿠키로 인증하는
+ * 것은 `/auth/refresh` 하나뿐이고 그쪽은 SameSite=Strict 가 막는다.
+ */
+const CSRF_HEADER = 'X-Requested-With'
+
 api.interceptors.request.use((config) => {
   const { accessToken } = useAuthStore.getState()
 
   // 비로그인 상태에서 `Bearer null` 을 보내면 서버가 401 대신 400 을 줄 수 있다
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
 
+  config.headers[CSRF_HEADER] = 'XMLHttpRequest'
+
+  return config
+})
+
+// 재발급도 같은 표식을 단다. 서버가 검사를 켜면 이 경로만 빠져서 401 이 나면 안 된다
+reissueClient.interceptors.request.use((config) => {
+  config.headers[CSRF_HEADER] = 'XMLHttpRequest'
   return config
 })
 
@@ -133,13 +169,37 @@ api.interceptors.response.use(unwrapEnvelope, async (error: AxiosError) => {
 
   config._retried = true
 
+  let accessToken: string
+
   try {
-    const accessToken = await reissueAccessToken()
-    config.headers.Authorization = `Bearer ${accessToken}`
-    return await api(config)
+    accessToken = await reissueAccessToken()
   } catch (reissueError) {
-    // 재발급까지 실패하면 세션을 되살릴 방법이 없다. 라우팅은 보호 라우트가 판단한다
-    useAuthStore.getState().clearSession()
+    /*
+     * 세션을 지우는 건 **서버가 이 refreshToken 을 거절했을 때뿐**이다.
+     *
+     * 타임아웃(10초)·502·5xx 도 여기로 들어온다. 그것들까지 지우면 서버가 잠깐
+     * 느리거나 와이파이가 끊긴 것만으로 로그인 화면으로 튕긴다 — 토큰은 멀쩡한데.
+     * 재발급 인스턴스에는 에러 인터셉터가 없어 토스트조차 안 떠서 이유도 안 보인다.
+     *
+     * 진짜 만료라면 다음 요청이 401 을 받고 재발급이 다시 401 로 떨어져 그때 정리된다.
+     *
+     * ⚠️ `clearSession()` 만 부르면 안 된다. react-query 캐시에 이전 사용자의 응답이
+     *    gcTime(5분) 동안 남아, 같은 탭에서 다른 계정으로 들어오면 첫 화면에 스친다.
+     */
+    const status = getErrorStatus(reissueError)
+
+    if (status === 401 || status === 403) clearAuthState()
+    else if (axios.isAxiosError(reissueError)) notifyUnrecoverable(reissueError)
+
     return Promise.reject(reissueError)
   }
+
+  /*
+   * 재시도는 try 밖이다. 안에 두면 재발급이 성공한 뒤 이 요청이 500 한 번 나는 것만으로
+   * 세션이 날아갔다 — 토큰 문제가 아닌데 로그아웃되는 가장 흔한 경로였다.
+   * 실패하면 이 인터셉터를 다시 타는데 `_retried` 가 true 라 재발급은 돌지 않고
+   * `notifyUnrecoverable` 만 동작한다.
+   */
+  config.headers.Authorization = `Bearer ${accessToken}`
+  return api(config)
 })

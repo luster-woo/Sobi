@@ -213,9 +213,9 @@ export const businessHandlers = [
    * '서울 강남구' 는 프론트가 `address` 에서 잘라 만든다 (`toRegionLabel`).
    */
   http.get('/api/v1/business/me', () => {
-    // 업체 미등록은 404 + BUSINESS_O04 다. 코드의 O 는 숫자 0 이 아니라 영문 대문자 (백엔드 오타)
+    // 업체 미등록은 404 + BUSINESS_004 다 (한동안 영문 O 가 섞인 오타였고 백엔드가 고쳤다)
     if (sessionStorage.getItem(BUSINESS_KEY) === 'none') {
-      return fail(404, 'BUSINESS_O04', '등록된 사업자 정보가 없습니다.', '/api/v1/business/me')
+      return fail(404, 'BUSINESS_004', '등록된 사업자 정보가 없습니다.', '/api/v1/business/me')
     }
 
     // 이 세션에서 등록한 업체가 있으면 그걸 보여준다. 등록 직후 사이드바에 방금 넣은

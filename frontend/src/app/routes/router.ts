@@ -139,6 +139,8 @@ export const router = createBrowserRouter([
                      * 상대 경로를 쓴다. 링크는 routeTo.loanDetail() 로 만든다.
                      */
                     path: ':loanId',
+                    // 목록 위에 뜨는 모달. AppLayout 이 이 경로에서는 스크롤을 건드리지 않는다
+                    handle: { modal: true },
                     lazy: async () => ({
                       Component: (await import('@/features/loan/components/LoanDetailRoute'))
                         .default,
@@ -207,6 +209,8 @@ export const router = createBrowserRouter([
                      * 쓴다. 링크는 routeTo.supportProgramDetail() 로 만든다.
                      */
                     path: ':supportProgramId',
+                    // 목록 위에 뜨는 모달. AppLayout 이 이 경로에서는 스크롤을 건드리지 않는다
+                    handle: { modal: true },
                     lazy: async () => ({
                       Component: (
                         await import('@/features/support-program/components/SupportProgramDetailRoute')

@@ -9,8 +9,8 @@ interface JudgementSummaryPanelProps {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <dt className="text-text-muted text-[11px]">{label}</dt>
-      <dd className="text-text-secondary text-[16px] font-medium tabular-nums">{value}</dd>
+      <dt className="text-text-muted text-caption">{label}</dt>
+      <dd className="text-text-secondary text-h4 font-medium tabular-nums">{value}</dd>
     </div>
   )
 }
@@ -31,11 +31,11 @@ function Stat({ label, value }: { label: string; value: number }) {
  * 이미 있다.
  */
 export default function JudgementSummaryPanel({ summary }: JudgementSummaryPanelProps) {
-  const { updatedAt, possible, urgent, impossible, total } = summary
+  const { updatedAt, possible, needsCheck, urgent, impossible, inProgress, total } = summary
 
   return (
     <Panel className="flex flex-col gap-3 px-4.5 py-4">
-      <p className="text-text-muted text-[11.5px]">
+      <p className="text-text-muted text-caption">
         {/* 예비창업자는 마이데이터가 없어 갱신일도 없다 */}
         자격 판정{updatedAt && ` · 마이데이터 ${toDotDate(updatedAt)} 갱신`}
       </p>
@@ -50,12 +50,13 @@ export default function JudgementSummaryPanel({ summary }: JudgementSummaryPanel
 
         <dl className="flex gap-4.5">
           {/*
-           * '마감 임박' 은 얼마나 급한지를 안 알려준다. 서버가 7일 기준으로 세어 주므로
-           * 그 숫자를 그대로 문구에 적는다.
-           * 신청 가능 18건 안에 든 수다 — 전체 = 가능 + 불가.
+           * 마감 임박은 '신청할 수 있는 것' 중 임박한 수라 가능·확인 필요에 걸쳐 있다.
+           * 나머지 넷(가능·확인 필요·불가·진행 중)을 더하면 전체가 된다.
            */}
           <Stat label="일주일 내 마감" value={urgent} />
+          <Stat label="확인 필요" value={needsCheck} />
           <Stat label="신청 불가" value={impossible} />
+          {inProgress > 0 && <Stat label="진행 중" value={inProgress} />}
           <Stat label="전체" value={total} />
         </dl>
       </div>

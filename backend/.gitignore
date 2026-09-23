@@ -39,3 +39,5 @@ out/
 # Environment variables
 .env
 **/.env
+# 업로드된 신청 서류 (file.upload-dir 로컬 기본값). 실명·사업자번호가 담긴 서류라 커밋 금지
+/uploads/

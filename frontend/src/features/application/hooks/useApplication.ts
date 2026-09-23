@@ -3,15 +3,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelApplication,
   createApplication,
+  downloadProgramDocument,
   getApplicationDetail,
   getApplications,
-  requestDraft,
   submitApplication,
   uploadDocument,
+  writeDraft,
 } from '@/features/application/api/application'
 import { hasValidating } from '@/features/application/model/documents'
-import type { ApplicationDetail } from '@/features/application/model/types'
+import type { ApplicationDetail, SubmitApplicationBody } from '@/features/application/model/types'
 import { queryKeys } from '@/shared/api/queryKeys'
+import { saveBlobAsFile } from '@/shared/utils/saveFile'
 
 /**
  * 검증이 도는 동안 다시 물어보는 주기.
@@ -38,7 +40,13 @@ export function useApplicationDetail(applicationId?: number) {
     enabled: Boolean(applicationId),
     refetchInterval: (query) => {
       const data = query.state.data as ApplicationDetail | undefined
-      if (!data) return false
+      /*
+       * documents 까지 본다. `!data` 만으로는 부족하다 — 캐시에 상세가 아닌 것이
+       * 들어오면 객체는 있는데 documents 가 없어서 그대로 터진다. refetchInterval 은
+       * 렌더 중에 불려서 그 예외가 ErrorBoundary 까지 올라가 화면이 통째로 죽는다.
+       */
+      if (!data?.documents) return false
+
       return hasValidating(data.documents) ? POLL_INTERVAL_MS : false
     },
   })
@@ -55,9 +63,12 @@ export function useCreateApplication() {
 
   return useMutation({
     mutationFn: createApplication,
-    onSuccess: (data) => {
-      // 방금 받은 상세를 캐시에 심어 두면 신청 화면이 로딩 없이 바로 그려진다
-      queryClient.setQueryData(queryKeys.application.detail(data.applicationId), data)
+    onSuccess: () => {
+      /*
+       * 상세 캐시에 심지 않는다. 생성 응답은 applicationId 하나뿐이라, 심으면
+       * documents 가 없는 껍데기가 상세 자리에 들어가고 신청 화면의 폴링이 그걸
+       * 상세로 알고 읽는다. 로딩 한 번을 아끼려다 화면을 죽였다.
+       */
       queryClient.invalidateQueries({ queryKey: queryKeys.application.list })
     },
   })
@@ -83,35 +94,46 @@ export function useCancelApplication() {
 }
 
 /** 최종 신청. 성공하면 status 가 바뀌므로 상세를 다시 받는다 */
-export function useSubmitApplication() {
+export function useSubmitApplication(applicationId: number) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: submitApplication,
-    onSuccess: (_data, body) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.application.detail(body.applicationId),
-      })
-      // 상태가 SUBMITTED 로 바뀜으니 목록의 배지도 달라진다
+    mutationFn: (body: SubmitApplicationBody) => submitApplication(applicationId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.application.detail(applicationId) })
+      // 제출하면 곧바로 PAID 나 REJECTED 라 목록의 배지도 달라진다
       queryClient.invalidateQueries({ queryKey: queryKeys.application.list })
+      /*
+       * 대출이 실행되면 그 상품의 상태가 ELIGIBLE 에서 PAID 로 바뀌고, 상환 목록에
+       * 새 대출 계좌가 생긴다. 그 화면들도 낡으므로 함께 버린다.
+       */
+      queryClient.invalidateQueries({ queryKey: queryKeys.loan.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.supportProgram.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.repayment.all })
     },
   })
 }
 
 /**
- * 작성 서류 초안 생성.
+ * 초안 만들기.
  *
- * 업로드와 마찬가지로 응답에 결과가 없다. 상세를 다시 받아야 '작성 중' 으로
- * 바뀌고, 그때부터 폴링이 초안을 기다린다.
+ * 만들고 받는 것이 한 번이라 성공하면 그대로 파일을 저장한다. 캐시를 건드리지 않는다 —
+ * 서버가 초안을 어디에도 저장하지 않아서 상세 응답이 달라지지 않는다.
+ *
+ * 최대 5분이라 부르는 쪽이 진행 상황을 보여줘야 한다. isPending 을 그대로 쓰면 된다.
  */
-export function useRequestDraft(applicationId: number) {
-  const queryClient = useQueryClient()
-
+export function useWriteDraft() {
   return useMutation({
-    mutationFn: requestDraft,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.application.detail(applicationId) })
-    },
+    mutationFn: (programDocumentId: number) => writeDraft(programDocumentId),
+    onSuccess: (file) => saveBlobAsFile(file.blob, file.fileName ?? '초안.hwpx'),
+  })
+}
+
+/** 공고가 배포하는 빈 서식 받기 */
+export function useDownloadProgramDocument() {
+  return useMutation({
+    mutationFn: (programDocumentId: number) => downloadProgramDocument(programDocumentId),
+    onSuccess: (file) => saveBlobAsFile(file.blob, file.fileName ?? '서식'),
   })
 }
 

@@ -1,13 +1,14 @@
 import { http } from 'msw'
 
-import type { ApplicationProduct } from '@/features/application/model/types'
+import type { ApplicationLoanSummary } from '@/features/application/model/types'
 import type { LoanDetail, LoanListData, LoanListItem } from '@/features/loan/model/types'
+import { isBookmarked } from '@/mocks/lib/bookmarkStore'
 import { fail, ok } from '@/mocks/lib/envelope'
-import { PRODUCT_STATUS, type ProductStatus } from '@/shared/constants/productStatus'
+import { LOAN_STATUS, type LoanStatus } from '@/shared/constants/productStatus'
 
 const BANKS = ['싸피은행', '기업은행', '대구은행', '소상공인시장진흥공단', '중소벤처기업진흥공단']
 /** 생성 상품에 돌아가며 붙인다. 일곱 상태가 화면에 한 번씩은 나오게 전부 넣는다 */
-const STATUSES: ProductStatus[] = [
+const STATUSES: LoanStatus[] = [
   'ELIGIBLE',
   'INELIGIBLE',
   'SUBMITTED',
@@ -93,22 +94,77 @@ function minBalanceOf(maxLoanBalance: number): number {
 }
 
 /**
+ * 대출 기간(**일**). 상세와 관심 목록이 같은 값을 보여야 해서 여기서 만든다.
+ *
+ * 금융망 대출은 일 단위로 매일 한 회차씩 갚는다 — 개월이 아니다.
+ */
+function periodOf(loanId: number): number {
+  return 180 + (loanId % 4) * 90
+}
+
+/** 시드 값에 사용자가 누른 것을 덮어쓴다. 목록·상세·관심 목록이 같은 값을 보게 한다 */
+function withBookmark(loan: LoanListItem): LoanListItem {
+  return { ...loan, bookmarked: isBookmarked('LOAN', loan.loanId, loan.bookmarked) }
+}
+
+/**
+ * 담기·빼기 목(handlers/bookmark.ts)이 '있는 상품인가' 와 '지금 담겨 있나' 를 묻는다.
+ *
+ * 시드를 그쪽에서 다시 계산하지 않게 여기서 내준다. 두 벌로 적어 두면 상품을 하나
+ * 추가했을 때 목록에는 뜨는데 담으려 하면 404 가 나는 식으로 갈린다.
+ */
+export function findLoanBookmarkState(loanId: number): { bookmarked: boolean } | null {
+  const found = mockLoans.find((loan) => loan.loanId === loanId)
+  return found ? { bookmarked: withBookmark(found).bookmarked } : null
+}
+
+/**
+ * 관심 목록에 담긴 대출. 관심 목록 목(handlers/bookmark.ts)이 가져간다.
+ *
+ * 응답 모양이 `GET /loan` 과 다르다 — 백엔드 `bookmark/dto/LoanList` 는 `minLoanBalance` ·
+ * `period` 가 더 오고 `bookmarked` 가 없다. 담긴 것만 실리므로 서버가 굳이 안 보낸다.
+ *
+ * ⚠️ status 도 다르다. `BookmarkServiceImpl` 만 `LoanStatus` enum 을 안 쓰고
+ *    `"POSSIBLE"` · `"IMPOSSIBLE"` 문자열을 직접 박아 둬서, 그 어긋남까지 흉내 낸다.
+ *    프론트가 되돌리는 코드(`features/mypage/api/bookmarks.ts` 의 STATUS_ALIAS)를
+ *    실제로 태워 봐야 실서버로 바꿔도 안 깨진다.
+ */
+export function bookmarkedLoanRows() {
+  return mockLoans
+    .filter((loan) => withBookmark(loan).bookmarked)
+    .map((loan) => ({
+      loanId: loan.loanId,
+      accountName: loan.accountName,
+      bankName: loan.bankName,
+      interestRate: loan.interestRate,
+      maxLoanBalance: loan.maxLoanBalance,
+      minLoanBalance: minBalanceOf(loan.maxLoanBalance),
+      period: periodOf(loan.loanId),
+      status:
+        loan.status === 'ELIGIBLE'
+          ? 'POSSIBLE'
+          : loan.status === 'INELIGIBLE'
+            ? 'IMPOSSIBLE'
+            : loan.status,
+    }))
+}
+
+/**
  * 신청 화면 상단에 쓸 상품 요약. 신청 목(handlers/application.ts)이 가져간다.
  *
  * 두 목이 따로 데이터를 들면 목록에서 고른 상품과 신청 화면의 상품이 어긋난다.
- * 대출은 마감이 없어서 deadline 은 항상 null 이다.
  */
-export function findLoanProductSummary(loanId: number): ApplicationProduct | null {
+export function findLoanProductSummary(loanId: number): ApplicationLoanSummary | null {
   const found = mockLoans.find((loan) => loan.loanId === loanId)
   if (!found) return null
 
   return {
-    name: found.accountName,
-    organization: found.bankName,
+    loanId: found.loanId,
+    accountName: found.accountName,
+    bankName: found.bankName,
     interestRate: found.interestRate,
-    minAmount: minBalanceOf(found.maxLoanBalance),
-    maxAmount: found.maxLoanBalance,
-    deadline: null,
+    minLoanBalance: minBalanceOf(found.maxLoanBalance),
+    maxLoanBalance: found.maxLoanBalance,
   }
 }
 
@@ -116,10 +172,10 @@ export function findLoanProductSummary(loanId: number): ApplicationProduct | nul
  * 상태별 개수. 서버처럼 일곱 키를 0 으로 깔고 센다 — 해당 상품이 없는 상태도
  * 키가 있어야 화면에서 `statusCounts[value]` 를 그냥 읽을 수 있다.
  */
-function countByStatus(loans: LoanListItem[]): Record<ProductStatus, number> {
+function countByStatus(loans: LoanListItem[]): Record<LoanStatus, number> {
   const counts = Object.fromEntries(
-    Object.values(PRODUCT_STATUS).map((status) => [status, 0]),
-  ) as Record<ProductStatus, number>
+    Object.values(LOAN_STATUS).map((status) => [status, 0]),
+  ) as Record<LoanStatus, number>
 
   for (const loan of loans) counts[loan.status] += 1
   return counts
@@ -142,7 +198,10 @@ export const loanHandlers = [
     const bookmarked = url.searchParams.get('bookmarked')
     const sort = url.searchParams.get('sort')
 
-    let filtered = mockLoans
+    // 사용자가 누른 담기·빼기를 먼저 반영한다. 안 그러면 표의 리본이 시드에 고정된다
+    const loans = mockLoans.map(withBookmark)
+
+    let filtered = loans
     // "검색: 상품명·기관" 이라 두 필드를 함께 본다
     if (keyword) {
       filtered = filtered.filter(
@@ -166,8 +225,8 @@ export const loanHandlers = [
     return ok<LoanListData>(
       {
         // 개수는 필터 전 전체 기준이다
-        totalCount: mockLoans.length,
-        statusCounts: countByStatus(mockLoans),
+        totalCount: loans.length,
+        statusCounts: countByStatus(loans),
         loans: filtered,
       },
       '대출 목록 조회 성공',
@@ -199,7 +258,7 @@ export const loanHandlers = [
         minLoanBalance: minBalanceOf(found.maxLoanBalance),
         maxLoanBalance: found.maxLoanBalance,
         // 금융망 대출은 일 단위다. 매일 한 회차씩 갚는다
-        period: 180 + (loanId % 4) * 90,
+        period: periodOf(loanId),
         repaymentMethod: '원리금균등상환',
         conditions: {
           ratingName,
@@ -219,7 +278,7 @@ export const loanHandlers = [
                 `업력 ${firmAge}년 이상 필요 (현재 1년)`,
               ]
             : [],
-        bookmarked: found.bookmarked,
+        bookmarked: withBookmark(found).bookmarked,
       },
       '대출 상품 상세 조회 성공',
       { path: `/api/v1/loan/${loanId}` },

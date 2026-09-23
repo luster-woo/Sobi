@@ -25,6 +25,14 @@ interface ImportMetaEnv {
   readonly VITE_MOCK_FORCE?: string
 
   /**
+   * 마이데이터 갱신 쿨다운(분). 비어 있으면 1440 — 백엔드 기본값 `24h` 와 같다.
+   *
+   * ⚠️ 실제로 막는 것은 서버(`mydata.refresh-cooldown`)다. 이 값은 '지금 갱신' 버튼을
+   *    미리 잠그는 데만 쓰므로 **서버 설정과 같은 값이어야 한다.**
+   */
+  readonly VITE_MYDATA_REFRESH_COOLDOWN_MINUTES?: string
+
+  /**
    * 구글 OAuth 클라이언트 ID. 비어 있으면 구글 버튼이 비활성화된다.
    *
    * 공개값이라 빌드에 박혀도 된다 — 비밀은 clientSecret 이고 서버만 가진다.

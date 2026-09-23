@@ -1,4 +1,4 @@
-import type { ProductStatus } from '@/shared/constants/productStatus'
+import type { SupportStatus } from '@/shared/constants/productStatus'
 import type { ISODate, PageMeta, SupportProgramType } from '@/shared/types'
 
 /**
@@ -24,14 +24,20 @@ interface SupportProgramBase {
   /** 둘 다 null 이면 '상시' 로 표시한다 */
   startDate: ISODate | null
   endDate: ISODate | null
-  status: ProductStatus
+  status: SupportStatus
   isBookmark: boolean
 }
 
-/** 원 단위 금액. 지원금·대출에만 온다 */
+/**
+ * 원 단위 금액. 지원금·대출에만 오는 자리다.
+ *
+ * ⚠️ optional 이다. 서버 DTO 가 @JsonInclude(NON_NULL) 이라 DB 가 비어 있으면 키 자체가
+ *    오지 않는다 — null 이 아니라 undefined 로 들어온다. 공고문에 금액이 안 적힌 건이
+ *    실제로 있어서, type 이 SUPPORT·LOAN 이어도 값을 보장하지 않는다.
+ */
 interface WithBalance {
-  minBalance: number
-  maxBalance: number
+  minBalance?: number
+  maxBalance?: number
 }
 
 /**
@@ -46,7 +52,7 @@ interface WithBalance {
  */
 export type SupportProgramListItem =
   | (SupportProgramBase & WithBalance & { type: 'SUPPORT' })
-  | (SupportProgramBase & WithBalance & { type: 'LOAN'; interestRate: number })
+  | (SupportProgramBase & WithBalance & { type: 'LOAN'; interestRate?: number })
   | (SupportProgramBase & { type: 'ETC' })
 
 export interface SupportProgramListData {
@@ -56,20 +62,24 @@ export interface SupportProgramListData {
 
 /** 목록 조회 쿼리. undefined 인 필터는 axios 가 알아서 빼고 보낸다 */
 export interface SupportProgramListParams {
-  /** 0-base. 화면의 1-base 를 toServerPage 로 변환해서 넣는다 */
   page: number
   size: number
   /**
-   * 지원 유형 필터.
-   * ⚠️ 명세 파라미터 목록에는 없다. 화면에 유형 필터가 있어 'type' 으로 가정했다 —
-   *    이름이 확정되면 여기와 SupportFilterBar 만 고치면 된다.
+   * 시도 표준 표기 16개. '서울특별시' 처럼 보낸다.
+   *
+   * 전국 공고는 어느 지역을 골라도 결과에 포함된다 — 서버가 그렇게 거른다.
    */
+  region?: string
   type?: SupportProgramType
-  /** 소관기관명 */
-  jrsdInsttNm?: string
-  /** 판정 결과. status 7종 중 하나를 보낸다 */
-  judgement?: ProductStatus
+  /** 판정 결과 기준. 신청 상태(PREPARING 등)로는 거르지 않는다 */
+  judgement?: SupportStatus
   isBookmark?: boolean
+  /**
+   * 'endDate,asc' | 'maxBalance,desc'. 그 외 값은 서버가 기본 정렬로 처리한다.
+   *
+   * ⚠️ 대출은 서버 enum(INTEREST_RATE 등)으로 바뀌었는데 지원사업은 Spring 형식
+   *    문자열 그대로다. 두 도메인이 다르니 상수를 공유하지 말 것.
+   */
   sort?: string
 }
 
@@ -96,21 +106,48 @@ export interface SupportProgramSearchParams {
  */
 interface SupportProgramDetailBase {
   pblancNm: string
-  /** 사업 개요 */
   bsnsSumryCn: string | null
   jrsdInsttNm: string
   excInsttNm: string
   startDate: ISODate | null
   endDate: ISODate | null
-  status: ProductStatus
+  status: SupportStatus
   isBookmark: boolean
-  /** 신청 방법 */
   reqstMthPapersCn: string | null
-  /** 문의처 */
   refrncNm: string | null
+  /**
+   * 판정 사유 한 문장. 마이데이터를 연동하지 않았으면 null 이다.
+   *
+   * 상태가 왜 그렇게 나왔는지 설명하는 값이라 ELIGIBLE·UNKNOWN·INELIGIBLE 어디서든
+   * 온다. '가능' 인데 사유가 있는 것도 정상이다.
+   */
+  reason: string | null
+  /**
+   * 신청 전 본인이 확인해야 할 항목.
+   * 공고문에 사람이 직접 확인해야 하는 조건이 있다.
+   * UNKNOWN 이 나오는 이유. 판정이 없으면 빈 배열이다.
+   */
+  checkItems: string[]
+  /** 우대·가점 조건. 판정에는 쓰이지 않는다. 판정이 없으면 빈 배열 */
+  benefits: string[]
+  /**
+   * 진행 중인 신청 id. 상태가 신청에서 온 값일 때만 온다(PREPARING~PAID).
+   * ELIGIBLE·UNKNOWN·INELIGIBLE 이면 null — 아직 신청한 적이 없다는 뜻이다.
+   */
+  applicationId: number | null
 }
 
 export type SupportProgramDetail =
   | (SupportProgramDetailBase & WithBalance & { type: 'SUPPORT' })
-  | (SupportProgramDetailBase & WithBalance & { type: 'LOAN'; interestRate: number })
+  | (SupportProgramDetailBase & WithBalance & { type: 'LOAN'; interestRate?: number })
   | (SupportProgramDetailBase & { type: 'ETC' })
+
+/**
+ * 판정 사유 설명. AI 가 공고 원문을 읽고 사장님 상황에 맞춰 풀어 쓴 문장이다.
+ *
+ * null 이 정상적으로 온다 — 판정이 없거나(예비창업자, 마이데이터 연동 전)
+ * 생성에 실패한 경우다. 그때는 상세의 `reason`(템플릿 문장)을 쓰면 된다.
+ */
+export interface SupportProgramExplanation {
+  explanation: string | null
+}

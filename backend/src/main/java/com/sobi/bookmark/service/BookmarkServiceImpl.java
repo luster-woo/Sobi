@@ -11,10 +11,13 @@ import com.sobi.business.entity.BusinessInfo;
 import com.sobi.business.repository.BusinessReporitory;
 import com.sobi.global.exception.BusinessException;
 import com.sobi.global.exception.ErrorCode;
+import com.sobi.loan.dto.LoanEligibility;
+import com.sobi.loan.dto.LoanStatus;
 import com.sobi.loan.entity.Loan;
 import com.sobi.loan.entity.SuggestLoan;
 import com.sobi.loan.repository.LoanRepository;
 import com.sobi.loan.repository.SuggestLoanRepository;
+import com.sobi.support.dto.SupportStatus;
 import com.sobi.support.entity.SuggestSupportProgram;
 import com.sobi.support.entity.SupportProgram;
 import com.sobi.support.repository.SuggestSupportProgramRepository;
@@ -25,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.awt.print.Book;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,79 +49,70 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Override
     public BookmarkListResponse getBookmarks(Long userId) {
 
-        // 북마크 리스트 가져오고
         List<Bookmark> bookmarkList = bookmarkRepository.findByUser_Id(userId);
 
+        // 예비창업자는 사업자 정보가 없다. 판정이 불가능하므로 null 을 그대로 흘린다
+        BusinessInfo business = businessReporitory.findByUserId(userId);
+        Long businessId = business == null ? null : business.getId();
 
-        // 돌리면서 리스트 만들고
         List<LoanList> loanLists = new ArrayList<>();
-        List<SupportProgramList>  supportProgramLists = new ArrayList<>();
+        List<SupportProgramList> supportProgramLists = new ArrayList<>();
 
         for (Bookmark bookmark : bookmarkList) {
             if (bookmark.getSupportProgram() == null) {
-                LoanList loanlist = LoanList.from(bookmark.getLoan());
-                // status 조회
-                // application 목록에 있는지 조회해보고
-                Application application = applicationRepository.findByUser_IdAndLoan_Id(userId, loanlist.getLoanId());
-                // 있으면 status 삽입 후 리스트에 추가
-                if (application != null) {
-                    loanlist.setStatus(application.getStatus());
-                    loanLists.add(loanlist);
-                    continue;
-                }
-                // 없으면 suggest 목록 조회
-                BusinessInfo businessInfo = businessReporitory.findByUserId(userId);
-                SuggestLoan suggestloan = suggestloanRepository.findByBusinessIdAndLoan_Id(businessInfo.getId(), bookmark.getLoan().getId());
-
-                // 있으면 가능
-                if (suggestloan != null) {
-                    loanlist.setStatus("POSSIBLE");
-                    loanLists.add(loanlist);
-                    continue;
-                }
-
-                // 없으면 불가능
-                loanlist.setStatus("IMPOSSIBLE");
-                loanLists.add(loanlist);
-
-            }else{
-                SupportProgramList supportProgramList = SupportProgramList.from(bookmark.getSupportProgram());
-
-                Application application = applicationRepository.findByUser_IdAndSupportProgram_Id(userId, supportProgramList.getSupportProgramId());
-
-
-                if (application != null) {
-                    supportProgramList.setStatus(application.getStatus());
-                    supportProgramLists.add(supportProgramList);
-                    continue;
-                }
-
-                BusinessInfo businessInfo = businessReporitory.findByUserId(userId);
-                SuggestSupportProgram suggestSupportProgram = suggestSupportProgramRepository.findByBusinessIdAndSupportProgram_Id(businessInfo.getId(), supportProgramList.getSupportProgramId());
-
-                if (suggestSupportProgram != null) {
-                    supportProgramList.setStatus("POSSIBLE");
-                    supportProgramLists.add(supportProgramList);
-                    continue;
-                }
-
-                // 없으면 불가능
-                supportProgramList.setStatus("IMPOSSIBLE");
-                supportProgramLists.add(supportProgramList);
-
+                loanLists.add(toLoanList(bookmark, userId, businessId));
+            } else {
+                supportProgramLists.add(toSupportProgramList(bookmark, userId, businessId));
             }
-
         }
 
-
-        // 리턴
-
-        BookmarkListResponse bookmarkListResponse = BookmarkListResponse.builder()
+        return BookmarkListResponse.builder()
                 .loanList(loanLists)
                 .supportProgramList(supportProgramLists)
                 .build();
+    }
 
-        return bookmarkListResponse;
+    private LoanList toLoanList(Bookmark bookmark, Long userId, Long businessId) {
+
+        LoanList loanList = LoanList.from(bookmark.getLoan());
+
+        Application application =
+                applicationRepository.findByUser_IdAndLoan_Id(userId, loanList.getLoanId());
+
+        // suggest_loan 은 자격이 되는 상품만 담는다. 행이 없으면 불가
+        boolean suggested = businessId != null
+                && suggestloanRepository
+                .findByBusinessIdAndLoan_Id(businessId, loanList.getLoanId()) != null;
+
+        LoanStatus status = LoanStatus.of(
+                suggested ? LoanEligibility.ELIGIBLE : LoanEligibility.INELIGIBLE,
+                application == null ? null : application.getStatus()
+        );
+
+        loanList.setStatus(status.name());
+        return loanList;
+    }
+
+    private SupportProgramList toSupportProgramList(Bookmark bookmark, Long userId, Long businessId) {
+
+        SupportProgramList supportProgramList = SupportProgramList.from(bookmark.getSupportProgram());
+
+        Application application = applicationRepository.findByUser_IdAndSupportProgram_Id(
+                userId, supportProgramList.getSupportProgramId());
+
+        // 마이데이터 미연동이면 판정 행이 없다
+        SuggestSupportProgram suggest = businessId == null
+                ? null
+                : suggestSupportProgramRepository.findByBusinessIdAndSupportProgram_Id(
+                businessId, supportProgramList.getSupportProgramId());
+
+        SupportStatus status = SupportStatus.of(
+                suggest == null ? null : suggest.getStatus(),
+                application == null ? null : application.getStatus()
+        );
+
+        supportProgramList.setStatus(status.name());
+        return supportProgramList;
     }
 
     @Override

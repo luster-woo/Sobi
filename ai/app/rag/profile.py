@@ -8,6 +8,13 @@ from datetime import date
 
 CS_MAJOR = {"CS1": "외식업", "CS2": "서비스업", "CS3": "소매업"}
 
+def age(birth_date: date, today: date | None = None) -> int:
+    """만 나이."""
+    today = today or date.today()
+    years = today.year - birth_date.year
+    if (today.month, today.day) < (birth_date.month, birth_date.day):
+        years -= 1
+    return years
 
 def biz_months(open_date: date, today: date | None = None) -> int:
     """개업일로부터 경과 개월 수."""
@@ -25,18 +32,25 @@ def to_query(
     business_name: str,
     business_code: str,
     employee_count: int,
-    open_date: date,
+    open_date: date | None,
     annual_revenue: int | None,
+    is_prestartup: bool = False,
 ) -> str:
     """프로필을 한 문단짜리 서술문으로."""
-    months = biz_months(open_date)
-    parts = [
-        f"{address.split()[0]} {address.split()[1] if len(address.split()) > 1 else ''}".strip()
-        + f"에서 {business_name}을 운영하는 소상공인.",
-        f"업력 {months // 12}년 {months % 12}개월, 상시근로자 {employee_count}명.",
-    ]
-    if annual_revenue:
-        parts.append(f"연매출 {annual_revenue / 100_000_000:.1f}억원.")
+    tokens = address.split()
+    where = f"{tokens[0]} {tokens[1] if len(tokens) > 1 else ''}".strip()
+
+    if is_prestartup:
+        parts = [f"{where}에 거주하며 {business_name} 창업을 준비하는 예비창업자."]
+    else:
+        months = biz_months(open_date)
+        parts = [
+            f"{where}에서 {business_name}을 운영하는 소상공인.",
+            f"업력 {months // 12}년 {months % 12}개월, 상시근로자 {employee_count}명.",
+        ]
+        if annual_revenue:
+            parts.append(f"연매출 {annual_revenue / 100_000_000:.1f}억원.")
+
     major = CS_MAJOR.get(business_code[:3], "")
     if major:
         parts.append(f"업종 분류는 {major}.")

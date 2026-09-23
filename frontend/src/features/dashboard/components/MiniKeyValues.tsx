@@ -25,10 +25,10 @@ export default function MiniKeyValues({ items }: MiniKeyValuesProps) {
     <dl className="flex flex-wrap gap-x-4 gap-y-2.5">
       {items.map((item) => (
         <div key={item.label} className="flex flex-col gap-0.5">
-          <dt className="text-text-muted text-[11px]">{item.label}</dt>
+          <dt className="text-text-muted text-caption">{item.label}</dt>
           <dd
             className={cn(
-              'text-[16px] font-medium tabular-nums',
+              'text-h4 font-medium tabular-nums',
               item.tone === 'primary' ? 'text-primary' : 'text-text',
             )}
           >
@@ -36,7 +36,7 @@ export default function MiniKeyValues({ items }: MiniKeyValuesProps) {
             {item.unit && (
               <span
                 className={cn(
-                  'text-[11.5px] font-normal',
+                  'text-caption font-normal',
                   item.tone === 'primary' ? 'text-primary' : 'text-text-secondary',
                 )}
               >

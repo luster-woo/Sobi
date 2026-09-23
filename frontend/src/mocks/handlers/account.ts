@@ -10,8 +10,8 @@ import type { ApiResponse } from '@/shared/types'
  * 나오지 않으므로 목도 입출금만 담는다.
  */
 const accounts: PayoutAccount[] = [
-  { bankName: '대구은행', accountNo: '50812345678' },
-  { bankName: '싸피은행', accountNo: '00219876543' },
+  { accountId: 15, bankName: '대구은행', accountNo: '50812345678' },
+  { accountId: 16, bankName: '싸피은행', accountNo: '00219876543' },
 ]
 
 export const accountHandlers = [

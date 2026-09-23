@@ -26,9 +26,7 @@ export async function sendEmailCode(email: string) {
 }
 
 /**
- * 가입용 인증번호 검증.
- *
- * 성공하면 서버가 "이 이메일은 인증됨" 을 따로 저장하고, `signup` 이 그걸 확인한다.
+ * 가입용 인증번호 검증. 서버가 "이 이메일은 인증됨" 을 따로 저장하고 `signup` 이 그걸 확인한다.
  * 실패는 200 이 아니라 **400** 이다 — AUTH_003(만료) · AUTH_004(불일치).
  */
 export async function verifyEmailCode(body: EmailVerifyRequest) {
@@ -37,9 +35,7 @@ export async function verifyEmailCode(body: EmailVerifyRequest) {
 }
 
 /**
- * 회원가입.
- *
- * 응답에 토큰이 없다(`data: null`). 가입 직후 자동 로그인이 안 되므로 로그인 화면으로 보낸다.
+ * 회원가입. 응답에 토큰이 없어(`data: null`) 가입 직후 자동 로그인이 안 된다.
  * 인증번호 검증을 건너뛰면 400 AUTH_006 이다.
  */
 export async function signUp(body: SignUpRequest) {

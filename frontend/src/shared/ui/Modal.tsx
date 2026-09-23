@@ -33,7 +33,7 @@ interface ModalProps {
   footer?: ReactNode
   /**
    * md 440 · lg 640 · xl 1000 (px).
-   * 확인 창은 md, 넓은 폼은 lg, 본인확인처럼 단계가 있는 큰 창은 xl.
+   * 확인 창은 md, 넓은 폼은 lg, 단계가 있는 큰 창은 xl.
    */
   size?: 'md' | 'lg' | 'xl'
   /**

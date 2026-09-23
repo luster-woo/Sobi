@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router'
 
 import type { BizVerifyData } from '@/features/auth/api/businessVerify'
 import BizVerifyResult from '@/features/auth/components/BizVerifyResult'
-import PhoneVerifyPopup from '@/features/auth/components/PhoneVerifyPopup'
 import PreOwnerBranchCard from '@/features/auth/components/PreOwnerBranchCard'
 import { useBusinessRegister } from '@/features/auth/hooks/useBusinessRegister'
 import { useBusinessVerify } from '@/features/auth/hooks/useBusinessVerify'
@@ -80,9 +79,6 @@ export function BusinessVerifyPage() {
    * 번호로 업체가 등록된다. 입력칸과 달리 하이픈이 없는 값이다.
    */
   const [verifiedBrn, setVerifiedBrn] = useState<string | null>(null)
-
-  /** 본인확인 팝업. 실제 본인확인처럼 페이지를 옮기지 않고 이 화면 위에 띄운다 */
-  const [identityOpen, setIdentityOpen] = useState(false)
 
   /**
    * 휴·폐업 사업자는 정책자금 신청 대상이 아니라 사업자로 시작할 수 없다.
@@ -189,29 +185,11 @@ export function BusinessVerifyPage() {
       return
     }
 
-    setIdentityOpen(true)
-  }
-
-  /**
-   * 본인확인을 마친 시점에 업체를 등록한다.
-   *
-   * 버튼을 누를 때 바로 부르지 않는 이유는 순서다. 본인확인을 중간에 닫으면 등록만
-   * 되어 있는 계정이 남고, 같은 번호로 다시 등록하면 유니크 제약에 걸려 500 이 난다.
-   *
-   * 명세에는 `bsn` 으로 적혀 있지만 실제 `BusinessRequest` 필드는 `brn` 이다.
-   */
-  const handleIdentityVerified = () => {
-    if (verifiedBrn === null) return
-
+    /* 명세에는 `bsn` 으로 적혀 있지만 실제 `BusinessRequest` 필드는 `brn` 이다 */
     register(verifiedBrn, {
-      onSuccess: () => {
-        setIdentityOpen(false)
-        navigate(ROUTES.MYDATA_CONSENT)
-      },
+      onSuccess: () => navigate(ROUTES.MYDATA_CONSENT),
       onError: (error) => {
         /*
-         * 팝업은 열어둔다. 인증번호가 그대로 있어 '인증 완료' 를 다시 누르면 재시도된다.
-         *
          * 500 은 여기서 직접 띄운다 — 인터셉터의 일반 문구('서버에 문제가 생겼습니다')
          * 보다 `REGISTER_CONFLICT_MESSAGE`(이미 등록된 번호) 가 훨씬 구체적이라, 이
          * 자리에서는 중복이 아깝지 않다. 같은 파일 `handleVerify` 가 5xx 를 거르는 것과
@@ -317,6 +295,7 @@ export function BusinessVerifyPage() {
         {/* 등록 여부를 아직 모르는 동안 누르면 가드가 통과해 버린다 */}
         <Button
           disabled={!canStartAsOwner || isCheckingBusiness || businessUnknown}
+          loading={isRegistering}
           onClick={handleStartAsOwner}
           className="mt-3.5 w-full"
         >
@@ -325,15 +304,6 @@ export function BusinessVerifyPage() {
 
         <PreOwnerBranchCard variant="inline" onStart={handleStartAsPreOwner} />
       </div>
-
-      {/* 조건부 렌더라 닫으면 언마운트된다 — 다시 열면 1단계부터 시작한다 */}
-      {identityOpen && (
-        <PhoneVerifyPopup
-          onClose={() => setIdentityOpen(false)}
-          onVerified={handleIdentityVerified}
-          submitting={isRegistering}
-        />
-      )}
     </>
   )
 }

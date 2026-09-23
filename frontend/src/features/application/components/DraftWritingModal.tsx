@@ -6,19 +6,42 @@ import { useAuthStore } from '@/shared/lib/store/useAuthStore'
 import Modal from '@/shared/ui/Modal'
 import { cn } from '@/shared/utils/cn'
 
-/** 예상 소요. 서버 read timeout 이 300초라 그 절반쯤을 보통으로 잡는다 */
-const EXPECTED_MS = 150_000
+/**
+ * 예상 소요. 서버 read timeout 은 300초지만 실제 응답은 그보다 한참 빠르다 —
+ * 예상을 timeout 에 맞춰 두면 막대가 한 자릿수에 머물다 응답을 맞고, 그 한 번에 다 찬다.
+ */
+const EXPECTED_MS = 45_000
 
 /** 칸 하나를 채우기 시작하는 간격과 글자 하나를 찍는 간격 */
-const ROW_MS = 650
-const CHAR_MS = 45
-/** 서술 칸의 줄 하나가 써지는 시간. 응답이 올 때까지 줄을 늘려 가며 계속 쓴다 */
-const LINE_MS = 1400
+const ROW_MS = 260
+const CHAR_MS = 26
+/** 서술 칸의 줄 하나가 써지는 시간 */
+const LINE_MS = 900
 const PROSE_LINES = [100, 72]
 
+/**
+ * 응답 전에 마지막 줄이 멈춰 서는 지점.
+ *
+ * 종이는 스스로 완성되지 않는다 — 남은 분량이 '아직 안 끝났다' 는 표시다.
+ * 진행바가 95% 앞에서 기다리는 것과 같은 이유다(`shared/utils/estimatedProgress.ts`).
+ */
+const LAST_LINE_CAP = 0.82
+
+/**
+ * 응답이 온 뒤 남은 칸을 마저 쓰는 시간.
+ *
+ * `useEstimatedProgress` 가 막대를 100 까지 채우는 시간과 맞춘다 — 막대가 다 차는
+ * 순간 종이도 다 써져야 도장이 따로 논다.
+ */
+const FINISH_MS = 1200
 /** 다 쓴 종이와 도장을 보여주고 닫힐 때까지 */
-const RESULT_HOLD_MS = 1600
+const RESULT_HOLD_MS = 1400
+/** 이만큼 지나야 오래 걸릴 수 있다고 말한다. 보통은 그 전에 끝난다 */
+const LONG_WAIT_MS = 15_000
 const TICK_MS = 50
+
+/** 쓰는 중 → 응답을 받아 남은 칸을 마저 쓰는 중 → 다 씀(도장) */
+type Phase = 'writing' | 'finishing' | 'done'
 
 type Source = 'USER' | 'BUSINESS' | 'MYDATA'
 
@@ -98,7 +121,7 @@ function useElapsed() {
   return elapsed
 }
 
-function DraftPaper({ documentName, done }: { documentName: string; done: boolean }) {
+function DraftPaper({ documentName, phase }: { documentName: string; phase: Phase }) {
   const rows = useRows()
   const elapsed = useElapsed()
 
@@ -106,21 +129,49 @@ function DraftPaper({ documentName, done }: { documentName: string; done: boolea
     defs: [],
     expectedMs: EXPECTED_MS,
     minMs: 400,
-    settled: done,
+    settled: phase !== 'writing',
   })
 
+  /**
+   * 응답이 온 순간의 경과 시간.
+   *
+   * 여기서 종이 시계를 멈추고 남은 분량만 `ratio` 로 메운다. 응답이 왔다고 값을 그대로
+   * 꽂으면 쓰던 칸과 아직 시작도 안 한 칸이 **동시에** 차서 한 번에 튄다 —
+   * 응답이 예상보다 빠를수록 안 쓴 칸이 많아 더 크게 튄다.
+   */
+  const [mark, setMark] = useState<number | null>(null)
+  if (phase !== 'writing' && mark === null) setMark(elapsed)
+
+  const clock = mark ?? elapsed
+  const ratio = mark === null ? 0 : Math.min(1, (elapsed - mark) / FINISH_MS)
+  /** 멈춘 시점의 값에서 완성까지 이어 채운다. 응답 전에는 그대로 둔다 */
+  const fill = (base: number, full: number) => (mark === null ? base : base + (full - base) * ratio)
+
   const typed = (index: number, value: string) => {
-    if (done) return value
-    const chars = Math.floor((elapsed - index * ROW_MS) / CHAR_MS)
-    return value.slice(0, Math.max(0, chars))
+    const chars = Math.floor((clock - index * ROW_MS) / CHAR_MS)
+    const base = Math.min(value.length, Math.max(0, chars))
+    return value.slice(0, Math.round(fill(base, value.length)))
   }
 
   const proseStart = rows.length * ROW_MS
-  const proseElapsed = Math.max(0, elapsed - proseStart)
-  // 응답 전에는 줄을 모두 채운 뒤에도 마지막 줄을 계속 고쳐 쓰는 것처럼 보이게 돌린다
-  const proseLine = Math.floor(proseElapsed / LINE_MS) % (PROSE_LINES.length + 1)
-  const proseRatio = (proseElapsed % LINE_MS) / LINE_MS
-  const writingProse = !done && elapsed >= proseStart
+  const proseFill = (index: number, last: boolean) => {
+    const cap = last ? LAST_LINE_CAP : 1
+    const base = Math.min(cap, Math.max(0, (clock - proseStart - index * LINE_MS) / LINE_MS))
+    return fill(base, 1)
+  }
+
+  const done = phase === 'done'
+  const writingProse = clock >= proseStart
+
+  const waitingText =
+    mark === null && elapsed >= LONG_WAIT_MS ? (
+      <>
+        내 정보와 마이데이터를 읽어 서식을 채우고 있어요.{' '}
+        <b className="text-text">최대 5분 가량 소요될 수 있습니다.</b> 창을 닫지 말고 기다려 주세요.
+      </>
+    ) : (
+      '내 정보와 마이데이터를 읽어 서식을 채우고 있어요. 창을 닫지 말고 기다려 주세요.'
+    )
 
   return (
     <div className="flex flex-col gap-3">
@@ -134,7 +185,6 @@ function DraftPaper({ documentName, done }: { documentName: string; done: boolea
             {rows.map((row, index) => {
               const text = typed(index, row.value)
               const typing = !done && text.length > 0 && text.length < row.value.length
-              const started = done || text.length > 0
 
               return (
                 <div
@@ -151,7 +201,7 @@ function DraftPaper({ documentName, done }: { documentName: string; done: boolea
                   <span
                     className={cn(
                       'transition-opacity duration-300',
-                      started ? 'opacity-100' : 'opacity-0',
+                      text.length > 0 ? 'opacity-100' : 'opacity-0',
                     )}
                   >
                     <SourceTag source={row.source} />
@@ -167,7 +217,7 @@ function DraftPaper({ documentName, done }: { documentName: string; done: boolea
               <span
                 className={cn(
                   'transition-opacity duration-300',
-                  done || writingProse ? 'opacity-100' : 'opacity-0',
+                  writingProse ? 'opacity-100' : 'opacity-0',
                 )}
               >
                 <SourceTag source="AI" />
@@ -175,9 +225,10 @@ function DraftPaper({ documentName, done }: { documentName: string; done: boolea
             </div>
             <span className="flex flex-col gap-1.5">
               {PROSE_LINES.map((width, index) => {
-                let fill = 0
-                if (done || index < proseLine) fill = 1
-                else if (writingProse && index === proseLine) fill = proseRatio
+                const last = index === PROSE_LINES.length - 1
+                const value = proseFill(index, last)
+                /* 응답을 기다리는 동안 마지막 줄은 여기 서 있다. 고쳐 쓰는 중으로 보이게 둔다 */
+                const stalled = mark === null && last && value >= LAST_LINE_CAP
 
                 return (
                   <span
@@ -186,8 +237,11 @@ function DraftPaper({ documentName, done }: { documentName: string; done: boolea
                     style={{ width: `${width}%` }}
                   >
                     <span
-                      className="bg-text-secondary/40 block h-full rounded-full"
-                      style={{ width: `${fill * 100}%` }}
+                      className={cn(
+                        'bg-text-secondary/40 block h-full rounded-full transition-[width] duration-100 ease-linear',
+                        stalled && 'animate-pulse',
+                      )}
+                      style={{ width: `${value * 100}%` }}
                     />
                   </span>
                 )
@@ -225,15 +279,9 @@ function DraftPaper({ documentName, done }: { documentName: string; done: boolea
       </div>
 
       <p className="text-body2 text-text-secondary break-keep">
-        {done ? (
-          '서명·날인처럼 직접 채울 칸은 비워 뒀어요. 받은 초안을 확인하고 올려주세요.'
-        ) : (
-          <>
-            내 정보와 마이데이터를 읽어 서식을 채우고 있어요.{' '}
-            <b className="text-text">최대 5분 가량 소요될 수 있습니다.</b> 창을 닫지 말고 기다려
-            주세요.
-          </>
-        )}
+        {done
+          ? '서명·날인처럼 직접 채울 칸은 비워 뒀어요. 받은 초안을 확인하고 올려주세요.'
+          : waitingText}
       </p>
     </div>
   )
@@ -251,31 +299,45 @@ interface DraftWritingModalProps {
  * 진행률은 **추정값이다.** 서버가 응답 하나만 주고 그 사이 어디까지 했는지 알려주지
  * 않는다. 칸이 채워지는 속도도 실제 작성 순서가 아니라 연출이다.
  *
+ * 응답이 오면 **바로 도장을 찍지 않는다.** 쓰던 자리에서 남은 칸을 `FINISH_MS` 동안
+ * 마저 쓰고 그다음에 찍는다 — 값을 그대로 꽂으면 종이·서술 칸·도장·막대가 같은
+ * 프레임에 한꺼번에 튀고, 응답이 빠를수록 더 크게 튄다.
+ *
  * 닫을 수 없다 — 창을 닫아도 요청은 계속 돌고, 다 만든 파일을 받을 자리가 사라진다.
- * 성공하면 다 쓴 종이에 도장을 찍고 잠깐 뒤 닫는다. 실패면 바로 닫는다(토스트가 알린다).
+ * 실패면 바로 닫는다(토스트가 알린다).
  */
 export default function DraftWritingModal({ status, documentName }: DraftWritingModalProps) {
   const [showing, setShowing] = useState(false)
+  const [phase, setPhase] = useState<Phase>('writing')
 
-  if (status === 'pending' && !showing) setShowing(true)
+  if (status === 'pending' && !showing) {
+    setShowing(true)
+    setPhase('writing')
+  }
   if (status === 'error' && showing) setShowing(false)
+  if (status === 'success' && showing && phase === 'writing') setPhase('finishing')
 
-  const done = showing && status === 'success'
-
+  /* 마저 쓰고(FINISH_MS) → 도장을 보여주고(RESULT_HOLD_MS) 닫는다 */
   useEffect(() => {
-    if (!done) return
+    if (phase === 'writing') return
+
+    if (phase === 'finishing') {
+      const timer = window.setTimeout(() => setPhase('done'), FINISH_MS)
+      return () => window.clearTimeout(timer)
+    }
+
     const timer = window.setTimeout(() => setShowing(false), RESULT_HOLD_MS)
     return () => window.clearTimeout(timer)
-  }, [done])
+  }, [phase])
 
   return (
     <Modal
       open={showing}
       onClose={() => {}}
-      title={done ? '초안을 만들었어요' : '초안을 만들고 있어요'}
+      title={phase === 'done' ? '초안을 만들었어요' : '초안을 만들고 있어요'}
       size="lg"
     >
-      <DraftPaper documentName={documentName} done={done} />
+      <DraftPaper documentName={documentName} phase={phase} />
     </Modal>
   )
 }

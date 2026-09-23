@@ -4,9 +4,19 @@
 """
 
 import logging
+import os
 import threading
 
 logger = logging.getLogger(__name__)
+
+# oneDNN 이 고르는 커널 상한. 배포 서버(Xeon Platinum 8175M, AVX-512)에서 기본값으로 두면
+# 검출 추론이 `RuntimeError: std::exception` 으로 죽는다 — AVX2 로 낮추면 정상이다.
+# AVX-512 가 없는 CPU 에서는 어차피 AVX2 가 상한이라 영향이 없다.
+os.environ.setdefault("ONEDNN_MAX_CPU_ISA", "AVX2")
+
+# oneDNN 가속. 인식이 4~5배 빨라지지만 CPU·paddle 조합에 따라 추론이 깨질 수 있어 끌 수 있게 둔다
+#   (OCR_MKLDNN=0 → 끔. 재빌드 없이 컨테이너 환경변수만 바꾸면 된다)
+MKLDNN = os.getenv("OCR_MKLDNN", "1") == "1"
 
 # lang="korean" 은 검출(det)에 무거운 server 모델을 써서 5배 느리다 → det 를 mobile 로 지정한다.
 # ⚠ 모델 이름을 하나라도 지정하면 lang 이 통째로 무시된다 (경고만 나고 에러는 없음).
@@ -30,10 +40,10 @@ def load():
         _ocr = PaddleOCR(
             text_detection_model_name=DET_MODEL,
             text_recognition_model_name=REC_MODEL,
-            # oneDNN 가속. 인식 시간이 4~5배 줄고(13.3s → 2.6s) 신뢰도·추출 결과는 같다. 추론 메모리는 +0.6GB.
+            # 인식 시간이 4~5배 줄고(13.3s → 2.6s) 신뢰도·추출 결과는 같다. 추론 메모리는 +0.6GB.
             # ⚠ paddlepaddle 3.3.x 에서는 PIR 회귀로 켜면 NotImplementedError (Paddle #77340) →
             #   requirements.txt 가 3.2.0 으로 고정돼 있다. paddle 을 올릴 때 이 옵션을 함께 확인할 것
-            enable_mkldnn=True,
+            enable_mkldnn=MKLDNN,
             # 증명서는 바로 찍힌 스캔·PDF 라 방향 보정·왜곡 보정이 필요 없고, 켜면 느려진다
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,

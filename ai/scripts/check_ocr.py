@@ -17,6 +17,8 @@ from typing import NamedTuple, Optional
 ROOT = Path(__file__).resolve().parents[1]
 # 모델 캐시를 ai/models 로 (gitignore 됨). 배포에서는 /models 볼륨을 쓴다
 os.environ.setdefault("PADDLE_PDX_CACHE_HOME", str(ROOT / "models" / "paddlex"))
+# AVX-512 CPU 에서 oneDNN 커널이 추론을 깨뜨린다 (app/ocr/engine.py 와 같은 이유)
+os.environ.setdefault("ONEDNN_MAX_CPU_ISA", "AVX2")
 
 import psutil
 
